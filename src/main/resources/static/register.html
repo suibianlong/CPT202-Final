@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module1/module1.css" />
+</head>
+<body data-page="register">
+<div class="auth-shell auth-shell-register">
+    <a class="register-back-link" href="./index.html">Back</a>
+
+    <section class="auth-card scenic-card register-paper">
+        <div class="register-paper-inner">
+            <header class="register-paper-header">
+                <h1 class="register-paper-title">Welcome to HerLink</h1>
+                <div class="register-paper-divider" aria-hidden="true"></div>
+            </header>
+
+            <form id="registerForm" class="form-stack register-form">
+                <div class="field">
+                    <label for="registerName">Name</label>
+                    <input id="registerName" type="text" placeholder="Enter your name" autocomplete="name" />
+                </div>
+
+                <div class="field">
+                    <label for="registerEmail">Email</label>
+                    <div class="field-inline-actions auth-inline-row register-email-row">
+                        <input id="registerEmail" type="email" placeholder="name@example.com" autocomplete="email" />
+                        <button type="button" id="sendRegisterCodeBtn" class="btn btn-secondary auth-inline-btn register-send-code">Send Code</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="registerVerificationCode">Verification Code</label>
+                    <input id="registerVerificationCode" type="text" inputmode="numeric" maxlength="6" placeholder="Enter the 6-digit code" autocomplete="one-time-code" />
+                </div>
+
+                <div class="field">
+                    <label for="registerPassword">Password</label>
+                    <input id="registerPassword" type="password" placeholder="At least 8 characters" autocomplete="new-password" />
+                </div>
+
+                <div class="field">
+                    <label for="registerConfirmPassword">Confirm Password</label>
+                    <input id="registerConfirmPassword" type="password" placeholder="Re-enter your password" autocomplete="new-password" />
+                </div>
+
+                <button type="submit" class="btn btn-primary auth-submit register-submit">Register</button>
+            </form>
+
+            <div class="register-secondary-actions">
+                <div class="register-login-note">
+                    Already registered? <a id="registerLoginLink" href="./login.html">Go to login</a>.
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module1/module1.js"></script>
+</body>
+</html>

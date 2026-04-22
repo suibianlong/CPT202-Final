@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ResourceFileMapper">
+
+    <resultMap id="ResourceFileResultMap" type="com.cpt202.HerLink.entity.ResourceFile">
+        <id column="fileId" property="fileId"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="originalFilename" property="originalFilename"/>
+        <result column="storedFilename" property="storedFilename"/>
+        <result column="filePath" property="filePath"/>
+        <result column="fileType" property="fileType"/>
+        <result column="fileSize" property="fileSize"/>
+        <result column="uploadedAt" property="uploadedAt"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.ResourceFile"
+            useGeneratedKeys="true"
+            keyProperty="fileId">
+        INSERT INTO resourceFile
+        (
+            resourceId,
+            originalFilename,
+            storedFilename,
+            filePath,
+            fileType,
+            fileSize,
+            uploadedAt
+        )
+        VALUES
+        (
+            #{resourceId},
+            #{originalFilename},
+            #{storedFilename},
+            #{filePath},
+            #{fileType},
+            #{fileSize},
+            #{uploadedAt}
+        )
+    </insert>
+
+    <select id="selectByResourceId"
+            parameterType="java.lang.Long"
+            resultMap="ResourceFileResultMap">
+        SELECT
+            fileId,
+            resourceId,
+            originalFilename,
+            storedFilename,
+            filePath,
+            fileType,
+            fileSize,
+            uploadedAt
+        FROM resourceFile
+        WHERE resourceId = #{resourceId}
+        ORDER BY uploadedAt DESC, fileId DESC
+    </select>
+
+    <select id="selectByResourceIdAndFilePath"
+            resultMap="ResourceFileResultMap">
+        SELECT
+            fileId,
+            resourceId,
+            originalFilename,
+            storedFilename,
+            filePath,
+            fileType,
+            fileSize,
+            uploadedAt
+        FROM resourceFile
+        WHERE resourceId = #{resourceId}
+          AND filePath = #{filePath}
+        ORDER BY fileId DESC
+        LIMIT 1
+    </select>
+
+    <delete id="deleteByResourceIdAndFilePath">
+        DELETE FROM resourceFile
+        WHERE resourceId = #{resourceId}
+          AND filePath = #{filePath}
+    </delete>
+
+</mapper>

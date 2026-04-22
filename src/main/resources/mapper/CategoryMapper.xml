@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.CategoryMapper">
+
+    <resultMap id="CategoryResultMap" type="com.cpt202.HerLink.entity.Category">
+        <id column="categoryId" property="categoryId"/>
+        <result column="categoryTopic" property="categoryTopic"/>
+        <result column="status" property="status"/>
+        <result column="usageCount" property="usageCount"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="lastUpdatedAt" property="lastUpdatedAt"/>
+    </resultMap>
+
+    <select id="selectAllCategories" resultMap="CategoryResultMap">
+        SELECT
+            categoryId,
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM category
+        ORDER BY categoryTopic ASC, categoryId ASC
+    </select>
+
+    <select id="selectActiveCategories" resultMap="CategoryResultMap">
+        SELECT
+            categoryId,
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM category
+        WHERE status = 'ACTIVE'
+        ORDER BY usageCount DESC, categoryTopic ASC
+    </select>
+
+    <select id="selectByStatus"
+            parameterType="java.lang.String"
+            resultMap="CategoryResultMap">
+        SELECT
+            categoryId,
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM category
+        WHERE status = #{status}
+        ORDER BY categoryTopic ASC, categoryId ASC
+    </select>
+
+    <select id="selectById"
+            parameterType="java.lang.Long"
+            resultMap="CategoryResultMap">
+        SELECT
+            categoryId,
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM category
+        WHERE categoryId = #{categoryId}
+    </select>
+
+    <select id="selectActiveById"
+            parameterType="java.lang.Long"
+            resultMap="CategoryResultMap">
+        SELECT
+            categoryId,
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM category
+        WHERE categoryId = #{categoryId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="selectByTopic"
+            parameterType="java.lang.String"
+            resultMap="CategoryResultMap">
+        SELECT
+            categoryId,
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM category
+        WHERE categoryTopic = #{categoryTopic}
+        ORDER BY categoryId ASC
+        LIMIT 1
+    </select>
+
+    <select id="countByTopicIgnoreCase"
+            resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM category
+        WHERE LOWER(TRIM(categoryTopic)) = LOWER(TRIM(#{categoryTopic}))
+        <if test="excludedCategoryId != null">
+            AND categoryId != #{excludedCategoryId}
+        </if>
+    </select>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.Category"
+            useGeneratedKeys="true"
+            keyProperty="categoryId">
+        INSERT INTO category
+        (
+            categoryTopic,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        )
+        VALUES
+        (
+            #{categoryTopic},
+            #{status},
+            #{usageCount},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="refreshUsageCount"
+            parameterType="java.lang.Long">
+        UPDATE category c
+        SET c.usageCount = (
+            SELECT COUNT(*)
+            FROM resource r
+            WHERE r.categoryId = c.categoryId
+        )
+        WHERE c.categoryId = #{categoryId}
+    </update>
+
+    <update id="updateTopic">
+        UPDATE category
+        SET categoryTopic = #{categoryTopic},
+            lastUpdatedAt = #{lastUpdatedAt}
+        WHERE categoryId = #{categoryId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE category
+        SET status = #{status},
+            lastUpdatedAt = #{lastUpdatedAt}
+        WHERE categoryId = #{categoryId}
+    </update>
+
+</mapper>

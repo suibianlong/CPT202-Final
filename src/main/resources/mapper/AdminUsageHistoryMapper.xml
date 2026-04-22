@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.AdminUsageHistoryMapper">
+
+    <resultMap id="ClassificationUsageHistoryResultMap" type="com.cpt202.HerLink.dto.admin.ClassificationUsageHistoryResponse">
+        <result column="classificationId" property="classificationId"/>
+        <result column="name" property="name"/>
+        <result column="kind" property="kind"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="relatedRecordName" property="relatedRecordName"/>
+        <result column="dateOfUse" property="dateOfUse"/>
+    </resultMap>
+
+    <resultMap id="TagUsageHistoryResultMap" type="com.cpt202.HerLink.dto.admin.TagUsageHistoryResponse">
+        <result column="tagId" property="tagId"/>
+        <result column="tagName" property="tagName"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="relatedRecordName" property="relatedRecordName"/>
+        <result column="dateOfUse" property="dateOfUse"/>
+    </resultMap>
+
+    <select id="selectClassificationUsageHistory" resultMap="ClassificationUsageHistoryResultMap">
+        SELECT *
+        FROM (
+            SELECT
+                rt.resourceTypeId AS classificationId,
+                rt.typeName AS name,
+                'Type' AS kind,
+                r.id AS resourceId,
+                r.title AS relatedRecordName,
+                COALESCE(r.updatedAt, r.createdAt) AS dateOfUse
+            FROM resource r
+            JOIN resourceType rt
+              ON r.resourceTypeId = rt.resourceTypeId
+
+            UNION ALL
+
+            SELECT
+                c.categoryId AS classificationId,
+                c.categoryTopic AS name,
+                'Topic' AS kind,
+                r.id AS resourceId,
+                r.title AS relatedRecordName,
+                COALESCE(r.updatedAt, r.createdAt) AS dateOfUse
+            FROM resource r
+            JOIN category c
+              ON r.categoryId = c.categoryId
+        ) classificationUsage
+        ORDER BY classificationUsage.dateOfUse DESC,
+                 classificationUsage.resourceId DESC,
+                 classificationUsage.kind ASC
+    </select>
+
+    <select id="selectTagUsageHistory" resultMap="TagUsageHistoryResultMap">
+        SELECT
+            t.tagId,
+            t.tagName,
+            r.id AS resourceId,
+            r.title AS relatedRecordName,
+            COALESCE(r.updatedAt, r.createdAt) AS dateOfUse
+        FROM resourceTag rt
+        JOIN tag t
+          ON rt.tagId = t.tagId
+        JOIN resource r
+          ON rt.resourceId = r.id
+        ORDER BY dateOfUse DESC,
+                 r.id DESC,
+                 t.tagName ASC
+    </select>
+
+</mapper>

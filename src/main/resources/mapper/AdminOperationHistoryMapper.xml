@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.AdminOperationHistoryMapper">
+
+    <resultMap id="AdminOperationHistoryResultMap" type="com.cpt202.HerLink.dto.admin.AdminOperationHistoryResponse">
+        <id column="historyId" property="historyId"/>
+        <result column="itemName" property="itemName"/>
+        <result column="kind" property="kind"/>
+        <result column="module" property="module"/>
+        <result column="action" property="action"/>
+        <result column="administrator" property="administrator"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="persistenceMode" property="persistenceMode"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO adminOperationHistory
+        (
+            itemName,
+            kind,
+            module,
+            action,
+            administrator,
+            createdAt
+        )
+        VALUES
+        (
+            #{itemName},
+            #{kind},
+            #{module},
+            #{action},
+            #{administrator},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="selectAll" resultMap="AdminOperationHistoryResultMap">
+        SELECT
+            historyId,
+            itemName,
+            kind,
+            module,
+            action,
+            administrator,
+            createdAt,
+            'MYSQL' AS persistenceMode
+        FROM adminOperationHistory
+        ORDER BY createdAt DESC, historyId DESC
+    </select>
+
+    <select id="selectByModule"
+            parameterType="java.lang.String"
+            resultMap="AdminOperationHistoryResultMap">
+        SELECT
+            historyId,
+            itemName,
+            kind,
+            module,
+            action,
+            administrator,
+            createdAt,
+            'MYSQL' AS persistenceMode
+        FROM adminOperationHistory
+        WHERE LOWER(module) = LOWER(#{module})
+        ORDER BY createdAt DESC, historyId DESC
+    </select>
+
+</mapper>

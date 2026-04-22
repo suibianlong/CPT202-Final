@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ResourceMapper">
+
+    <resultMap id="ResourceResultMap" type="com.cpt202.HerLink.entity.Resource">
+        <id column="id" property="id"/>
+        <result column="contributorId" property="contributorId"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="copyright" property="copyright"/>
+        <result column="categoryId" property="categoryId"/>
+        <result column="resourceTypeId" property="resourceTypeId"/>
+        <result column="place" property="place"/>
+        <result column="previewImage" property="previewImage"/>
+        <result column="mediaUrl" property="mediaUrl"/>
+        <result column="status" property="status"/>
+        <result column="reviewedAt" property="reviewedAt"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="updatedAt" property="updatedAt"/>
+        <result column="archivedAt" property="archivedAt"/>
+        <result column="resourceType" property="resourceType"/>
+        <result column="categoryName" property="categoryName"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.Resource"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO resource
+        (
+            contributorId,
+            title,
+            description,
+            copyright,
+            categoryId,
+            place,
+            previewImage,
+            mediaUrl,
+            status,
+            reviewedAt,
+            createdAt,
+            updatedAt,
+            archivedAt,
+            resourceTypeId
+        )
+        VALUES
+        (
+            #{contributorId},
+            #{title},
+            #{description},
+            #{copyright},
+            #{categoryId},
+            #{place},
+            #{previewImage},
+            #{mediaUrl},
+            #{status},
+            #{reviewedAt},
+            #{createdAt},
+            #{updatedAt},
+            #{archivedAt},
+            #{resourceTypeId}
+        )
+    </insert>
+
+    <select id="selectById"
+            parameterType="java.lang.Long"
+            resultMap="ResourceResultMap">
+        SELECT
+            r.id,
+            r.contributorId,
+            r.title,
+            r.description,
+            r.copyright,
+            r.categoryId,
+            r.resourceTypeId,
+            r.place,
+            r.previewImage,
+            r.mediaUrl,
+            r.status,
+            r.reviewedAt,
+            r.createdAt,
+            r.updatedAt,
+            r.archivedAt,
+            rt.typeName AS resourceType,
+            c.categoryTopic AS categoryName
+        FROM resource r
+        LEFT JOIN category c ON r.categoryId = c.categoryId
+        LEFT JOIN resourceType rt ON r.resourceTypeId = rt.resourceTypeId
+        WHERE r.id = #{id}
+    </select>
+
+    <select id="selectByIdForUpdate"
+            parameterType="java.lang.Long"
+            resultMap="ResourceResultMap">
+        SELECT
+            r.id,
+            r.contributorId,
+            r.title,
+            r.description,
+            r.copyright,
+            r.categoryId,
+            r.resourceTypeId,
+            r.place,
+            r.previewImage,
+            r.mediaUrl,
+            r.status,
+            r.reviewedAt,
+            r.createdAt,
+            r.updatedAt,
+            r.archivedAt,
+            rt.typeName AS resourceType,
+            c.categoryTopic AS categoryName
+        FROM resource r
+        LEFT JOIN category c ON r.categoryId = c.categoryId
+        LEFT JOIN resourceType rt ON r.resourceTypeId = rt.resourceTypeId
+        WHERE r.id = #{id}
+        FOR UPDATE
+    </select>
+
+    <update id="updateById"
+            parameterType="com.cpt202.HerLink.entity.Resource">
+        UPDATE resource
+        SET
+            title = #{title},
+            description = #{description},
+            copyright = #{copyright},
+            categoryId = #{categoryId},
+            place = #{place},
+            previewImage = #{previewImage},
+            mediaUrl = #{mediaUrl},
+            status = #{status},
+            reviewedAt = #{reviewedAt},
+            updatedAt = #{updatedAt},
+            archivedAt = #{archivedAt},
+            resourceTypeId = #{resourceTypeId}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectMyResources"
+            resultMap="ResourceResultMap">
+        SELECT
+            r.id,
+            r.contributorId,
+            r.title,
+            r.description,
+            r.copyright,
+            r.categoryId,
+            r.resourceTypeId,
+            r.place,
+            r.previewImage,
+            r.mediaUrl,
+            r.status,
+            r.reviewedAt,
+            r.createdAt,
+            r.updatedAt,
+            r.archivedAt,
+            rt.typeName AS resourceType,
+            c.categoryTopic AS categoryName
+        FROM resource r
+        LEFT JOIN category c ON r.categoryId = c.categoryId
+        LEFT JOIN resourceType rt ON r.resourceTypeId = rt.resourceTypeId
+        WHERE r.contributorId = #{contributorId}
+        <if test="keyword != null and keyword != ''">
+            AND r.title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="status != null and status != ''">
+            AND r.status = #{status}
+        </if>
+        <if test="categoryId != null">
+            AND r.categoryId = #{categoryId}
+        </if>
+        ORDER BY r.updatedAt DESC, r.createdAt DESC
+    </select>
+
+    <select id="selectApprovedResources"
+            resultMap="ResourceResultMap">
+        SELECT
+            r.id,
+            r.contributorId,
+            r.title,
+            r.description,
+            r.copyright,
+            r.categoryId,
+            r.resourceTypeId,
+            r.place,
+            r.previewImage,
+            r.mediaUrl,
+            r.status,
+            r.reviewedAt,
+            r.createdAt,
+            r.updatedAt,
+            r.archivedAt,
+            rt.typeName AS resourceType,
+            c.categoryTopic AS categoryName
+        FROM resource r
+        LEFT JOIN category c ON r.categoryId = c.categoryId
+        LEFT JOIN resourceType rt ON r.resourceTypeId = rt.resourceTypeId
+        WHERE r.status = 'Approved'
+        <if test="keyword != null and keyword != ''">
+            AND (
+                r.title LIKE CONCAT('%', #{keyword}, '%')
+                OR r.description LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        <if test="resourceTypeId != null">
+            AND r.resourceTypeId = #{resourceTypeId}
+        </if>
+        <if test="categoryId != null">
+            AND r.categoryId = #{categoryId}
+        </if>
+        <choose>
+            <when test="sortBy == 'title'">
+                ORDER BY r.title ASC, r.reviewedAt DESC, r.updatedAt DESC
+            </when>
+            <when test="sortBy == 'time'">
+                ORDER BY r.reviewedAt DESC, r.updatedAt DESC
+            </when>
+            <otherwise>
+                ORDER BY r.reviewedAt DESC, r.updatedAt DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectApprovedById"
+            parameterType="java.lang.Long"
+            resultMap="ResourceResultMap">
+        SELECT
+            r.id,
+            r.contributorId,
+            r.title,
+            r.description,
+            r.copyright,
+            r.categoryId,
+            r.resourceTypeId,
+            r.place,
+            r.previewImage,
+            r.mediaUrl,
+            r.status,
+            r.reviewedAt,
+            r.createdAt,
+            r.updatedAt,
+            r.archivedAt,
+            rt.typeName AS resourceType,
+            c.categoryTopic AS categoryName
+        FROM resource r
+        LEFT JOIN category c ON r.categoryId = c.categoryId
+        LEFT JOIN resourceType rt ON r.resourceTypeId = rt.resourceTypeId
+        WHERE r.id = #{id}
+          AND r.status = 'Approved'
+    </select>
+
+</mapper>

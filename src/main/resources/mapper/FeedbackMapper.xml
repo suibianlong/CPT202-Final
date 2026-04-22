@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.FeedbackMapper">
+
+    <resultMap id="FeedbackResultMap" type="com.cpt202.HerLink.entity.Feedback">
+        <id column="feedbackId" property="feedbackId"/>
+        <result column="fileNum" property="fileNum"/>
+        <result column="uploadedAt" property="uploadedAt"/>
+        <result column="userId" property="userId"/>
+        <result column="feedbackType" property="feedbackType"/>
+        <result column="description" property="description"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.Feedback"
+            useGeneratedKeys="true"
+            keyProperty="feedbackId">
+        INSERT INTO feedback
+        (
+            fileNum,
+            uploadedAt,
+            userId,
+            feedbackType,
+            description
+        )
+        VALUES
+        (
+            #{fileNum},
+            #{uploadedAt},
+            #{userId},
+            #{feedbackType},
+            #{description}
+        )
+    </insert>
+
+    <select id="selectById"
+            resultMap="FeedbackResultMap">
+        SELECT
+            feedbackId,
+            fileNum,
+            uploadedAt,
+            userId,
+            feedbackType,
+            description
+        FROM feedback
+        WHERE feedbackId = #{feedbackId}
+        LIMIT 1
+    </select>
+
+    <select id="selectByUserId"
+            resultMap="FeedbackResultMap">
+        SELECT
+            feedbackId,
+            fileNum,
+            uploadedAt,
+            userId,
+            feedbackType,
+            description
+        FROM feedback
+        WHERE userId = #{userId}
+        ORDER BY uploadedAt DESC, feedbackId DESC
+    </select>
+
+</mapper>

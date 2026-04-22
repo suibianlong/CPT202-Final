@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ReviewRecordMapper">
+
+    <resultMap id="ReviewRecordResultMap" type="com.cpt202.HerLink.entity.ReviewRecord">
+        <id column="reviewRecordId" property="reviewRecordId"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="submissionId" property="submissionId"/>
+        <result column="versionNo" property="versionNo"/>
+        <result column="reviewerId" property="reviewerId"/>
+        <result column="actionDescription" property="actionDescription"/>
+        <result column="status" property="status"/>
+        <result column="feedbackComment" property="feedbackComment"/>
+        <result column="reviewedAt" property="reviewedAt"/>
+        <result column="createdAt" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.ReviewRecord"
+            useGeneratedKeys="true"
+            keyProperty="reviewRecordId">
+        INSERT INTO reviewRecord
+        (
+            resourceId,
+            submissionId,
+            versionNo,
+            reviewerId,
+            actionDescription,
+            status,
+            feedbackComment,
+            reviewedAt,
+            createdAt
+        )
+        VALUES
+        (
+            #{resourceId},
+            #{submissionId},
+            #{versionNo},
+            #{reviewerId},
+            #{actionDescription},
+            #{status},
+            #{feedbackComment},
+            #{reviewedAt},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="selectLatestByResourceId"
+            parameterType="java.lang.Long"
+            resultMap="ReviewRecordResultMap">
+        SELECT
+            reviewRecordId,
+            resourceId,
+            submissionId,
+            versionNo,
+            reviewerId,
+            actionDescription,
+            status,
+            feedbackComment,
+            reviewedAt,
+            createdAt
+        FROM reviewRecord
+        WHERE resourceId = #{resourceId}
+        ORDER BY reviewedAt DESC, reviewRecordId DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestBySubmissionId"
+            parameterType="java.lang.Long"
+            resultMap="ReviewRecordResultMap">
+        SELECT
+            reviewRecordId,
+            resourceId,
+            submissionId,
+            versionNo,
+            reviewerId,
+            actionDescription,
+            status,
+            feedbackComment,
+            reviewedAt,
+            createdAt
+        FROM reviewRecord
+        WHERE submissionId = #{submissionId}
+        ORDER BY reviewedAt DESC, reviewRecordId DESC
+        LIMIT 1
+    </select>
+
+</mapper>

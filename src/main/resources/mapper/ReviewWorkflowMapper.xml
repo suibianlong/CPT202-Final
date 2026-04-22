@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ReviewWorkflowMapper">
+
+    <sql id="LatestSubmissionSql">
+        SELECT MAX(candidate.submissionId) AS submissionId,
+               candidate.resourceId
+        FROM resourceSubmission candidate
+        JOIN (
+            SELECT resourceId,
+                   MAX(versionNo) AS versionNo
+            FROM resourceSubmission
+            GROUP BY resourceId
+        ) latestVersion
+          ON latestVersion.resourceId = candidate.resourceId
+         AND latestVersion.versionNo = candidate.versionNo
+        GROUP BY candidate.resourceId
+    </sql>
+
+    <resultMap id="ReviewSubmissionRowMap" type="com.cpt202.HerLink.dto.review.ReviewSubmissionRow">
+        <id column="submissionId" property="submissionId"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="versionNo" property="versionNo"/>
+        <result column="submittedBy" property="submittedBy"/>
+        <result column="submittedAt" property="submittedAt"/>
+        <result column="submissionNote" property="submissionNote"/>
+        <result column="statusSnapshot" property="statusSnapshot"/>
+        <result column="contributorId" property="contributorId"/>
+        <result column="contributorName" property="contributorName"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="copyrightDeclaration" property="copyrightDeclaration"/>
+        <result column="categoryId" property="categoryId"/>
+        <result column="categoryTopic" property="categoryTopic"/>
+        <result column="resourceTypeId" property="resourceTypeId"/>
+        <result column="resourceType" property="resourceType"/>
+        <result column="place" property="place"/>
+        <result column="previewImage" property="previewImage"/>
+        <result column="mediaUrl" property="mediaUrl"/>
+        <result column="resourceStatus" property="resourceStatus"/>
+        <result column="reviewedAt" property="reviewedAt"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="updatedAt" property="updatedAt"/>
+        <result column="latestSubmissionId" property="latestSubmissionId"/>
+        <result column="latestVersionNo" property="latestVersionNo"/>
+    </resultMap>
+
+    <resultMap id="ReviewHistoryRowMap" type="com.cpt202.HerLink.dto.review.ReviewHistoryRow">
+        <id column="reviewRecordId" property="reviewRecordId"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="submissionId" property="submissionId"/>
+        <result column="versionNo" property="versionNo"/>
+        <result column="reviewerId" property="reviewerId"/>
+        <result column="reviewerName" property="reviewerName"/>
+        <result column="actionDescription" property="actionDescription"/>
+        <result column="status" property="status"/>
+        <result column="feedbackComment" property="feedbackComment"/>
+        <result column="reviewedAt" property="reviewedAt"/>
+    </resultMap>
+
+    <select id="countPendingReviews" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM resource r
+        JOIN (
+            <include refid="LatestSubmissionSql"/>
+        ) latestSubmission ON latestSubmission.resourceId = r.id
+        WHERE r.status = 'Pending Review'
+    </select>
+
+    <select id="selectPendingReviews" resultMap="ReviewSubmissionRowMap">
+        SELECT
+            submission.submissionId,
+            r.id AS resourceId,
+            submission.versionNo,
+            r.title,
+            r.contributorId,
+            contributor.username AS contributorName,
+            c.categoryId,
+            c.categoryTopic,
+            submission.submittedAt,
+            r.status AS resourceStatus
+        FROM resource r
+        JOIN (
+            <include refid="LatestSubmissionSql"/>
+        ) latestSubmission ON latestSubmission.resourceId = r.id
+        JOIN resourceSubmission submission
+          ON submission.submissionId = latestSubmission.submissionId
+        JOIN `user` contributor
+          ON contributor.userId = r.contributorId
+        JOIN category c
+          ON c.categoryId = r.categoryId
+        WHERE r.status = 'Pending Review'
+        ORDER BY submission.submittedAt DESC, submission.submissionId DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectSubmissionDetail"
+            parameterType="java.lang.Long"
+            resultMap="ReviewSubmissionRowMap">
+        SELECT
+            submission.submissionId,
+            submission.resourceId,
+            submission.versionNo,
+            submission.submittedBy,
+            submission.submittedAt,
+            submission.submissionNote,
+            submission.statusSnapshot,
+            r.contributorId,
+            contributor.username AS contributorName,
+            r.title,
+            r.description,
+            r.copyright AS copyrightDeclaration,
+            r.categoryId,
+            c.categoryTopic,
+            r.resourceTypeId,
+            rt.typeName AS resourceType,
+            r.place,
+            r.previewImage,
+            r.mediaUrl,
+            r.status AS resourceStatus,
+            r.reviewedAt,
+            r.createdAt,
+            r.updatedAt,
+            latestSubmission.submissionId AS latestSubmissionId,
+            latestVersion.versionNo AS latestVersionNo
+        FROM resourceSubmission submission
+        JOIN resource r
+          ON r.id = submission.resourceId
+        JOIN (
+            <include refid="LatestSubmissionSql"/>
+        ) latestSubmission ON latestSubmission.resourceId = r.id
+        JOIN resourceSubmission latestVersion
+          ON latestVersion.submissionId = latestSubmission.submissionId
+        JOIN `user` contributor
+          ON contributor.userId = r.contributorId
+        JOIN category c
+          ON c.categoryId = r.categoryId
+        JOIN resourceType rt
+          ON rt.resourceTypeId = r.resourceTypeId
+        WHERE submission.submissionId = #{submissionId}
+    </select>
+
+    <select id="selectReviewHistoryRows"
+            parameterType="java.lang.Long"
+            resultMap="ReviewHistoryRowMap">
+        SELECT
+            rr.reviewRecordId,
+            rr.resourceId,
+            rr.submissionId,
+            rr.versionNo,
+            rr.reviewerId,
+            reviewer.username AS reviewerName,
+            rr.actionDescription,
+            rr.status,
+            rr.feedbackComment,
+            rr.reviewedAt
+        FROM reviewRecord rr
+        LEFT JOIN `user` reviewer
+          ON reviewer.userId = rr.reviewerId
+        WHERE rr.resourceId = #{resourceId}
+        ORDER BY COALESCE(rr.reviewedAt, rr.createdAt) ASC,
+                 rr.reviewRecordId ASC
+    </select>
+
+    <update id="updateResourceAfterDecision">
+        UPDATE resource
+        SET status = #{status},
+            reviewedAt = #{reviewedAt},
+            updatedAt = #{reviewedAt}
+        WHERE id = #{resourceId}
+          AND status = #{expectedStatus}
+    </update>
+
+</mapper>

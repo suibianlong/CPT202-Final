@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ResourceTagMapper">
+
+    <resultMap id="ResourceTagResultMap" type="com.cpt202.HerLink.entity.ResourceTag">
+        <id column="id" property="id"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="tagId" property="tagId"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.ResourceTag"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO resourceTag
+        (
+            resourceId,
+            tagId
+        )
+        VALUES
+        (
+            #{resourceId},
+            #{tagId}
+        )
+    </insert>
+
+    <delete id="deleteByResourceId"
+            parameterType="java.lang.Long">
+        DELETE FROM resourceTag
+        WHERE resourceId = #{resourceId}
+    </delete>
+
+    <select id="selectTagIdsByResourceId"
+            parameterType="java.lang.Long"
+            resultType="java.lang.Long">
+        SELECT tagId
+        FROM resourceTag
+        WHERE resourceId = #{resourceId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectTagNamesByResourceId"
+            parameterType="java.lang.Long"
+            resultType="java.lang.String">
+        SELECT t.tagName
+        FROM resourceTag rt
+        INNER JOIN tag t ON rt.tagId = t.tagId
+        WHERE rt.resourceId = #{resourceId}
+        ORDER BY rt.id ASC
+    </select>
+
+</mapper>

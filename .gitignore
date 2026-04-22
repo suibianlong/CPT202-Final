@@ -1,0 +1,22 @@
+# Maven build output
+target/
+
+# IDE/editor files
+.vscode/
+.idea/
+.vs/
+*.iml
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Runtime files
+logs/
+*.log
+uploads/
+
+# Local-only configuration
+.env
+.env.*
+src/main/resources/application-local.yml

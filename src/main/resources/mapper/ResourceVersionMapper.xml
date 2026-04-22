@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ResourceVersionMapper">
+
+    <resultMap id="ResourceVersionResultMap" type="com.cpt202.HerLink.entity.ResourceVersion">
+        <id column="versionId" property="versionId"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="versionNo" property="versionNo"/>
+        <result column="snapshot" property="snapshot"/>
+        <result column="changeType" property="changeType"/>
+        <result column="changeSummary" property="changeSummary"/>
+        <result column="createdBy" property="createdBy"/>
+        <result column="createdAt" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.ResourceVersion"
+            useGeneratedKeys="true"
+            keyProperty="versionId">
+        INSERT INTO resourceVersion
+        (
+            resourceId,
+            versionNo,
+            snapshot,
+            changeType,
+            changeSummary,
+            createdBy,
+            createdAt
+        )
+        VALUES
+        (
+            #{resourceId},
+            #{versionNo},
+            #{snapshot},
+            #{changeType},
+            #{changeSummary},
+            #{createdBy},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="selectMaxVersionNoByResourceId"
+            parameterType="java.lang.Long"
+            resultType="java.lang.Integer">
+        SELECT MAX(versionNo)
+        FROM resourceVersion
+        WHERE resourceId = #{resourceId}
+    </select>
+
+    <select id="selectByResourceId"
+            parameterType="java.lang.Long"
+            resultMap="ResourceVersionResultMap">
+        SELECT
+            versionId,
+            resourceId,
+            versionNo,
+            snapshot,
+            changeType,
+            changeSummary,
+            createdBy,
+            createdAt
+        FROM resourceVersion
+        WHERE resourceId = #{resourceId}
+        ORDER BY versionNo DESC, versionId DESC
+    </select>
+
+    <select id="selectByResourceIdAndVersionNo"
+            resultMap="ResourceVersionResultMap">
+        SELECT
+            versionId,
+            resourceId,
+            versionNo,
+            snapshot,
+            changeType,
+            changeSummary,
+            createdBy,
+            createdAt
+        FROM resourceVersion
+        WHERE resourceId = #{resourceId}
+          AND versionNo = #{versionNo}
+        LIMIT 1
+    </select>
+
+</mapper>

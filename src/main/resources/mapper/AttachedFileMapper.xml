@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.AttachedFileMapper">
+
+    <resultMap id="AttachedFileResultMap" type="com.cpt202.HerLink.entity.AttachedFile">
+        <id column="fileId" property="fileId"/>
+        <result column="feedbackId" property="feedbackId"/>
+        <result column="originalFilename" property="originalFilename"/>
+        <result column="storedFilename" property="storedFilename"/>
+        <result column="filePath" property="filePath"/>
+        <result column="fileType" property="fileType"/>
+        <result column="fileSize" property="fileSize"/>
+        <result column="uploadedAt" property="uploadedAt"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.AttachedFile"
+            useGeneratedKeys="true"
+            keyProperty="fileId">
+        INSERT INTO attachedFile
+        (
+            feedbackId,
+            originalFilename,
+            storedFilename,
+            filePath,
+            fileType,
+            fileSize,
+            uploadedAt
+        )
+        VALUES
+        (
+            #{feedbackId},
+            #{originalFilename},
+            #{storedFilename},
+            #{filePath},
+            #{fileType},
+            #{fileSize},
+            #{uploadedAt}
+        )
+    </insert>
+
+    <select id="selectByFeedbackId"
+            resultMap="AttachedFileResultMap">
+        SELECT
+            fileId,
+            feedbackId,
+            originalFilename,
+            storedFilename,
+            filePath,
+            fileType,
+            fileSize,
+            uploadedAt
+        FROM attachedFile
+        WHERE feedbackId = #{feedbackId}
+        ORDER BY uploadedAt DESC, fileId DESC
+    </select>
+
+</mapper>

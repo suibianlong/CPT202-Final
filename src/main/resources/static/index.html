@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HerLink</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module1/module1.css" />
+</head>
+<body data-page="home">
+<main class="home-landing">
+    <section class="home-artboard" aria-label="HerLink landing artwork">
+        <img class="home-art-image" src="./module1/assets/backgrounds/Loginface.png" alt="HerLink historical heritage collage background" />
+        <a class="home-image-button home-image-login" href="./login.html" aria-label="Login"></a>
+        <a class="home-image-button home-image-register" href="./register.html" aria-label="Register"></a>
+    </section>
+
+    <div id="homeSessionCard" class="status-panel muted-panel">
+        <div class="status-panel-title">Current Session</div>
+        <p>Not logged in yet. Open the login page or create a new account.</p>
+    </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module1/module1.js"></script>
+</body>
+</html>

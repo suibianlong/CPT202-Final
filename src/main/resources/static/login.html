@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log In</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module1/module1.css" />
+</head>
+<body data-page="login">
+<div class="auth-shell auth-shell-login">
+    <a class="login-back-link" href="./index.html">Back</a>
+
+    <section class="auth-card scenic-card login-paper">
+        <div class="login-paper-inner">
+            <header class="login-paper-header">
+                <h1 class="login-paper-title">Login to Your Account</h1>
+                <div class="login-paper-divider" aria-hidden="true"></div>
+            </header>
+
+            <form id="loginForm" class="form-stack login-form">
+                <div class="field">
+                    <label for="loginEmail">Email Address</label>
+                    <input id="loginEmail" type="email" placeholder="Email Address" autocomplete="email" />
+                </div>
+
+                <div class="field">
+                    <label for="loginPassword">Password</label>
+                    <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
+                </div>
+
+                <button type="submit" class="btn btn-primary auth-submit login-submit">Login</button>
+            </form>
+
+            <div class="login-secondary-actions">
+                <a id="loginCreateAccountLink" class="login-create-link" href="./register.html">Create an Account</a>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module1/module1.js"></script>
+</body>
+</html>

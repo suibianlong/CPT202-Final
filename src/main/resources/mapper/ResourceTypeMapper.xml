@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ResourceTypeMapper">
+
+    <resultMap id="ResourceTypeResultMap" type="com.cpt202.HerLink.entity.ResourceType">
+        <id column="resourceTypeId" property="resourceTypeId"/>
+        <result column="typeName" property="typeName"/>
+        <result column="status" property="status"/>
+        <result column="usageCount" property="usageCount"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="lastUpdatedAt" property="lastUpdatedAt"/>
+    </resultMap>
+
+    <select id="selectAllResourceTypes" resultMap="ResourceTypeResultMap">
+        SELECT
+            resourceTypeId,
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM resourceType
+        ORDER BY typeName ASC, resourceTypeId ASC
+    </select>
+
+    <select id="selectActiveResourceTypes" resultMap="ResourceTypeResultMap">
+        SELECT
+            resourceTypeId,
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM resourceType
+        WHERE status = 'ACTIVE'
+        ORDER BY typeName ASC, resourceTypeId ASC
+    </select>
+
+    <select id="selectByStatus"
+            parameterType="java.lang.String"
+            resultMap="ResourceTypeResultMap">
+        SELECT
+            resourceTypeId,
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM resourceType
+        WHERE status = #{status}
+        ORDER BY typeName ASC, resourceTypeId ASC
+    </select>
+
+    <select id="selectById"
+            parameterType="java.lang.Long"
+            resultMap="ResourceTypeResultMap">
+        SELECT
+            resourceTypeId,
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM resourceType
+        WHERE resourceTypeId = #{resourceTypeId}
+    </select>
+
+    <select id="selectActiveByTypeName"
+            parameterType="java.lang.String"
+            resultMap="ResourceTypeResultMap">
+        SELECT
+            resourceTypeId,
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM resourceType
+        WHERE LOWER(typeName) = LOWER(#{typeName})
+          AND status = 'ACTIVE'
+        ORDER BY resourceTypeId ASC
+        LIMIT 1
+    </select>
+
+    <select id="selectByTypeNameIgnoreCase"
+            parameterType="java.lang.String"
+            resultMap="ResourceTypeResultMap">
+        SELECT
+            resourceTypeId,
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM resourceType
+        WHERE LOWER(typeName) = LOWER(#{typeName})
+        ORDER BY resourceTypeId ASC
+        LIMIT 1
+    </select>
+
+    <select id="countByTypeNameIgnoreCase"
+            resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM resourceType
+        WHERE LOWER(TRIM(typeName)) = LOWER(TRIM(#{typeName}))
+        <if test="excludedResourceTypeId != null">
+            AND resourceTypeId != #{excludedResourceTypeId}
+        </if>
+    </select>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.ResourceType"
+            useGeneratedKeys="true"
+            keyProperty="resourceTypeId">
+        INSERT INTO resourceType
+        (
+            typeName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        )
+        VALUES
+        (
+            #{typeName},
+            #{status},
+            #{usageCount},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="refreshUsageCount"
+            parameterType="java.lang.Long">
+        UPDATE resourceType rt
+        SET rt.usageCount = (
+            SELECT COUNT(*)
+            FROM resource r
+            WHERE r.resourceTypeId = rt.resourceTypeId
+        )
+        WHERE rt.resourceTypeId = #{resourceTypeId}
+    </update>
+
+    <update id="updateTypeName">
+        UPDATE resourceType
+        SET typeName = #{typeName},
+            lastUpdatedAt = #{lastUpdatedAt}
+        WHERE resourceTypeId = #{resourceTypeId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE resourceType
+        SET status = #{status},
+            lastUpdatedAt = #{lastUpdatedAt}
+        WHERE resourceTypeId = #{resourceTypeId}
+    </update>
+
+</mapper>

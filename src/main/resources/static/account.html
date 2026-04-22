@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account Center</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module1/module1.css" />
+    <link rel="stylesheet" href="./module1/account.css" />
+</head>
+<body data-page="account">
+<div class="account-page">
+    <header class="account-topbar">
+        <button type="button" id="accountBackBtn" class="btn account-ink-button account-ink-button-secondary">Back</button>
+        <button type="button" class="btn account-ink-button" data-logout-btn>Log Out</button>
+    </header>
+
+    <main class="account-paper">
+        <section class="account-hero">
+            <div class="account-center-mark">Account Center</div>
+            <h1 class="account-hero-title" id="accountHeroTitle">Loading account...</h1>
+            <p class="account-hero-subtitle" id="accountHeroSubtitle">
+                Manage your personal account details and view your current account status.
+            </p>
+        </section>
+
+        <section class="account-main-grid">
+            <article class="account-panel archive-panel account-details-panel">
+                <div class="account-panel-heading">
+                    <h2>Account Details</h2>
+                    <p>Review and update the account record currently attached to your session.</p>
+                </div>
+
+                <form id="accountForm" class="account-form">
+                    <div class="account-field">
+                        <label for="accountName">Name</label>
+                        <input id="accountName" type="text" autocomplete="name" />
+                    </div>
+
+                    <div class="account-field">
+                        <label for="accountEmail">Email</label>
+                        <input id="accountEmail" type="email" autocomplete="email" />
+                    </div>
+
+                    <div class="account-field">
+                        <label for="accountBio">Bio</label>
+                        <textarea id="accountBio" rows="5" maxlength="1000" placeholder="Share a short profile note for your contributor application record."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn account-ink-button account-save-button">Save Account Details</button>
+                </form>
+            </article>
+
+            <article class="account-panel archive-panel account-status-panel">
+                <div class="account-panel-heading">
+                    <h2>Current Status</h2>
+                    <p>Your access record is summarized here together with the latest contributor decision.</p>
+                </div>
+
+                <div id="accountStatusHeading" class="account-status-heading">Registered User</div>
+
+                <div class="account-status-frame">
+                    <img
+                        id="accountStatusImage"
+                        src="./module1/assets/account/status-default-user.png"
+                        alt="Registered user account status illustration"
+                    />
+                </div>
+
+                <div class="account-status-meta">
+                    <div class="account-status-meta-item">
+                        <span class="account-status-meta-label">System Role</span>
+                        <span id="accountRoleChip" class="account-status-meta-value">Role</span>
+                    </div>
+                    <div class="account-status-meta-item">
+                        <span class="account-status-meta-label">Contributor Record</span>
+                        <span id="accountContributorChip" class="account-status-meta-value">Status</span>
+                    </div>
+                </div>
+
+                <p id="accountStatusText" class="account-status-copy">Loading account status...</p>
+
+                <div class="account-status-actions">
+                    <p id="contributorActionText" class="account-action-copy">Loading contributor request status...</p>
+
+                    <div id="contributorReasonField" class="account-field contributor-reason-field">
+                        <label for="contributorApplicationReason">Application Reason</label>
+                        <textarea id="contributorApplicationReason" rows="5" maxlength="2000" placeholder="Explain why you want to become a contributor."></textarea>
+                    </div>
+
+                    <div class="account-status-button-row">
+                        <a
+                            id="accountStatusWorkspaceLink"
+                            class="btn account-ink-button account-ink-button-secondary hidden"
+                            href="./resource-edit.html"
+                        >Open Contributor Workspace</a>
+                        <button
+                            type="button"
+                            id="submitContributorRequestBtn"
+                            class="btn account-ink-button"
+                        >Request Contributor Status</button>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="account-panel archive-panel latest-request-panel">
+            <div class="account-panel-heading">
+                <h2>Latest Contributor Request</h2>
+                <p>The most recent contributor application for this account is preserved below.</p>
+            </div>
+
+            <div id="latestContributorRequest" class="account-request-content" data-state="loading">
+                Loading contributor request...
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module1/module1.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.ResourceSubmissionMapper">
+
+    <resultMap id="ResourceSubmissionResultMap" type="com.cpt202.HerLink.entity.ResourceSubmission">
+        <id column="submissionId" property="submissionId"/>
+        <result column="resourceId" property="resourceId"/>
+        <result column="versionNo" property="versionNo"/>
+        <result column="submittedBy" property="submittedBy"/>
+        <result column="submittedAt" property="submittedAt"/>
+        <result column="submissionNote" property="submissionNote"/>
+        <result column="statusSnapshot" property="statusSnapshot"/>
+        <result column="createdAt" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.ResourceSubmission"
+            useGeneratedKeys="true"
+            keyProperty="submissionId">
+        INSERT INTO resourceSubmission
+        (
+            resourceId,
+            versionNo,
+            submittedBy,
+            submittedAt,
+            submissionNote,
+            statusSnapshot,
+            createdAt
+        )
+        VALUES
+        (
+            #{resourceId},
+            #{versionNo},
+            #{submittedBy},
+            #{submittedAt},
+            #{submissionNote},
+            #{statusSnapshot},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="countByResourceId"
+            parameterType="java.lang.Long"
+            resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM resourceSubmission
+        WHERE resourceId = #{resourceId}
+    </select>
+
+    <select id="selectLatestByResourceId"
+            parameterType="java.lang.Long"
+            resultMap="ResourceSubmissionResultMap">
+        SELECT
+            submissionId,
+            resourceId,
+            versionNo,
+            submittedBy,
+            submittedAt,
+            submissionNote,
+            statusSnapshot,
+            createdAt
+        FROM resourceSubmission
+        WHERE resourceId = #{resourceId}
+        ORDER BY versionNo DESC, submissionId DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectByResourceId"
+            parameterType="java.lang.Long"
+            resultMap="ResourceSubmissionResultMap">
+        SELECT
+            submissionId,
+            resourceId,
+            versionNo,
+            submittedBy,
+            submittedAt,
+            submissionNote,
+            statusSnapshot,
+            createdAt
+        FROM resourceSubmission
+        WHERE resourceId = #{resourceId}
+        ORDER BY versionNo DESC, submissionId DESC
+    </select>
+
+</mapper>

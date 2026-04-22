@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.AdminResourceLifecycleMapper">
+
+    <resultMap id="ResourceLifecycleResultMap" type="com.cpt202.HerLink.dto.admin.ResourceLifecycleRow">
+        <id column="resourceId" property="resourceId"/>
+        <result column="title" property="title"/>
+        <result column="status" property="status"/>
+        <result column="archivedAt" property="archivedAt"/>
+        <result column="updatedAt" property="updatedAt"/>
+    </resultMap>
+
+    <select id="selectResourceLifecycle"
+            parameterType="java.lang.Long"
+            resultMap="ResourceLifecycleResultMap">
+        SELECT
+            id AS resourceId,
+            title,
+            status,
+            archivedAt,
+            updatedAt
+        FROM resource
+        WHERE id = #{resourceId}
+    </select>
+
+    <update id="archiveApprovedResource">
+        UPDATE resource
+        SET status = #{archivedStatus},
+            archivedAt = #{archivedAt},
+            updatedAt = #{archivedAt}
+        WHERE id = #{resourceId}
+          AND status = #{approvedStatus}
+    </update>
+
+</mapper>

@@ -1,0 +1,79 @@
+package com.cpt202.HerLink.entity;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+// corresponding to the "category" table
+public class Category implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+    private Long categoryId;
+    private String categoryTopic;
+    private String status;
+    private Integer usageCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime lastUpdatedAt;
+
+    public Category() {
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getCategoryTopic() {
+        return categoryTopic;
+    }
+
+    public void setCategoryTopic(String categoryTopic) {
+        this.categoryTopic = categoryTopic;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Integer getUsageCount() {
+        return usageCount;
+    }
+
+    public void setUsageCount(Integer usageCount) {
+        this.usageCount = usageCount;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getLastUpdatedAt() {
+        return lastUpdatedAt;
+    }
+
+    public void setLastUpdatedAt(LocalDateTime lastUpdatedAt) {
+        this.lastUpdatedAt = lastUpdatedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "Category{" +
+                "categoryId=" + categoryId +
+                ", categoryTopic='" + categoryTopic + '\'' +
+                ", status='" + status + '\'' +
+                ", usageCount=" + usageCount +
+                ", createdAt=" + createdAt +
+                ", lastUpdatedAt=" + lastUpdatedAt +
+                '}';
+    }
+}

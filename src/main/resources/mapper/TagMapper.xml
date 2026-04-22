@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.TagMapper">
+
+    <resultMap id="TagResultMap" type="com.cpt202.HerLink.entity.Tag">
+        <id column="tagId" property="tagId"/>
+        <result column="tagName" property="tagName"/>
+        <result column="status" property="status"/>
+        <result column="usageCount" property="usageCount"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="lastUpdatedAt" property="lastUpdatedAt"/>
+    </resultMap>
+
+    <select id="selectAllTags" resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        ORDER BY tagName ASC, tagId ASC
+    </select>
+
+    <select id="selectActiveTags" resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        WHERE status = 'ACTIVE'
+        ORDER BY usageCount DESC, tagName ASC
+    </select>
+
+    <select id="selectByStatus"
+            parameterType="java.lang.String"
+            resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        WHERE status = #{status}
+        ORDER BY tagName ASC, tagId ASC
+    </select>
+
+    <select id="selectById"
+            parameterType="java.lang.Long"
+            resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        WHERE tagId = #{tagId}
+    </select>
+
+    <select id="selectByIds"
+            resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        WHERE tagId IN
+        <foreach collection="tagIds" item="tagId" open="(" separator="," close=")">
+            #{tagId}
+        </foreach>
+    </select>
+
+    <select id="selectByName"
+            parameterType="java.lang.String"
+            resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        WHERE tagName = #{tagName}
+        LIMIT 1
+    </select>
+
+    <select id="selectByNameIgnoreCase"
+            parameterType="java.lang.String"
+            resultMap="TagResultMap">
+        SELECT
+            tagId,
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        FROM tag
+        WHERE LOWER(tagName) = LOWER(#{tagName})
+        LIMIT 1
+    </select>
+
+    <select id="countByNameIgnoreCase"
+            resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM tag
+        WHERE LOWER(TRIM(tagName)) = LOWER(TRIM(#{tagName}))
+        <if test="excludedTagId != null">
+            AND tagId != #{excludedTagId}
+        </if>
+    </select>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.Tag"
+            useGeneratedKeys="true"
+            keyProperty="tagId">
+        INSERT INTO tag
+        (
+            tagName,
+            status,
+            usageCount,
+            createdAt,
+            lastUpdatedAt
+        )
+        VALUES
+        (
+            #{tagName},
+            #{status},
+            #{usageCount},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="refreshUsageCount"
+            parameterType="java.lang.Long">
+        UPDATE tag t
+        SET t.usageCount = (
+            SELECT COUNT(*)
+            FROM resourceTag rt
+            WHERE rt.tagId = t.tagId
+        )
+        WHERE t.tagId = #{tagId}
+    </update>
+
+    <update id="updateTagName">
+        UPDATE tag
+        SET tagName = #{tagName},
+            lastUpdatedAt = #{lastUpdatedAt}
+        WHERE tagId = #{tagId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE tag
+        SET status = #{status},
+            lastUpdatedAt = #{lastUpdatedAt}
+        WHERE tagId = #{tagId}
+    </update>
+
+</mapper>
