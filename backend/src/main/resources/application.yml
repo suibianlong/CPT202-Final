@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: HerLink
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  sql:
+    init:
+      mode: never
+      encoding: UTF-8
+
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+
+HerLink:
+  upload-dir: uploads
+  frontend-dir: ../frontend
+  demo-data-enabled: ${DEMO_DATA_ENABLED:false}
+  register-verification:
+    from-address: ${MAIL_FROM:}
+    code-expire-minutes: ${REGISTER_CODE_EXPIRE_MINUTES:10}
+    resend-interval-seconds: ${REGISTER_CODE_RESEND_SECONDS:60}
+  notification:
+    from-address: ${MAIL_FROM:}

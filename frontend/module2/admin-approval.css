@@ -1,0 +1,27 @@
+.contributor-card {
+    border: 1px solid #dbe6f0;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.contributor-card h3 {
+    margin: 0 0 6px;
+    color: #4f6478;
+    font-size: 18px;
+}
+
+.contributor-card p {
+    margin: 0;
+    color: #70808f;
+    line-height: 1.5;
+}
+
+.contributor-card .admin-row-actions {
+    margin-top: 12px;
+}
+
+.contributor-comment {
+    margin-top: 12px;
+}

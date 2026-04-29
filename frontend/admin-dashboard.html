@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module7/module7.css" />
+</head>
+<body class="admin-page" data-page="admin-dashboard">
+<header class="admin-top-bar">
+    <h1 class="admin-title">Admin Dashboard</h1>
+    <div class="admin-top-actions">
+        <a class="admin-btn" href="./account.html">Account</a>
+        <button type="button" class="admin-btn" data-logout-btn>Log Out</button>
+    </div>
+</header>
+
+<main class="admin-dashboard-main" data-admin-main>
+    <section class="admin-dashboard-card">
+        <h2 id="adminWelcomeTitle">Welcome, Administrator</h2>
+        <p id="adminWelcomeText">Select a management area to continue.</p>
+        <div class="admin-dashboard-actions">
+            <a class="admin-btn primary" href="./classification-management.html">Classification Management</a>
+            <a class="admin-btn primary" href="./tag-management.html">Tag Management</a>
+            <a class="admin-btn primary" href="./admin-approval.html">Approval</a>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="admin-toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module7/module7.js"></script>
+<script src="./module7/admin-dashboard.js"></script>
+</body>
+</html>

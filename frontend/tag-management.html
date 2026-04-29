@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tag Management</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module7/module7.css" />
+</head>
+<body class="admin-page" data-page="tag-management">
+<header class="admin-top-bar">
+    <div class="admin-top-actions">
+        <a class="admin-btn" href="./admin-dashboard.html">Back</a>
+        <h1 class="admin-title">Tag Management</h1>
+    </div>
+    <div class="admin-top-actions">
+        <a class="admin-btn primary" href="./classification-management.html">Classification Management</a>
+        <button type="button" class="admin-btn" id="tagRefreshBtn">Refresh</button>
+        <button type="button" class="admin-btn" data-logout-btn>Log Out</button>
+    </div>
+</header>
+
+<main class="admin-shell wide" data-admin-main>
+    <div class="admin-page-head">
+        <div>
+            <h1>Tag Management</h1>
+            <p>Review, edit, activate, and deactivate tags created through resource metadata.</p>
+        </div>
+    </div>
+
+    <div class="admin-tabs" role="tablist" aria-label="Tag management sections">
+        <button type="button" class="admin-tab active" data-tag-tab="tags">Tags</button>
+        <button type="button" class="admin-tab" data-tag-tab="usage">Usage History</button>
+        <button type="button" class="admin-tab" data-tag-tab="operations">Operation History</button>
+    </div>
+
+    <section class="admin-section active" id="tagTagsSection">
+        <div class="admin-panel">
+            <div class="admin-panel-header">
+                <div>
+                    <h2>Tags</h2>
+                    <p>Tag creation is handled by contributor resource metadata; administrators can edit status and names here.</p>
+                </div>
+            </div>
+            <div id="tagListPanel">
+                <div class="admin-loading">Loading tags...</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="tagUsageSection">
+        <div class="admin-grid">
+            <div class="admin-panel" id="tagUsageOverviewPanel">
+                <div class="admin-loading">Loading usage overview...</div>
+            </div>
+            <div class="admin-panel" id="tagUsageHistoryPanel">
+                <div class="admin-loading">Loading usage history...</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="tagOperationsSection">
+        <div class="admin-panel" id="tagOperationPanel">
+            <div class="admin-loading">Loading operation history...</div>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="admin-toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module7/module7.js"></script>
+<script src="./module7/tag-management.js"></script>
+</body>
+</html>

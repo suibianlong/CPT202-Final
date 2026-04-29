@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heritage Resource Detail</title>
+    <link rel="stylesheet" href="../shared/shared.css" />
+    <link rel="stylesheet" href="./module6.css" />
+</head>
+<body data-page="viewer-detail">
+<div class="viewer-shell">
+    <header class="viewer-detail-topbar">
+        <a href="./heritage-viewer.html" class="viewer-topbar-btn viewer-topbar-link">Back to Viewer</a>
+        <div class="viewer-detail-actions">
+            <a href="../account.html" class="viewer-topbar-btn viewer-topbar-link">Account</a>
+        </div>
+    </header>
+
+    <main class="viewer-detail-main">
+        <section class="viewer-detail-hero">
+            <h1 id="detailTitle">Loading resource...</h1>
+            <p id="detailSubtitle">Approved heritage resource detail</p>
+        </section>
+
+        <section id="detailError" class="viewer-error hidden"></section>
+
+        <div id="detailContent" class="viewer-detail-stack hidden">
+            <div class="viewer-detail-grid">
+                <section class="viewer-detail-card scenic-card">
+                    <div class="section-head">
+                        <div>
+                            <h2>Overview</h2>
+                            <p>Basic metadata and approved publication details.</p>
+                        </div>
+                    </div>
+
+                    <div class="viewer-detail-meta">
+                        <div class="viewer-meta-item">
+                            <span class="viewer-meta-label">Resource ID</span>
+                            <strong id="detailId">-</strong>
+                        </div>
+                        <div class="viewer-meta-item">
+                            <span class="viewer-meta-label">Type</span>
+                            <strong id="detailType">-</strong>
+                        </div>
+                        <div class="viewer-meta-item">
+                            <span class="viewer-meta-label">Category</span>
+                            <strong id="detailCategory">-</strong>
+                        </div>
+                        <div class="viewer-meta-item">
+                            <span class="viewer-meta-label">Place</span>
+                            <strong id="detailPlace">-</strong>
+                        </div>
+                        <div class="viewer-meta-item">
+                            <span class="viewer-meta-label">Reviewed At</span>
+                            <strong id="detailReviewedAt">-</strong>
+                        </div>
+                        <div class="viewer-meta-item">
+                            <span class="viewer-meta-label">Copyright</span>
+                            <strong id="detailCopyright">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="viewer-detail-copy">
+                        <h3>Description</h3>
+                        <p id="detailDescription">-</p>
+                    </div>
+
+                    <div class="viewer-detail-copy">
+                        <h3>Tags</h3>
+                        <div id="detailTags" class="viewer-tag-list"></div>
+                    </div>
+                </section>
+
+                <section class="viewer-detail-card scenic-card">
+                    <div class="section-head">
+                        <div>
+                            <h2>Media</h2>
+                            <p>Preview image and primary heritage media.</p>
+                        </div>
+                    </div>
+
+                    <div class="viewer-media-block">
+                        <h3>Preview Image</h3>
+                        <div id="previewContainer" class="viewer-media-slot"></div>
+                    </div>
+
+                    <div class="viewer-media-block">
+                        <h3>Main Media</h3>
+                        <div id="mediaContainer" class="viewer-media-slot"></div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="viewer-detail-card scenic-card">
+                <div class="section-head">
+                    <div>
+                        <h2>Comments</h2>
+                        <p>Registered users can leave comments on this approved heritage resource.</p>
+                    </div>
+                </div>
+
+                <form id="commentForm" class="viewer-form-stack">
+                    <div class="field">
+                        <label for="commentContent">Add a Comment</label>
+                        <textarea id="commentContent" rows="4" maxlength="1000" placeholder="Share your thoughts about this heritage resource."></textarea>
+                    </div>
+                    <div class="viewer-form-actions">
+                        <button id="commentSubmitBtn" type="submit" class="btn btn-primary">Post Comment</button>
+                    </div>
+                </form>
+
+                <div id="commentList" class="viewer-comment-list">
+                    <div class="viewer-empty-message">Loading comments...</div>
+                </div>
+            </section>
+
+            <section class="viewer-detail-card scenic-card">
+                <div class="section-head">
+                    <div>
+                        <h2>Feedback</h2>
+                        <p>Share an issue or suggestion with the administrator team.</p>
+                    </div>
+                </div>
+
+                <form id="feedbackForm" class="viewer-form-stack" enctype="multipart/form-data">
+                    <div class="field">
+                        <label for="feedbackType">Feedback Type</label>
+                        <select id="feedbackType">
+                            <option value="BUG">Bug</option>
+                            <option value="SUGGESTION">Suggestion</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="feedbackDescription">Description</label>
+                        <textarea id="feedbackDescription" rows="4" placeholder="Describe the issue or suggestion in detail."></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="feedbackFiles">Attachments</label>
+                        <input id="feedbackFiles" type="file" accept=".jpg,.png,.pdf,.txt" multiple />
+                        <div id="feedbackFilesText" class="viewer-input-note">No files selected. JPG, PNG, PDF, or TXT. 10MB per file.</div>
+                    </div>
+                    <div class="viewer-form-actions">
+                        <button id="feedbackSubmitBtn" type="submit" class="btn btn-secondary">Submit Feedback</button>
+                    </div>
+                </form>
+
+                <div class="viewer-feedback-history">
+                    <h3>Your Feedback History</h3>
+                    <div id="feedbackList" class="viewer-feedback-list">
+                        <div class="viewer-empty-message">Loading feedback history...</div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="../shared/shared.js"></script>
+<script src="./module6.js"></script>
+</body>
+</html>

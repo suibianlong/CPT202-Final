@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cpt202.HerLink.mapper.AppUserMapper">
+
+    <resultMap id="AppUserResultMap" type="com.cpt202.HerLink.entity.AppUser">
+        <id column="userId" property="userId"/>
+        <result column="username" property="name"/>
+        <result column="email" property="email"/>
+        <result column="passwordHash" property="passwordHash"/>
+        <result column="role" property="role"/>
+        <result column="isContributor" property="contributor"/>
+        <result column="bio" property="bio"/>
+        <result column="createdAt" property="createdAt"/>
+        <result column="lastUpdatedAt" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.cpt202.HerLink.entity.AppUser"
+            useGeneratedKeys="true"
+            keyProperty="userId">
+        INSERT INTO `user`
+        (
+            username,
+            email,
+            passwordHash,
+            role,
+            isContributor,
+            bio,
+            createdAt,
+            lastUpdatedAt
+        )
+        VALUES
+        (
+            #{name},
+            #{email},
+            #{passwordHash},
+            #{role},
+            #{contributor},
+            #{bio},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById"
+            parameterType="java.lang.Long"
+            resultMap="AppUserResultMap">
+        SELECT
+            userId,
+            username,
+            email,
+            passwordHash,
+            role,
+            isContributor,
+            bio,
+            createdAt,
+            lastUpdatedAt
+        FROM `user`
+        WHERE userId = #{userId}
+    </select>
+
+    <select id="selectByIdForUpdate"
+            parameterType="java.lang.Long"
+            resultMap="AppUserResultMap">
+        SELECT
+            userId,
+            username,
+            email,
+            passwordHash,
+            role,
+            isContributor,
+            bio,
+            createdAt,
+            lastUpdatedAt
+        FROM `user`
+        WHERE userId = #{userId}
+        FOR UPDATE
+    </select>
+
+    <select id="selectByEmail"
+            parameterType="java.lang.String"
+            resultMap="AppUserResultMap">
+        SELECT
+            userId,
+            username,
+            email,
+            passwordHash,
+            role,
+            isContributor,
+            bio,
+            createdAt,
+            lastUpdatedAt
+        FROM `user`
+        WHERE email = #{email}
+    </select>
+
+    <select id="selectByUsername"
+            parameterType="java.lang.String"
+            resultMap="AppUserResultMap">
+        SELECT
+            userId,
+            username,
+            email,
+            passwordHash,
+            role,
+            isContributor,
+            bio,
+            createdAt,
+            lastUpdatedAt
+        FROM `user`
+        WHERE username = #{username}
+    </select>
+
+    <update id="updateBasicInfo"
+            parameterType="com.cpt202.HerLink.entity.AppUser">
+        UPDATE `user`
+        SET
+            username = #{name},
+            email = #{email},
+            bio = #{bio},
+            lastUpdatedAt = #{updatedAt}
+        WHERE userId = #{userId}
+    </update>
+
+    <update id="updateContributorFlag">
+        UPDATE `user`
+        SET
+            isContributor = #{contributor},
+            lastUpdatedAt = #{updatedAt}
+        WHERE userId = #{userId}
+    </update>
+
+</mapper>

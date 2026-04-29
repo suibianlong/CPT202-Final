@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Historical Heritage Resources</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module3/module3.css" />
+</head>
+<body data-page="resource-edit">
+<div class="heritage-page resource-editor-page">
+    <header class="heritage-topbar editor-topbar">
+        <div class="heritage-topbar-spacer" aria-hidden="true"></div>
+        <div class="heritage-topbar-copy" aria-hidden="true"></div>
+        <div class="heritage-topbar-actions"></div>
+    </header>
+
+    <section id="editorAlert" class="editor-alert hidden" role="alert"></section>
+
+    <main class="heritage-main editor-shell">
+        <aside class="creation-sidebar" aria-label="Resource creation steps">
+            <div class="creation-mark" aria-hidden="true">⌁</div>
+            <div class="creation-heading">
+                <h1>HISTORICAL HERITAGE RESOURCES</h1>
+                <p>you can fill in the corresponding<br />resource information</p>
+            </div>
+            <ol class="creation-steps">
+                <li>
+                    <a href="#module-identity">
+                        <span class="step-number">1</span>
+                        <span>
+                            <strong>Basic Information</strong>
+                            <small>Title, topic, type, copyright</small>
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#module-description">
+                        <span class="step-number">2</span>
+                        <span>
+                            <strong>Description</strong>
+                            <small>Provide a detailed overview</small>
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#module-tags">
+                        <span class="step-number">3</span>
+                        <span>
+                            <strong>Tags</strong>
+                            <small>Add relevant keywords</small>
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#module-media">
+                        <span class="step-number">4</span>
+                        <span>
+                            <strong>Files</strong>
+                            <small>Upload media and previews</small>
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#module-submit">
+                        <span class="step-number">5</span>
+                        <span>
+                            <strong>Submission</strong>
+                            <small>Review and submit</small>
+                        </span>
+                    </a>
+                </li>
+            </ol>
+        </aside>
+
+        <section class="editor-board" aria-label="Resource editor">
+            <section id="module-summary" class="editor-card summary-card">
+                <div class="module-head">
+                    <span class="module-symbol" aria-hidden="true">▰</span>
+                    <h2>1. Resource Summary</h2>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="field">
+                        <label>Resource ID</label>
+                        <div id="resourceIdText" class="archive-value">Not created</div>
+                        <small>System generated after first save.</small>
+                    </div>
+                    <div class="field">
+                        <label>Current Status</label>
+                        <div id="resourceStatusBadge" class="status-pill status-draft">Draft</div>
+                        <strong id="resourceStatusText" class="sr-meta-text">Draft</strong>
+                    </div>
+                    <div class="field">
+                        <label>Last Updated</label>
+                        <div id="updatedAtText" class="archive-value">—</div>
+                    </div>
+                </div>
+
+                <p class="submission-required">
+                    Required for submission: Title, Topic, Copyright, Resource Type, Description, Media File
+                </p>
+            </section>
+
+            <form id="metadataForm" class="editor-form metadata-form">
+                <section id="module-identity" class="editor-card module-card basic-card">
+                    <div class="module-head">
+                        <span class="module-symbol" aria-hidden="true">▥</span>
+                        <h2>2. Basic Information</h2>
+                    </div>
+
+                    <div class="basic-grid">
+                        <div class="field field-wide">
+                            <label for="title">Resource Title <span aria-hidden="true">*</span></label>
+                            <input id="title" type="text" placeholder="Enter the resource title" />
+                        </div>
+
+                        <div class="field">
+                            <label for="categoryId">Topic / Category <span aria-hidden="true">*</span></label>
+                            <select id="categoryId">
+                                <option value="">Select topic</option>
+                            </select>
+                        </div>
+
+                        <div class="field field-wide">
+                            <label for="place">Place</label>
+                            <input id="place" type="text" placeholder="Enter the place or region" />
+                        </div>
+
+                        <div class="field">
+                            <label for="resourceTypeMirror">Resource Type <span aria-hidden="true">*</span></label>
+                            <select id="resourceTypeMirror">
+                                <option value="">Select type</option>
+                            </select>
+                        </div>
+
+                        <div class="field basic-copyright">
+                            <label for="copyright">Copyright <span aria-hidden="true">*</span></label>
+                            <input id="copyright" type="text" placeholder="Enter copyright owner or license information" />
+                        </div>
+                    </div>
+
+                    <input id="resourceType" type="hidden" />
+                </section>
+
+                <section id="module-description" class="editor-card module-card description-card">
+                    <div class="module-head">
+                        <span class="module-symbol" aria-hidden="true">⌁</span>
+                        <h2>3. Description</h2>
+                    </div>
+
+                    <div class="field">
+                        <label for="description">Resource Description <span aria-hidden="true">*</span></label>
+                        <textarea id="description" rows="5" placeholder="Provide a detailed description of this resource, including historical context, significance, and any relevant notes..."></textarea>
+                    </div>
+                </section>
+
+                <section id="module-tags" class="editor-card module-card tags-card">
+                    <div class="module-head">
+                        <span class="module-symbol" aria-hidden="true">◇</span>
+                        <h2>4. Tags</h2>
+                    </div>
+
+                    <div class="field">
+                        <label for="tagInput">Tags &amp; Keywords</label>
+                        <div class="tag-editor-shell">
+                            <div id="tagOptions" class="chip-group heritage-chip-group" tabindex="-1"></div>
+                            <input id="tagInput" type="text" placeholder="Add a tag and press Enter..." />
+                        </div>
+                    </div>
+                </section>
+            </form>
+
+            <form id="uploadForm" class="editor-form upload-form" enctype="multipart/form-data">
+                <section id="module-media" class="editor-card module-card file-card">
+                    <div class="module-head">
+                        <span class="module-symbol" aria-hidden="true">✚</span>
+                        <h2>5. File Upload</h2>
+                    </div>
+
+                    <div class="file-grid">
+                        <div class="field upload-picker-field">
+                            <label for="mediaFile">Primary Media File <span aria-hidden="true">*</span></label>
+                            <div class="file-picker-shell">
+                                <div class="file-picker-icon" aria-hidden="true">⇧</div>
+                                <span id="mediaFileNameText" class="file-picker-name">Drag &amp; drop file here or</span>
+                                <button id="mediaFilePickerButton" type="button" class="file-picker-button" data-file-target="mediaFile">Choose File</button>
+                                <input id="mediaFile" type="file" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label>Media URL / Path</label>
+                            <div id="mediaFilePathText" class="heritage-inline-value">Will appear after upload</div>
+                        </div>
+
+                        <div class="field upload-picker-field">
+                            <label for="previewImage">Preview Image</label>
+                            <div class="file-picker-shell">
+                                <div class="file-picker-icon" aria-hidden="true">⇧</div>
+                                <span id="previewImageNameText" class="file-picker-name">Drag &amp; drop image here or</span>
+                                <button id="previewImagePickerButton" type="button" class="file-picker-button" data-file-target="previewImage">Choose File</button>
+                                <input id="previewImage" type="file" accept="image/*" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label>Preview Path</label>
+                            <div id="previewImagePathText" class="heritage-inline-value">Will appear after upload</div>
+                        </div>
+
+                        <div class="preview-frame" aria-live="polite">
+                            <span>No preview available</span>
+                        </div>
+                    </div>
+                </section>
+            </form>
+
+            <form id="submitForm" class="editor-form submit-form">
+                <section id="module-submit" class="editor-card module-card submission-card">
+                    <div class="module-head">
+                        <span class="module-symbol" aria-hidden="true">⌘</span>
+                        <h2>6. Submission</h2>
+                    </div>
+
+                    <div class="field submission-note-field">
+                        <label for="submissionNote">Submission Note (Optional)</label>
+                        <textarea id="submissionNote" rows="3" placeholder="Add any additional notes for the reviewers (optional)..."></textarea>
+                    </div>
+                </section>
+            </form>
+
+            <div class="editor-actions">
+                <button id="metadataSaveBtn" type="submit" form="metadataForm" class="heritage-btn heritage-btn-primary">Save Metadata</button>
+                <button id="uploadFilesBtn" type="submit" form="uploadForm" class="heritage-btn heritage-btn-secondary">Upload Files</button>
+                <button id="submitReviewBtn" type="submit" form="submitForm" class="heritage-btn heritage-btn-primary">Submit for Review</button>
+                <a href="./my-resources.html" class="heritage-btn heritage-btn-return">Return to My Resources</a>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module3/module3.js"></script>
+</body>
+</html>

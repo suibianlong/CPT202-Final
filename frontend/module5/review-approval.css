@@ -1,0 +1,43 @@
+.resource-review-list {
+    display: grid;
+    gap: 12px;
+}
+
+.resource-review-card {
+    border: 1px solid #dbe6f0;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 14px;
+}
+
+.resource-review-card h3 {
+    margin: 0 0 6px;
+    color: #4f6478;
+    font-size: 18px;
+}
+
+.resource-review-card p {
+    margin: 0 0 5px;
+    color: #70808f;
+    line-height: 1.5;
+}
+
+.resource-review-card .admin-row-actions {
+    margin-top: 12px;
+}
+
+.review-feedback-box {
+    margin-top: 14px;
+}
+
+.review-history-list {
+    display: grid;
+    gap: 10px;
+}
+
+.review-history-item {
+    background: #f4f8fc;
+    border: 1px solid #dbe6f0;
+    border-radius: 8px;
+    padding: 12px;
+}

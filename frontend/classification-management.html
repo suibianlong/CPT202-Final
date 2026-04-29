@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Classification Management</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module7/module7.css" />
+</head>
+<body class="admin-page" data-page="classification-management">
+<header class="admin-top-bar">
+    <div class="admin-top-actions">
+        <a class="admin-btn" href="./admin-dashboard.html">Back</a>
+        <h1 class="admin-title">Classification Management</h1>
+    </div>
+    <div class="admin-top-actions">
+        <a class="admin-btn primary" href="./tag-management.html">Tag Management</a>
+        <button type="button" class="admin-btn" id="classificationRefreshBtn">Refresh</button>
+        <button type="button" class="admin-btn" data-logout-btn>Log Out</button>
+    </div>
+</header>
+
+<main class="admin-shell wide" data-admin-main>
+    <div class="admin-page-head">
+        <div>
+            <h1>Classification Management</h1>
+            <p>Manage resource types and category topics used by contributor resources.</p>
+        </div>
+    </div>
+
+    <div class="admin-tabs" role="tablist" aria-label="Classification management sections">
+        <button type="button" class="admin-tab active" data-classification-tab="types">Resource Types</button>
+        <button type="button" class="admin-tab" data-classification-tab="categories">Categories</button>
+        <button type="button" class="admin-tab" data-classification-tab="usage">Usage History</button>
+        <button type="button" class="admin-tab" data-classification-tab="operations">Operation History</button>
+    </div>
+
+    <section class="admin-section active" id="classificationTypesSection">
+        <div class="admin-panel">
+            <div class="admin-panel-header">
+                <div>
+                    <h2>Resource Type Management</h2>
+                    <p>Create, edit, activate, or deactivate resource types.</p>
+                </div>
+            </div>
+            <form class="admin-form-row" id="resourceTypeCreateForm">
+                <div class="admin-field">
+                    <label for="resourceTypeName">New Resource Type</label>
+                    <input class="admin-input" id="resourceTypeName" name="typeName" maxlength="50" autocomplete="off" />
+                </div>
+                <button type="submit" class="admin-btn primary">Create Type</button>
+            </form>
+        </div>
+        <div class="admin-panel" id="resourceTypePanel">
+            <div class="admin-loading">Loading resource types...</div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="classificationCategoriesSection">
+        <div class="admin-panel">
+            <div class="admin-panel-header">
+                <div>
+                    <h2>Category Management</h2>
+                    <p>Create, edit, activate, or deactivate category topics.</p>
+                </div>
+            </div>
+            <form class="admin-form-row" id="categoryCreateForm">
+                <div class="admin-field">
+                    <label for="categoryTopic">New Category Topic</label>
+                    <input class="admin-input" id="categoryTopic" name="categoryTopic" maxlength="50" autocomplete="off" />
+                </div>
+                <button type="submit" class="admin-btn primary">Create Category</button>
+            </form>
+        </div>
+        <div class="admin-panel" id="categoryPanel">
+            <div class="admin-loading">Loading categories...</div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="classificationUsageSection">
+        <div class="admin-grid">
+            <div class="admin-panel" id="classificationUsageOverviewPanel">
+                <div class="admin-loading">Loading usage overview...</div>
+            </div>
+            <div class="admin-panel" id="classificationUsageHistoryPanel">
+                <div class="admin-loading">Loading usage history...</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="classificationOperationsSection">
+        <div class="admin-panel" id="classificationOperationPanel">
+            <div class="admin-loading">Loading operation history...</div>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="admin-toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module7/module7.js"></script>
+<script src="./module7/classification-management.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/heritageResourcePlatform?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:remote_user}
+    password: ${DB_PASSWORD:Test@123456}
+
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 2933015960@qq.com
+    password: uuzfstodfscwdgie
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+HerLink:
+  register-verification:
+    from-address: 2933015960@qq.com
+    code-expire-minutes: 10
+    resend-interval-seconds: 60
+  notification:
+    from-address: 2933015960@qq.com

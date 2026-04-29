@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Approval Management</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module7/module7.css" />
+    <link rel="stylesheet" href="./module2/admin-approval.css" />
+    <link rel="stylesheet" href="./module5/review-approval.css" />
+</head>
+<body class="admin-page" data-page="admin-approval">
+<header class="admin-top-bar">
+    <div class="admin-top-actions">
+        <a class="admin-btn" href="./admin-dashboard.html">Back</a>
+        <h1 class="admin-title">Approval Management</h1>
+    </div>
+    <div class="admin-top-actions">
+        <button type="button" class="admin-btn" id="approvalRefreshBtn">Refresh</button>
+        <button type="button" class="admin-btn" data-logout-btn>Log Out</button>
+    </div>
+</header>
+
+<main class="admin-shell wide" data-admin-main>
+    <div class="admin-page-head">
+        <div>
+            <h1>Approval</h1>
+            <p>Review contributor applications and resource submissions from one administrator page.</p>
+        </div>
+    </div>
+
+    <div class="admin-tabs" role="tablist" aria-label="Approval sections">
+        <button type="button" class="admin-tab active" data-approval-tab="contributors">Contributor Approval</button>
+        <button type="button" class="admin-tab" data-approval-tab="resources">Resource Review Approval</button>
+    </div>
+
+    <section class="admin-section active" id="approvalContributorsSection">
+        <div class="admin-grid">
+            <div class="admin-panel">
+                <div class="admin-panel-header">
+                    <div>
+                        <h2>Pending Contributor Applications</h2>
+                        <p>Approve or reject pending contributor applications once.</p>
+                    </div>
+                </div>
+                <div id="contributorPendingPanel">
+                    <div class="admin-loading">Loading contributor applications...</div>
+                </div>
+            </div>
+            <div class="admin-panel">
+                <div class="admin-panel-header">
+                    <div>
+                        <h2>Approved Contributors</h2>
+                        <p>Revoke contributor access without deleting accounts or history.</p>
+                    </div>
+                </div>
+                <div id="approvedContributorPanel">
+                    <div class="admin-loading">Loading contributors...</div>
+                </div>
+            </div>
+        </div>
+        <div class="admin-panel" id="contributorDetailPanel">
+            <div class="admin-empty">Select a contributor application to view details.</div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="approvalResourcesSection">
+        <div class="admin-grid">
+            <div class="admin-panel">
+                <div class="admin-panel-header">
+                    <div>
+                        <h2>Pending Resource Submissions</h2>
+                        <p>Only the latest pending submission can be approved or rejected.</p>
+                    </div>
+                </div>
+                <div id="resourcePendingPanel">
+                    <div class="admin-loading">Loading resource submissions...</div>
+                </div>
+            </div>
+            <div class="admin-panel" id="resourceDetailPanel">
+                <div class="admin-empty">Select a resource submission to view metadata and review history.</div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="admin-toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module7/module7.js"></script>
+<script src="./module2/admin-approval.js"></script>
+<script src="./module5/review-approval.js"></script>
+</body>
+</html>
