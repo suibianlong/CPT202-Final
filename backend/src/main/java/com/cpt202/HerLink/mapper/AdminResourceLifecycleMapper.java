@@ -2,11 +2,14 @@ package com.cpt202.HerLink.mapper;
 
 import com.cpt202.HerLink.dto.admin.ResourceLifecycleRow;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface AdminResourceLifecycleMapper {
+
+    List<ResourceLifecycleRow> selectResourceLifecycles(@Param("status") String status);
 
     ResourceLifecycleRow selectResourceLifecycle(@Param("resourceId") Long resourceId);
 

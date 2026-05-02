@@ -495,6 +495,7 @@ function renderResourceTable(resources) {
         const submittedText = resource.lastSubmittedAt
             ? `Last submitted: ${formatDateTime(resource.lastSubmittedAt)}`
             : "Not submitted yet";
+        const editAction = renderMyResourceEditAction(resource);
 
         return `
             <tr>
@@ -515,13 +516,21 @@ function renderResourceTable(resources) {
                 <td>${updatedAtText}</td>
                 <td>
                     <div class="action-group">
-                        <a class="action-link" href="./resource-edit.html?id=${resource.id}">Edit</a>
+                        ${editAction}
                         <button type="button" class="action-link action-button" data-history-id="${resource.id}">History</button>
                     </div>
                 </td>
             </tr>
         `;
     }).join("");
+}
+
+function renderMyResourceEditAction(resource) {
+    if (isEditableResourceStatus(resource?.status)) {
+        return `<a class="action-link" href="./resource-edit.html?id=${resource.id}">Edit</a>`;
+    }
+    const label = normalizeStatusForCheck(resource?.status) === "archived" ? "Archived" : "Locked";
+    return `<span class="action-link action-button-disabled" aria-disabled="true">${escapeHtml(label)}</span>`;
 }
 
 async function openHistoryModal(resourceId) {
@@ -1109,6 +1118,22 @@ function updateEditorMeta(detail) {
     if (badge) {
         badge.textContent = formatStatus(statusValue);
         badge.className = `status-pill status-${toStatusClassName(statusValue)}`;
+    }
+
+    applyEditorLifecycleLock(statusValue);
+}
+
+function applyEditorLifecycleLock(status) {
+    if (isEditableResourceStatus(status)) {
+        return;
+    }
+
+    setActionDisabled("metadataSaveBtn", true);
+    setActionDisabled("uploadFilesBtn", true);
+    setActionDisabled("submitReviewBtn", true);
+
+    if (normalizeStatusForCheck(status) === "archived") {
+        showEditorAlert("Archived resources are kept in system records and cannot be edited or resubmitted.");
     }
 }
 
@@ -1704,6 +1729,19 @@ function normalizeResourceTypeValue(value) {
         default:
             return String(value ?? "").trim();
     }
+}
+
+function isEditableResourceStatus(status) {
+    const normalized = normalizeStatusForCheck(status);
+    return normalized === "draft" || normalized === "rejected";
+}
+
+function normalizeStatusForCheck(status) {
+    return String(status ?? "")
+        .trim()
+        .replaceAll("_", " ")
+        .replaceAll("-", " ")
+        .toLowerCase();
 }
 
 function toStatusClassName(status) {
