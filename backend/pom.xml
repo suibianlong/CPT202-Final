@@ -68,6 +68,20 @@
 
     <build>
         <plugins>
+            <!-- 关键修复：Spring Boot 打包插件（解决无主清单问题） -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 你原来的前端复制配置 -->
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
@@ -93,5 +107,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
