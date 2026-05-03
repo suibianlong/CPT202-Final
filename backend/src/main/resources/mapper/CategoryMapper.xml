@@ -23,7 +23,7 @@
             createdAt,
             lastUpdatedAt
         FROM category
-        ORDER BY categoryId ASC
+        ORDER BY categoryTopic ASC, categoryId ASC
     </select>
 
     <select id="selectActiveCategories" resultMap="CategoryResultMap">
@@ -36,7 +36,7 @@
             lastUpdatedAt
         FROM category
         WHERE status = 'ACTIVE'
-        ORDER BY categoryTopic ASC
+        ORDER BY usageCount DESC, categoryTopic ASC
     </select>
 
     <select id="selectByStatus"
@@ -51,7 +51,7 @@
             lastUpdatedAt
         FROM category
         WHERE status = #{status}
-        ORDER BY categoryId ASC
+        ORDER BY categoryTopic ASC, categoryId ASC
     </select>
 
     <select id="selectById"

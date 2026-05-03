@@ -21,6 +21,7 @@ services:
       - herlink-network
 
   app:
+    image: ${APP_IMAGE:-herlink-app:local}
     build:
       context: .
       dockerfile: Dockerfile
