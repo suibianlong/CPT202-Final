@@ -52,4 +52,13 @@
           AND status = #{approvedStatus}
     </update>
 
+    <update id="unarchiveResource">
+        UPDATE resource
+        SET status = #{approvedStatus},
+            archivedAt = NULL,
+            updatedAt = #{updatedAt}
+        WHERE id = #{resourceId}
+          AND status = #{archivedStatus}
+    </update>
+
 </mapper>

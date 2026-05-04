@@ -225,6 +225,17 @@ body.admin-page {
     color: #7b2c2c;
 }
 
+.admin-btn.restore {
+    background: linear-gradient(180deg, #e3f0df, #c9dfbf);
+    color: #3f6f4d;
+    border-color: rgba(63, 111, 77, 0.22);
+}
+
+.admin-btn.restore:hover {
+    background: linear-gradient(180deg, #d8e9d1, #bcd4b0);
+    color: #315c3d;
+}
+
 .admin-btn:disabled {
     cursor: not-allowed;
     opacity: 0.58;
@@ -256,6 +267,62 @@ body.admin-page {
 
 .admin-form-row {
     align-items: flex-end;
+}
+
+.admin-resource-filter-row {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    gap: 16px;
+    width: 100%;
+}
+
+.admin-resource-filter-row .filter-status {
+    flex: 0 0 170px;
+}
+
+.admin-resource-filter-row .filter-search {
+    flex: 1 1 auto;
+    min-width: 360px;
+}
+
+.admin-resource-filter-row .filter-action {
+    flex: 0 0 auto;
+}
+
+.admin-resource-filter-row .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    min-width: 0;
+}
+
+.admin-resource-filter-row .filter-field label {
+    color: #745739;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 18px;
+    margin: 0;
+}
+
+.admin-resource-filter-row .admin-input {
+    box-sizing: border-box;
+    display: block;
+    height: 44px;
+    line-height: normal;
+    margin: 0;
+    min-height: 44px;
+    padding: 0 12px;
+    width: 100%;
+}
+
+.admin-resource-filter-row .filter-action .admin-btn {
+    height: 44px;
+    margin: 0;
+    min-height: 44px;
+    padding: 0 20px;
+    white-space: nowrap;
 }
 
 .admin-field {

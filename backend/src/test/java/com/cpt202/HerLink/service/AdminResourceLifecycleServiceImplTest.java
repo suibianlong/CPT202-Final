@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -170,6 +172,113 @@ class AdminResourceLifecycleServiceImplTest {
     }
 
     @Test
+    void unarchiveResource_shouldRestoreArchivedResourceToApproved() {
+        LocalDateTime archivedAt = LocalDateTime.now().minusDays(2);
+        LocalDateTime oldUpdatedAt = LocalDateTime.now().minusDays(1);
+        LocalDateTime newUpdatedAt = LocalDateTime.now();
+        ResourceLifecycleRow archived = createRow(ResourceStatusEnum.ARCHIVED.getValue(), archivedAt, oldUpdatedAt);
+        ResourceLifecycleRow approved = createRow(ResourceStatusEnum.APPROVED.getValue(), null, newUpdatedAt);
+
+        when(adminResourceLifecycleMapper.selectResourceLifecycle(5L))
+                .thenReturn(archived)
+                .thenReturn(approved);
+        when(adminResourceLifecycleMapper.unarchiveResource(
+                eq(5L),
+                any(LocalDateTime.class),
+                eq(ResourceStatusEnum.APPROVED.getValue()),
+                eq(ResourceStatusEnum.ARCHIVED.getValue())
+        )).thenReturn(1);
+
+        AdminResourceLifecycleResponse result = service.unarchiveResource(5L, "Admin User");
+
+        assertTrue(result.changed());
+        assertEquals(ResourceReviewStatus.ARCHIVED, result.previousStatus());
+        assertEquals(ResourceReviewStatus.APPROVED, result.resourceStatus());
+        assertNull(result.archivedAt());
+        assertEquals(newUpdatedAt, result.updatedAt());
+        assertTrue(result.updatedAt().isAfter(oldUpdatedAt));
+        assertEquals("Resource restored to approved and visible to viewers.", result.message());
+    }
+
+    @Test
+    void unarchiveResource_shouldReturnUnchangedWhenAlreadyApproved() {
+        ResourceLifecycleRow approved = createRow(ResourceStatusEnum.APPROVED.getValue(), null);
+        when(adminResourceLifecycleMapper.selectResourceLifecycle(5L)).thenReturn(approved);
+
+        AdminResourceLifecycleResponse result = service.unarchiveResource(5L, "Admin User");
+
+        assertFalse(result.changed());
+        assertEquals(ResourceReviewStatus.APPROVED, result.previousStatus());
+        assertEquals(ResourceReviewStatus.APPROVED, result.resourceStatus());
+        assertNull(result.archivedAt());
+        assertEquals("Resource is already approved and visible.", result.message());
+        verify(adminResourceLifecycleMapper, never()).unarchiveResource(any(), any(), any(), any());
+        verify(operationHistoryService, never()).recordOperation(any(), any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Draft", "Pending Review", "Rejected"})
+    void unarchiveResource_shouldRejectDraftPendingRejectedResources(String status) {
+        ResourceLifecycleRow row = createRow(status, null);
+        when(adminResourceLifecycleMapper.selectResourceLifecycle(5L)).thenReturn(row);
+
+        AppException exception = assertThrows(AppException.class, () -> service.unarchiveResource(5L, "Admin User"));
+
+        assertEquals(409, exception.getStatusCode());
+        assertEquals("Only archived resources can be unarchived.", exception.getMessage());
+        verify(adminResourceLifecycleMapper, never()).unarchiveResource(any(), any(), any(), any());
+        verify(operationHistoryService, never()).recordOperation(any(), any(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(longs = {0L, -1L})
+    void unarchiveResource_shouldRejectInvalidResourceId(Long resourceId) {
+        AppException exception = assertThrows(AppException.class, () -> service.unarchiveResource(resourceId, "Admin User"));
+
+        assertEquals(400, exception.getStatusCode());
+        verify(adminResourceLifecycleMapper, never()).selectResourceLifecycle(any());
+        verify(adminResourceLifecycleMapper, never()).unarchiveResource(any(), any(), any(), any());
+    }
+
+    @Test
+    void unarchiveResource_shouldThrowNotFoundWhenResourceDoesNotExist() {
+        when(adminResourceLifecycleMapper.selectResourceLifecycle(5L)).thenReturn(null);
+
+        AppException exception = assertThrows(AppException.class, () -> service.unarchiveResource(5L, "Admin User"));
+
+        assertEquals(404, exception.getStatusCode());
+        assertEquals("Resource does not exist.", exception.getMessage());
+        verify(adminResourceLifecycleMapper, never()).unarchiveResource(any(), any(), any(), any());
+    }
+
+    @Test
+    void unarchiveResource_shouldRecordAdminOperationHistory() {
+        ResourceLifecycleRow archived = createRow(ResourceStatusEnum.ARCHIVED.getValue(), LocalDateTime.now().minusDays(1));
+        ResourceLifecycleRow approved = createRow(ResourceStatusEnum.APPROVED.getValue(), null);
+
+        when(adminResourceLifecycleMapper.selectResourceLifecycle(5L))
+                .thenReturn(archived)
+                .thenReturn(approved);
+        when(adminResourceLifecycleMapper.unarchiveResource(
+                eq(5L),
+                any(LocalDateTime.class),
+                eq(ResourceStatusEnum.APPROVED.getValue()),
+                eq(ResourceStatusEnum.ARCHIVED.getValue())
+        )).thenReturn(1);
+
+        service.unarchiveResource(5L, "Admin User");
+
+        verify(operationHistoryService).recordOperation(
+                "Approved resource (#5)",
+                "Resource",
+                "resource",
+                "UNARCHIVE_RESOURCE Archived -> Approved",
+                "Admin User"
+        );
+    }
+
+    @Test
     void listResources_shouldNormalizeOptionalStatusFilter() {
         service.listResources("archived");
 
@@ -192,6 +301,12 @@ class AdminResourceLifecycleServiceImplTest {
         row.setStatus(status);
         row.setArchivedAt(archivedAt);
         row.setUpdatedAt(LocalDateTime.now());
+        return row;
+    }
+
+    private ResourceLifecycleRow createRow(String status, LocalDateTime archivedAt, LocalDateTime updatedAt) {
+        ResourceLifecycleRow row = createRow(status, archivedAt);
+        row.setUpdatedAt(updatedAt);
         return row;
     }
 }
