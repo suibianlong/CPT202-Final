@@ -10,6 +10,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         title.textContent = `Welcome, ${currentUser.name || "Administrator"}`;
     }
     if (text) {
-        text.textContent = "Choose a management area for classification, tags, or approval workflow.";
+        text.textContent = "Choose a management area for resources, classification, tags, or approval workflow.";
     }
 });

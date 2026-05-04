@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource Management</title>
+    <link rel="stylesheet" href="./shared/shared.css" />
+    <link rel="stylesheet" href="./module7/module7.css" />
+</head>
+<body class="admin-page" data-page="admin-resources">
+<header class="admin-top-bar">
+    <div class="admin-top-actions">
+        <a class="admin-btn" href="./admin-dashboard.html">Back</a>
+        <h1 class="admin-title">Resource Management</h1>
+    </div>
+    <div class="admin-top-actions">
+        <a class="admin-btn" href="./admin-approval.html">Approval</a>
+        <button type="button" class="admin-btn" id="resourceRefreshBtn">Refresh</button>
+        <button type="button" class="admin-btn" data-logout-btn>Log Out</button>
+    </div>
+</header>
+
+<main class="admin-shell wide" data-admin-main>
+    <div class="admin-page-head">
+        <div>
+            <h1>Resource Management</h1>
+            <p>Manage approved and archived resources without changing reviewer decisions.</p>
+        </div>
+    </div>
+
+    <section class="admin-panel">
+        <form class="admin-form-row" id="resourceFilterForm">
+            <div class="admin-field">
+                <label for="resourceStatusFilter">Status</label>
+                <select class="admin-input" id="resourceStatusFilter">
+                    <option value="">All Status</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Archived">Archived</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Pending Review">Pending Review</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+            <button type="submit" class="admin-btn primary">Apply Filter</button>
+        </form>
+    </section>
+
+    <section class="admin-panel" id="resourceListPanel">
+        <div class="admin-loading">Loading resources...</div>
+    </section>
+</main>
+
+<div id="toast" class="admin-toast"></div>
+
+<script src="./shared/shared.js"></script>
+<script src="./module7/module7.js"></script>
+<script src="./module7/admin-resources.js"></script>
+</body>
+</html>

@@ -1,8 +1,16 @@
 package com.cpt202.HerLink.service.admin;
 
 import com.cpt202.HerLink.dto.admin.AdminResourceLifecycleResponse;
+import com.cpt202.HerLink.dto.admin.ResourceLifecycleRow;
+import java.util.List;
 
 public interface AdminResourceLifecycleService {
 
-    AdminResourceLifecycleResponse archiveResource(Long resourceId);
+    List<ResourceLifecycleRow> listResources(String status);
+
+    default AdminResourceLifecycleResponse archiveResource(Long resourceId) {
+        return archiveResource(resourceId, null);
+    }
+
+    AdminResourceLifecycleResponse archiveResource(Long resourceId, String administrator);
 }
