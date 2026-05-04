@@ -4,6 +4,7 @@ body[data-page="viewer-feedback"] {
     min-height: 100vh;
     background: linear-gradient(180deg, #f4efe8 0%, #f8f5f0 100%);
     color: #5f5a55;
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 body[data-page="heritage-viewer"] .viewer-shell,
@@ -77,13 +78,17 @@ body[data-page="viewer-feedback"] .viewer-detail-main {
     margin: 0;
     font-size: clamp(2.2rem, 5vw, 3.9rem);
     color: #7a593a;
+    font-family: Baskerville, "Times New Roman", Georgia, serif;
+    font-weight: 700;
 }
+
 
 .viewer-hero p,
 .viewer-detail-hero p {
     margin: 10px 0 0;
     color: #8a8178;
     font-size: 1.02rem;
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 .viewer-controls {
@@ -121,6 +126,8 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     margin: 0 0 18px;
     font-size: 2rem;
     color: #7a593a;
+    font-family: Baskerville, "Times New Roman", Georgia, serif;
+    font-weight: 700;
 }
 
 .viewer-resource-list {
@@ -159,6 +166,8 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     margin: 0;
     color: #5f4531;
     font-size: 1.22rem;
+    font-family: Baskerville, "Times New Roman", Georgia, serif;
+    font-weight: 700;
 }
 
 .viewer-resource-summary {
@@ -248,6 +257,7 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     background-color: #f8f5f1;
     color: #5f5a55;
     box-shadow: none;
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 .viewer-form-stack textarea:focus,
@@ -446,7 +456,10 @@ body[data-page="heritage-viewer"]::after {
 
 body[data-page="heritage-viewer"]::before {
     z-index: 0;
-    background: url("./assets/heritage-view.png") top center / contain no-repeat;
+    background-image: url("./assets/heritage-view.png");
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
 }
 
 body[data-page="heritage-viewer"]::after {
@@ -568,7 +581,7 @@ body[data-page="heritage-viewer"] .viewer-hero h1 {
     z-index: 1;
     max-width: 920px;
     margin: 0 auto;
-    color: #7a593a;
+    color: #5f6070;
     font-family: Baskerville, "Times New Roman", Georgia, serif;
     font-size: clamp(2.8rem, 5.6vw, 4.8rem);
     line-height: 1.02;
@@ -577,9 +590,15 @@ body[data-page="heritage-viewer"] .viewer-hero h1 {
     text-wrap: balance;
 }
 
-body[data-page="heritage-viewer"] .viewer-hero h1 span {
+body[data-page="heritage-viewer"] .viewer-hero h1 span,
+body[data-page="heritage-viewer"] .viewer-hero-line-top {
     display: block;
     color: #7a593a;
+}
+
+body[data-page="heritage-viewer"] .viewer-hero-line-bottom {
+    display: block;
+    color: #5f6070;
 }
 
 body[data-page="heritage-viewer"] .viewer-hero p {
@@ -700,31 +719,63 @@ body[data-page="heritage-viewer"] .btn {
     font-size: 1rem;
     letter-spacing: 0.01em;
     box-shadow: none;
+    text-decoration: none;
 }
 
 body[data-page="heritage-viewer"] .btn:hover,
 body[data-page="heritage-viewer"] .btn:active {
     transform: none;
+    text-decoration: none;
 }
 
-body[data-page="heritage-viewer"] .btn-primary {
-    background:
-            linear-gradient(180deg, #d3a96c, #b88345);
-    color: #fbf4e8;
-    border-color: rgba(130, 88, 44, 0.3);
-}
-
-body[data-page="heritage-viewer"] .btn-secondary {
-    background:
-            linear-gradient(180deg, #d3a96c, #b88345);
+body[data-page="heritage-viewer"] .btn-primary,
+body[data-page="heritage-viewer"] .btn-primary:link,
+body[data-page="heritage-viewer"] .btn-primary:visited {
+    background: linear-gradient(180deg, #d3a96c, #b88345);
     color: #fff8ed;
     border-color: rgba(130, 88, 44, 0.3);
+    text-decoration: none;
+}
+
+body[data-page="heritage-viewer"] .btn-secondary,
+body[data-page="heritage-viewer"] .btn-secondary:link,
+body[data-page="heritage-viewer"] .btn-secondary:visited {
+    background: linear-gradient(180deg, #d3a96c, #b88345);
+    color: #fff8ed;
+    border-color: rgba(130, 88, 44, 0.3);
+    text-decoration: none;
 }
 
 body[data-page="heritage-viewer"] .btn-primary:hover,
 body[data-page="heritage-viewer"] .btn-secondary:hover {
     color: #fff9ef;
     filter: brightness(1.02);
+    text-decoration: none;
+}
+
+
+body[data-page="viewer-detail"] .btn-primary,
+body[data-page="viewer-detail"] .btn-secondary,
+body[data-page="viewer-feedback"] .btn-primary,
+body[data-page="viewer-feedback"] .btn-secondary {
+    background: linear-gradient(180deg, #d3a96c, #b88345);
+    color: #fff8ed;
+    border: 1px solid rgba(130, 88, 44, 0.3);
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(120, 78, 35, 0.16);
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 700;
+}
+
+body[data-page="viewer-detail"] .btn-primary:hover,
+body[data-page="viewer-detail"] .btn-secondary:hover,
+body[data-page="viewer-feedback"] .btn-primary:hover,
+body[data-page="viewer-feedback"] .btn-secondary:hover {
+    background: linear-gradient(180deg, #c9944d, #a96f2f);
+    color: #fff9ef;
+    border-color: rgba(130, 88, 44, 0.42);
+    box-shadow: 0 10px 22px rgba(120, 78, 35, 0.2);
+    transform: translateY(-1px);
 }
 
 body[data-page="heritage-viewer"] .viewer-section {
