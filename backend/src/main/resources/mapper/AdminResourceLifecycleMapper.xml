@@ -13,6 +13,23 @@
         <result column="updatedAt" property="updatedAt"/>
     </resultMap>
 
+    <select id="selectResourceLifecycles"
+            resultMap="ResourceLifecycleResultMap">
+        SELECT
+            id AS resourceId,
+            title,
+            status,
+            archivedAt,
+            updatedAt
+        FROM resource
+        <where>
+            <if test="status != null and status != ''">
+                status = #{status}
+            </if>
+        </where>
+        ORDER BY updatedAt DESC, id DESC
+    </select>
+
     <select id="selectResourceLifecycle"
             parameterType="java.lang.Long"
             resultMap="ResourceLifecycleResultMap">
@@ -33,6 +50,15 @@
             updatedAt = #{archivedAt}
         WHERE id = #{resourceId}
           AND status = #{approvedStatus}
+    </update>
+
+    <update id="unarchiveResource">
+        UPDATE resource
+        SET status = #{approvedStatus},
+            archivedAt = NULL,
+            updatedAt = #{updatedAt}
+        WHERE id = #{resourceId}
+          AND status = #{archivedStatus}
     </update>
 
 </mapper>

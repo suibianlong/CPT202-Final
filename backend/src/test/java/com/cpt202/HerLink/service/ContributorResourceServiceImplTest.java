@@ -571,6 +571,29 @@ class ContributorResourceServiceImplTest {
         assertEquals("Map", result.get(0).getName());
     }
 
+    @Test
+    void listMyResources_shouldIncludeArchivedOwnedResources() {
+        Long currentUserId = 1L;
+        Resource archivedResource = new Resource();
+        archivedResource.setId(110L);
+        archivedResource.setContributorId(currentUserId);
+        archivedResource.setTitle("Archived resource");
+        archivedResource.setStatus(ResourceStatusEnum.ARCHIVED.getValue());
+        archivedResource.setCategoryId(1L);
+        archivedResource.setCategoryName("places");
+        archivedResource.setResourceType("photo");
+
+        when(resourceMapper.selectMyResources(currentUserId, null, null, null)).thenReturn(List.of(archivedResource));
+        when(resourceVersionMapper.selectMaxVersionNoByResourceId(110L)).thenReturn(3);
+
+        var result = contributorResourceService.listMyResources(currentUserId, null);
+
+        assertEquals(1, result.size());
+        assertEquals(110L, result.get(0).getId());
+        assertEquals(ResourceStatusEnum.ARCHIVED.getValue(), result.get(0).getStatus());
+        verify(resourceMapper).selectMyResources(currentUserId, null, null, null);
+    }
+
     private Category createCategory(Long id, String topic) {
         Category category = new Category();
         category.setCategoryId(id);
