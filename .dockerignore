@@ -3,11 +3,8 @@
 .vs
 .idea
 .vscode
-<<<<<<< HEAD
-=======
 node_modules
 dist
->>>>>>> 24e506390e74019506578a85c9dcde46189c8f68
 
 **/.DS_Store
 **/Thumbs.db
@@ -22,8 +19,5 @@ logs
 .env.*
 backend/src/main/resources/application-local.yml
 
-<<<<<<< HEAD
 __MACOSX
-=======
-__MACOSX
->>>>>>> 24e506390e74019506578a85c9dcde46189c8f68
+
