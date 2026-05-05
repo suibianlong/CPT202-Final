@@ -13,7 +13,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./backend/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
+      test: ['CMD-SHELL', 'mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -36,7 +36,7 @@ services:
       DB_USERNAME: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
 
-      DEMO_DATA_ENABLED: "false"
+      DEMO_DATA_ENABLED: 'false'
 
       MAIL_HOST: ${MAIL_HOST}
       MAIL_PORT: ${MAIL_PORT}
@@ -53,7 +53,7 @@ services:
     volumes:
       - app_uploads:/app/uploads
     expose:
-      - "8080"
+      - '8080'
     networks:
       - herlink-network
 
@@ -64,7 +64,7 @@ services:
     depends_on:
       - app
     ports:
-      - "80:80"
+      - '80:80'
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
