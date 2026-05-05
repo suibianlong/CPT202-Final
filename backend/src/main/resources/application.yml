@@ -33,6 +33,21 @@ spring:
 mybatis:
   mapper-locations: classpath:mapper/*.xml
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
 HerLink:
   upload-dir: uploads
   frontend-dir: ../frontend

@@ -1,0 +1,17 @@
+{
+  "name": "herlink-engineering-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Lightweight formatting and linting tools for the HerLink static frontend.",
+  "scripts": {
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown",
+    "lint": "eslint \"frontend/**/*.js\" \"backend/src/main/resources/static/**/*.js\" --no-error-on-unmatched-pattern",
+    "lint:fix": "eslint \"frontend/**/*.js\" \"backend/src/main/resources/static/**/*.js\" --fix --no-error-on-unmatched-pattern"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2"
+  }
+}

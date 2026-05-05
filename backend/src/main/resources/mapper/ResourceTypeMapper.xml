@@ -23,7 +23,7 @@
             createdAt,
             lastUpdatedAt
         FROM resourceType
-        ORDER BY resourceTypeId ASC
+        ORDER BY typeName ASC, resourceTypeId ASC
     </select>
 
     <select id="selectActiveResourceTypes" resultMap="ResourceTypeResultMap">
@@ -36,7 +36,7 @@
             lastUpdatedAt
         FROM resourceType
         WHERE status = 'ACTIVE'
-        ORDER BY resourceTypeId ASC
+        ORDER BY typeName ASC, resourceTypeId ASC
     </select>
 
     <select id="selectByStatus"
@@ -51,7 +51,7 @@
             lastUpdatedAt
         FROM resourceType
         WHERE status = #{status}
-        ORDER BY resourceTypeId ASC
+        ORDER BY typeName ASC, resourceTypeId ASC
     </select>
 
     <select id="selectById"

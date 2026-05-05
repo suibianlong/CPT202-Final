@@ -19,66 +19,42 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ErrorResponse> handleAppException(AppException exception, HttpServletRequest request) {
         return ResponseEntity.status(exception.getStatusCode())
-                .body(buildErrorResponse(exception.getStatusCode(), exception.getMessage(), exception.getDetails(), request));
+                .body(buildErrorResponse(exception.getErrorCode(), exception.getMessage(), exception.getDetails(), request));
     }
 
     @ExceptionHandler({
             IllegalArgumentException.class,
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
-            ServletRequestBindingException.class,
-            MultipartException.class,
-            MaxUploadSizeExceededException.class
+            ServletRequestBindingException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(buildErrorResponse(400, exception.getMessage(), List.of(), request));
+                .body(buildErrorResponse(ErrorCode.BAD_REQUEST, exception.getMessage(), List.of(), request));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildErrorResponse(ErrorCode.CONFLICT, exception.getMessage(), List.of(), request));
+    }
+
+    @ExceptionHandler({
+            MultipartException.class,
+            MaxUploadSizeExceededException.class
+    })
+    public ResponseEntity<ErrorResponse> handleFileUploadException(Exception exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(ErrorCode.FILE_UPLOAD_ERROR, exception.getMessage(), List.of(), request));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(buildErrorResponse(500, "Internal server error.", List.of(), request));
+                .body(buildErrorResponse(ErrorCode.INTERNAL_ERROR, "Internal server error.", List.of(), request));
     }
 
-    private ErrorResponse buildErrorResponse(int statusCode, String message, List<String> details, HttpServletRequest request) {
-        return new ErrorResponse(statusCode, message, details, request.getRequestURI(), LocalDateTime.now());
-    }
-
-    public static class ErrorResponse {
-
-        private final int statusCode;
-        private final String message;
-        private final List<String> details;
-        private final String path;
-        private final LocalDateTime timestamp;
-
-        public ErrorResponse(int statusCode, String message, List<String> details, String path, LocalDateTime timestamp) {
-            this.statusCode = statusCode;
-            this.message = message;
-            this.details = details;
-            this.path = path;
-            this.timestamp = timestamp;
-        }
-
-        public int getStatusCode() {
-            return statusCode;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        public List<String> getDetails() {
-            return details;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public LocalDateTime getTimestamp() {
-            return timestamp;
-        }
+    private ErrorResponse buildErrorResponse(ErrorCode errorCode, String message, List<String> details, HttpServletRequest request) {
+        return new ErrorResponse(errorCode, message, details, request.getRequestURI(), LocalDateTime.now());
     }
 }
