@@ -20,7 +20,7 @@ public class AdminResourceLifecycleServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdminResourceLifecycleServiceImpl(null);
+        service = new AdminResourceLifecycleServiceImpl(null, null);
     }
 
     @AfterEach
