@@ -1,7 +1,5 @@
 # Maven build output
 target/
-node_modules/
-dist/
 
 # IDE/editor files
 .vscode/
@@ -22,8 +20,3 @@ uploads/
 .env
 .env.*
 src/main/resources/application-local.yml
-
-!.env.example
-backend/target/
-backend/uploads/
-backend/src/main/resources/application-local.yml

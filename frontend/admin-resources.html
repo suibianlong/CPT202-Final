@@ -1,65 +1,65 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Resource Management</title>
     <link rel="stylesheet" href="./shared/shared.css" />
     <link rel="stylesheet" href="./module7/module7.css?v=20260504-resource-filter" />
-  </head>
-  <body class="admin-page" data-page="admin-resources">
-    <header class="admin-top-bar">
-      <div class="admin-top-actions">
+</head>
+<body class="admin-page" data-page="admin-resources">
+<header class="admin-top-bar">
+    <div class="admin-top-actions">
         <a class="admin-btn" href="./admin-dashboard.html">Back</a>
         <h1 class="admin-title">Resource Management</h1>
-      </div>
-      <div class="admin-top-actions">
+    </div>
+    <div class="admin-top-actions">
         <a class="admin-btn" href="./admin-approval.html">Approval</a>
         <button type="button" class="admin-btn" id="resourceRefreshBtn">Refresh</button>
         <button type="button" class="admin-btn" data-logout-btn>Log Out</button>
-      </div>
-    </header>
+    </div>
+</header>
 
-    <main class="admin-shell wide" data-admin-main>
-      <div class="admin-page-head">
+<main class="admin-shell wide" data-admin-main>
+    <div class="admin-page-head">
         <div>
-          <h1>Resource Management</h1>
-          <p>Manage approved and archived resources without changing reviewer decisions.</p>
+            <h1>Resource Management</h1>
+            <p>Manage approved and archived resources without changing reviewer decisions.</p>
         </div>
-      </div>
+    </div>
 
-      <section class="admin-panel">
+    <section class="admin-panel">
         <form class="admin-resource-filter-row" id="resourceFilterForm">
-          <div class="filter-field filter-status">
-            <label for="resourceStatusFilter">Status</label>
-            <select class="admin-input" id="resourceStatusFilter">
-              <option value="">All Status</option>
-              <option value="Approved">Approved</option>
-              <option value="Archived">Archived</option>
-              <option value="Draft">Draft</option>
-              <option value="Pending Review">Pending Review</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-          </div>
-          <div class="filter-field filter-search">
-            <label for="resourceSearchInput">Search</label>
-            <input class="admin-input" id="resourceSearchInput" type="search" placeholder="Search by ID or title" />
-          </div>
-          <div class="filter-action">
-            <button type="submit" class="admin-btn primary">Apply Filter</button>
-          </div>
+            <div class="filter-field filter-status">
+                <label for="resourceStatusFilter">Status</label>
+                <select class="admin-input" id="resourceStatusFilter">
+                    <option value="">All Status</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Archived">Archived</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Pending Review">Pending Review</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+            <div class="filter-field filter-search">
+                <label for="resourceSearchInput">Search</label>
+                <input class="admin-input" id="resourceSearchInput" type="search" placeholder="Search by ID or title" />
+            </div>
+            <div class="filter-action">
+                <button type="submit" class="admin-btn primary">Apply Filter</button>
+            </div>
         </form>
-      </section>
+    </section>
 
-      <section class="admin-panel" id="resourceListPanel">
+    <section class="admin-panel" id="resourceListPanel">
         <div class="admin-loading">Loading resources...</div>
-      </section>
-    </main>
+    </section>
+</main>
 
-    <div id="toast" class="admin-toast"></div>
+<div id="toast" class="admin-toast"></div>
 
-    <script src="./shared/shared.js"></script>
-    <script src="./module7/module7.js"></script>
-    <script src="./module7/admin-resources.js?v=20260504-unarchive-filter"></script>
-  </body>
+<script src="./shared/shared.js"></script>
+<script src="./module7/module7.js"></script>
+<script src="./module7/admin-resources.js?v=20260504-unarchive-filter"></script>
+</body>
 </html>
