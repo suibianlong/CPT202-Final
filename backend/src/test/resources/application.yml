@@ -10,6 +10,11 @@ spring:
       mode: always
       encoding: UTF-8
 
+management:
+  health:
+    mail:
+      enabled: false
+
 mybatis:
   mapper-locations: classpath:mapper/*.xml
 

@@ -21,14 +21,15 @@ class Module6ScriptRegressionTest {
 
     @Test
     void viewerDetailAssets_shouldIncludeCommentAndFeedbackFlow() throws IOException {
-        String html = Files.readString(Path.of("../frontend/module6/viewer-detail.html"));
+        String detailHtml = Files.readString(Path.of("../frontend/module6/viewer-detail.html"));
+        String feedbackHtml = Files.readString(Path.of("../frontend/module6/viewer-feedback.html"));
         String script = Files.readString(Path.of("../frontend/module6/module6.js"));
         String css = Files.readString(Path.of("../frontend/module6/module6.css"));
 
-        assertTrue(html.contains("id=\"commentForm\""));
-        assertTrue(html.contains("id=\"commentList\""));
-        assertTrue(html.contains("id=\"feedbackForm\""));
-        assertTrue(html.contains("id=\"feedbackList\""));
+        assertTrue(detailHtml.contains("id=\"commentForm\""));
+        assertTrue(detailHtml.contains("id=\"commentList\""));
+        assertTrue(feedbackHtml.contains("id=\"feedbackForm\""));
+        assertTrue(feedbackHtml.contains("id=\"feedbackList\""));
         assertTrue(script.contains("await loadViewerComments();"));
         assertTrue(script.contains("await loadViewerFeedbackHistory();"));
         assertTrue(script.contains("`${VIEWER_API_BASE}/${resourceId}/comments`"));

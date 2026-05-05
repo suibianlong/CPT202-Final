@@ -58,14 +58,19 @@ class ContributorResourceControllerIntegrationTest {
     static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("herlink_test")
             .withUsername("test")
-            .withPassword("test");
+            .withPassword("test")
+            .withInitScript("sql/contributor-resource-history-integration-schema.sql");
+
+    static {
+        mysql.start();
+    }
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
-        registry.add("spring.datasource.driver-class-name", mysql::getDriverClassName);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("spring.sql.init.mode", () -> "never");
         registry.add("HerLink.demo-data-enabled", () -> "false");
         registry.add("HerLink.upload-dir", () -> "target/test-uploads");
@@ -478,7 +483,7 @@ class ContributorResourceControllerIntegrationTest {
             Long resourceId = insertDraftResource("File Draft");
             org.springframework.mock.web.MockHttpSession session = loginAndGetSession();
             MockMultipartFile previewImage = new MockMultipartFile("previewImage", "cover.jpg", "image/jpeg", "img".getBytes());
-            MockMultipartFile mediaFile = new MockMultipartFile("mediaFile", "video.mp4", "video/mp4", "video".getBytes());
+            MockMultipartFile mediaFile = new MockMultipartFile("mediaFile", "gallery.jpg", "image/jpeg", "photo".getBytes());
 
             mockMvc.perform(multipart("/api/contributor/resources/" + resourceId + "/files")
                             .file(previewImage)

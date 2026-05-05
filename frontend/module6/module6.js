@@ -290,6 +290,7 @@ function renderApprovedResources(resources) {
         const description = buildViewerExcerpt(resource.description, 120);
         const resolvedCategoryName = resource.categoryName || resolveCategoryName(resource.categoryId);
         const categoryName = escapeViewerHtml(capitalizeViewerLabel(resolvedCategoryName));
+        const categoryImageUrl = escapeViewerHtml(getViewerCategoryImageUrl(resolvedCategoryName));
         const resourceType = escapeViewerHtml(formatViewerResourceType(resource.resourceType));
         const updatedAt = escapeViewerHtml(formatViewerDateTime(resource.updatedAt, { emptyText: "-" }));
 
@@ -304,6 +305,7 @@ function renderApprovedResources(resources) {
                     <p class="viewer-resource-summary">${escapeViewerHtml(description)}</p>
                 </div>
                 <div class="viewer-resource-meta">
+                    <img class="viewer-category-icon" src="${categoryImageUrl}" alt="" />
                     <span class="viewer-meta-pill">${categoryName}</span>
                     <span class="viewer-meta-pill">${resourceType}</span>
                 </div>
@@ -338,6 +340,10 @@ function renderApprovedResourceDetail(detail) {
     }
 
     document.getElementById("detailTitle").textContent = detail.title || "Approved resource detail";
+    const detailSubtitle = document.getElementById("detailSubtitle");
+    if (detailSubtitle) {
+        detailSubtitle.textContent = `Resource #${detail.id ?? "-"}`;
+    }
     document.getElementById("detailId").textContent = detail.id ?? "-";
     document.getElementById("detailType").textContent = formatViewerResourceType(detail.resourceType);
     document.getElementById("detailCategory").textContent =
@@ -580,6 +586,11 @@ function renderPreviewMedia(previewImage) {
     const container = document.getElementById("previewContainer");
     if (!container) return;
 
+    if (!previewImage) {
+        container.innerHTML = '<div class="viewer-empty-message">No preview image provided.</div>';
+        return;
+    }
+
     const previewUrl = getViewerPreviewImageUrl(previewImage);
     const defaultPreviewUrl = escapeViewerHtml(VIEWER_DEFAULT_PREVIEW_IMAGE);
     container.innerHTML = `
@@ -697,6 +708,22 @@ function capitalizeViewerLabel(value) {
             .filter(Boolean)
             .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
             .join(" ");
+}
+
+function normalizeViewerCategoryKey(value) {
+    const categoryKey = String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+    if (categoryKey === "education") {
+        return "educational materials";
+    }
+    return categoryKey;
+}
+
+function getViewerCategoryImageUrl(value) {
+    const categoryKey = normalizeViewerCategoryKey(value);
+    const assetKey = categoryKey === "educational materials"
+            ? "education"
+            : categoryKey.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return assetKey ? `./assets/category-${assetKey}.png` : VIEWER_DEFAULT_PREVIEW_IMAGE;
 }
 
 function normalizeViewerResourceTypeOptions(options) {

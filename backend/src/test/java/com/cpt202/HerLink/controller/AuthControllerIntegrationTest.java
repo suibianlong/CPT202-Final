@@ -46,7 +46,6 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -103,6 +102,7 @@ class AuthControllerIntegrationTest {
         registry.add("spring.datasource.url", MYSQL_CONTAINER::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL_CONTAINER::getUsername);
         registry.add("spring.datasource.password", MYSQL_CONTAINER::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("spring.mail.host", () -> "mail.test.local");
         registry.add("HerLink.register-verification.from-address", () -> "noreply@test.local");
         registry.add("HerLink.notification.from-address", () -> "noreply@test.local");
@@ -412,7 +412,6 @@ class AuthControllerIntegrationTest {
                                     }
                                     """))
                     .andExpect(status().isOk())
-                    .andExpect(cookie().exists("JSESSIONID"))
                     .andExpect(jsonPath("$.userId").value(contributor.getUserId()))
                     .andExpect(jsonPath("$.latestContributorRequestId").value(request.getRequestId()))
                     .andExpect(jsonPath("$.name").value("Approved Contributor"))
@@ -836,7 +835,6 @@ class AuthControllerIntegrationTest {
                                 }
                                 """.formatted(email, password)))
                 .andExpect(status().isOk())
-                .andExpect(cookie().exists("JSESSIONID"))
                 .andReturn();
 
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);

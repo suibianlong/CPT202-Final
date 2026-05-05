@@ -53,6 +53,7 @@ let savedResourceTypeValue = "";
 let pendingResourceTypeSave = Promise.resolve();
 let tagDraftValues = [];
 let historyModalState = createEmptyHistoryState();
+let fileUploadBusy = false;
 
 document.addEventListener("DOMContentLoaded", () => {
     const page = document.body.dataset.page;
@@ -125,12 +126,12 @@ async function initResourceEditPage() {
 }
 
 function bindFilePickerUI() {
-    bindSingleFilePicker("mediaFile", "mediaFileNameText");
-    bindSingleFilePicker("previewImage", "previewImageNameText");
+    bindSingleFilePicker("mediaFile", "mediaFileNameText", { autoUpload: true });
+    bindSingleFilePicker("previewImage", "previewImageNameText", { autoUpload: true });
     updateMediaFileAccept(document.getElementById("resourceType")?.value || "");
 }
 
-function bindSingleFilePicker(inputId, textId) {
+function bindSingleFilePicker(inputId, textId, options = {}) {
     const input = document.getElementById(inputId);
     const text = document.getElementById(textId);
     const button = document.querySelector(`[data-file-target="${inputId}"]`);
@@ -154,6 +155,16 @@ function bindSingleFilePicker(inputId, textId) {
     input.addEventListener("change", () => {
         const file = input.files?.[0];
         text.textContent = file ? file.name : "No file selected";
+        if (!file || !options.autoUpload) return;
+
+        if (inputId === "previewImage") {
+            renderLocalPreviewImage(file);
+        }
+
+        uploadSelectedFiles({
+            includeMediaFile: inputId === "mediaFile",
+            includePreviewImage: inputId === "previewImage"
+        });
     });
 }
 
@@ -989,45 +1000,74 @@ function bindUploadForm() {
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
-
-        const resourceId = getResourceIdFromQuery();
-        if (!resourceId) {
-            showToast("Please create a draft first.");
-            return;
-        }
-
-        const previewImage = document.getElementById("previewImage").files[0];
-        const mediaFile = document.getElementById("mediaFile").files[0];
-
-        if (!previewImage && !mediaFile) {
-            showToast("Select at least one file.");
-            return;
-        }
-
-        const formData = new FormData();
-        if (previewImage) formData.append("previewImage", previewImage);
-        if (mediaFile) formData.append("mediaFile", mediaFile);
-
-        try {
-            try {
-                await pendingResourceTypeSave;
-            } catch (error) {
-                pendingResourceTypeSave = Promise.resolve();
-            }
-
-            await persistResourceTypeSelection({ showError: false });
-
-            const detail = await requestJson(`${API_BASE}/${resourceId}/files`, {
-                method: "POST",
-                body: formData
-            });
-
-            fillEditor(detail);
-            showToast("Files uploaded successfully.");
-        } catch (error) {
-            showToast(error.message || "Failed to upload files.");
-        }
+        await uploadSelectedFiles();
     });
+}
+
+async function uploadSelectedFiles({ includeMediaFile = true, includePreviewImage = true } = {}) {
+    if (fileUploadBusy) {
+        showToast("Please wait for the current upload to finish.");
+        return;
+    }
+
+    const resourceId = getResourceIdFromQuery();
+    if (!resourceId) {
+        showToast("Please create a draft first.");
+        return;
+    }
+
+    const previewInput = document.getElementById("previewImage");
+    const mediaInput = document.getElementById("mediaFile");
+    const previewImage = includePreviewImage ? previewInput?.files?.[0] : null;
+    const mediaFile = includeMediaFile ? mediaInput?.files?.[0] : null;
+
+    if (!previewImage && !mediaFile) {
+        showToast("Select at least one file.");
+        return;
+    }
+
+    const formData = new FormData();
+    if (previewImage) formData.append("previewImage", previewImage);
+    if (mediaFile) formData.append("mediaFile", mediaFile);
+
+    setFileUploadBusy(true);
+
+    try {
+        try {
+            await pendingResourceTypeSave;
+        } catch (error) {
+            pendingResourceTypeSave = Promise.resolve();
+        }
+
+        await persistResourceTypeSelection({ showError: false });
+
+        const detail = await requestJson(`${API_BASE}/${resourceId}/files`, {
+            method: "POST",
+            body: formData
+        });
+
+        fillEditor(detail);
+        clearUploadedFileInputs({ mediaFile, mediaInput, previewImage, previewInput });
+        showToast("File uploaded successfully.");
+    } catch (error) {
+        showToast(error.message || "Failed to upload file.");
+    } finally {
+        setFileUploadBusy(false);
+    }
+}
+
+function clearUploadedFileInputs({ mediaFile, mediaInput, previewImage, previewInput }) {
+    if (mediaFile && mediaInput) {
+        mediaInput.value = "";
+        const mediaText = document.getElementById("mediaFileNameText");
+        if (mediaText) mediaText.textContent = `Uploaded: ${mediaFile.name}`;
+    }
+
+    if (previewImage && previewInput) {
+        previewInput.value = "";
+        const previewText = document.getElementById("previewImageNameText");
+        if (previewText) previewText.textContent = `Uploaded: ${previewImage.name}`;
+    }
 }
 
 function bindSubmitForm() {
@@ -1095,10 +1135,51 @@ function fillEditor(detail) {
         mediaText.textContent = detail.mediaUrl || "—";
     }
 
+    renderPreviewFrame(detail.previewImage);
     syncResourceTypeMirror();
     updateMediaFileAccept(detail.resourceType);
     savedResourceTypeValue = normalizeResourceTypeValue(detail.resourceType);
     updateEditorMeta(detail);
+}
+
+function renderLocalPreviewImage(file) {
+    if (!file || !file.type?.startsWith("image/")) return;
+
+    const frame = document.getElementById("previewImageFrame");
+    if (!frame) return;
+
+    const objectUrl = URL.createObjectURL(file);
+    frame.innerHTML = `<img src="${objectUrl}" alt="${escapeHtml(file.name || "Selected preview image")}" />`;
+    const image = frame.querySelector("img");
+    if (image) {
+        image.addEventListener("load", () => URL.revokeObjectURL(objectUrl), { once: true });
+    }
+}
+
+function renderPreviewFrame(previewImage) {
+    const frame = document.getElementById("previewImageFrame");
+    if (!frame) return;
+
+    if (!previewImage) {
+        frame.innerHTML = "<span>No preview available</span>";
+        return;
+    }
+
+    const previewUrl = escapeHtml(toPublicMediaUrl(previewImage));
+    frame.innerHTML = `<img src="${previewUrl}" alt="Uploaded preview image" />`;
+}
+
+function toPublicMediaUrl(value) {
+    if (!value) return "";
+
+    const normalized = String(value).trim();
+    if (!normalized) return "";
+
+    if (/^https?:\/\//i.test(normalized) || normalized.startsWith("/uploads/")) {
+        return normalized;
+    }
+
+    return `/uploads/${normalized.replace(/^\/+/, "")}`;
 }
 
 function updateEditorMeta(detail) {
@@ -1124,12 +1205,14 @@ function updateEditorMeta(detail) {
 }
 
 function applyEditorLifecycleLock(status) {
-    if (isEditableResourceStatus(status)) {
+    const isEditable = isEditableResourceStatus(status);
+    setFilePickerDisabled(!isEditable || fileUploadBusy);
+
+    if (isEditable) {
         return;
     }
 
     setActionDisabled("metadataSaveBtn", true);
-    setActionDisabled("uploadFilesBtn", true);
     setActionDisabled("submitReviewBtn", true);
 
     if (normalizeStatusForCheck(status) === "archived") {
@@ -1140,8 +1223,8 @@ function applyEditorLifecycleLock(status) {
 async function createDraftFromDirectEditorEntry() {
     updateEditorMetaMessage("Creating draft...");
     setActionDisabled("metadataSaveBtn", true);
-    setActionDisabled("uploadFilesBtn", true);
     setActionDisabled("submitReviewBtn", true);
+    setFilePickerDisabled(true);
 
     try {
         const draft = await requestJson(API_BASE, {
@@ -1767,6 +1850,23 @@ function setActionDisabled(buttonId, disabled) {
     const button = document.getElementById(buttonId);
     if (!button) return;
     button.disabled = disabled;
+}
+
+function setFileUploadBusy(isBusy) {
+    fileUploadBusy = isBusy;
+    const status = document.getElementById("resourceStatusText")?.textContent || "Draft";
+    setFilePickerDisabled(isBusy || !isEditableResourceStatus(status));
+}
+
+function setFilePickerDisabled(disabled) {
+    ["mediaFile", "previewImage"].forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) input.disabled = disabled;
+    });
+
+    document.querySelectorAll("[data-file-target]").forEach(button => {
+        button.disabled = disabled;
+    });
 }
 
 function showEditorAlert(message) {

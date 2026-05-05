@@ -9,195 +9,314 @@ import com.cpt202.HerLink.mapper.AdminResourceLifecycleMapper;
 import com.cpt202.HerLink.service.admin.AdminOperationHistoryService;
 import com.cpt202.HerLink.service.admin.AdminResourceLifecycleServiceImpl;
 import java.time.LocalDateTime;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Collections;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class AdminResourceLifecycleServiceImplTest {
 
-    private static final Long TEST_RESOURCE_ID = 100L;
-    private static final String TEST_TITLE = "Test Resource";
+    private static final Long RESOURCE_ID = 100L;
     private static final String APPROVED = ResourceStatusEnum.APPROVED.getValue();
     private static final String ARCHIVED = ResourceStatusEnum.ARCHIVED.getValue();
     private static final String PENDING = ResourceStatusEnum.PENDING_REVIEW.getValue();
 
     @Mock
-    private AdminResourceLifecycleMapper adminResourceLifecycleMapper;
+    private AdminResourceLifecycleMapper mapper;
 
-    @Mock
-    private AdminOperationHistoryService operationHistoryService;
-
-    @InjectMocks
+    private RecordingOperationHistory operationHistory;
     private AdminResourceLifecycleServiceImpl service;
 
-    @Test
-    @DisplayName("Archive resource - resource ID is null")
-    void archiveResource_resourceIdIsNull() {
-        AppException ex = assertThrows(AppException.class, () -> service.archiveResource(null, "Olivia Admin"));
-
-        assertEquals("Resource id is required.", ex.getMessage());
+    @BeforeEach
+    void setUp() {
+        operationHistory = new RecordingOperationHistory();
+        service = new AdminResourceLifecycleServiceImpl(mapper, operationHistory);
     }
 
     @Test
-    @DisplayName("Archive resource - resource ID is invalid")
-    void archiveResource_resourceIdIsInvalid() {
-        AppException ex = assertThrows(AppException.class, () -> service.archiveResource(0L, "Olivia Admin"));
+    @DisplayName("List resources returns empty list when mapper returns null")
+    void listResources_mapperReturnsNull_returnsEmptyList() {
+        when(mapper.selectResourceLifecycles(null)).thenReturn(null);
 
-        assertEquals("Resource id is invalid.", ex.getMessage());
+        List<ResourceLifecycleRow> result = service.listResources(null);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    @DisplayName("Archive resource - resource not found")
-    void archiveResource_resourceNotFound() {
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(null);
+    @DisplayName("List resources normalizes supported status filter")
+    void listResources_supportedStatus_returnsMapperRows() {
+        List<ResourceLifecycleRow> rows = List.of(row(ARCHIVED, LocalDateTime.now(), LocalDateTime.now(), "Archived item"));
+        when(mapper.selectResourceLifecycles(ARCHIVED)).thenReturn(rows);
 
-        AppException ex = assertThrows(AppException.class, () -> service.archiveResource(TEST_RESOURCE_ID, "Olivia Admin"));
+        List<ResourceLifecycleRow> result = service.listResources(" archived ");
 
-        assertEquals("Resource does not exist.", ex.getMessage());
+        assertEquals(rows, result);
+        assertEquals(ARCHIVED, result.get(0).getStatus());
     }
 
     @Test
-    @DisplayName("Archive resource - status is not approved")
-    void archiveResource_statusNotApproved() {
-        ResourceLifecycleRow row = resourceRow(PENDING, null, null);
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(row);
+    @DisplayName("List resources rejects unsupported status filter")
+    void listResources_unsupportedStatus_throwsBadRequest() {
+        AppException exception = assertThrows(AppException.class, () -> service.listResources("published"));
 
-        AppException ex = assertThrows(AppException.class, () -> service.archiveResource(TEST_RESOURCE_ID, "Olivia Admin"));
-
-        assertEquals("Only Approved resources can be archived.", ex.getMessage());
-        verify(operationHistoryService, never()).recordOperation(any(), any(), any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("Archive resource - update failed and latest status is still invalid")
-    void archiveResource_updateFailed() {
-        ResourceLifecycleRow row = resourceRow(APPROVED, null, null);
-        ResourceLifecycleRow latest = resourceRow(PENDING, null, LocalDateTime.now());
-
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(row, latest);
-        when(adminResourceLifecycleMapper.archiveApprovedResource(eq(TEST_RESOURCE_ID), any(), eq(ARCHIVED), eq(APPROVED))).thenReturn(0);
-
-        AppException ex = assertThrows(AppException.class, () -> service.archiveResource(TEST_RESOURCE_ID, "Olivia Admin"));
-
-        assertEquals("Resource could not be archived from its current status.", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Archive resource - already archived")
-    void archiveResource_alreadyArchived() {
-        ResourceLifecycleRow row = resourceRow(ARCHIVED, LocalDateTime.now(), LocalDateTime.now());
-
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(row);
-
-        AdminResourceLifecycleResponse response = service.archiveResource(TEST_RESOURCE_ID, "Olivia Admin");
-
-        assertEquals(TEST_RESOURCE_ID, response.resourceId());
-        assertEquals(TEST_TITLE, response.title());
-        assertEquals(ResourceReviewStatus.ARCHIVED, response.previousStatus());
-        assertEquals(ResourceReviewStatus.ARCHIVED, response.resourceStatus());
-        assertFalse(response.changed());
-        assertEquals("Resource is already archived.", response.message());
-        verify(operationHistoryService, never()).recordOperation(any(), any(), any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("Archive resource - success")
-    void archiveResource_success() {
-        ResourceLifecycleRow before = resourceRow(APPROVED, null, null);
-        ResourceLifecycleRow after = resourceRow(ARCHIVED, LocalDateTime.now(), LocalDateTime.now());
-
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(before, after);
-        when(adminResourceLifecycleMapper.archiveApprovedResource(eq(TEST_RESOURCE_ID), any(), eq(ARCHIVED), eq(APPROVED))).thenReturn(1);
-
-        AdminResourceLifecycleResponse response = service.archiveResource(TEST_RESOURCE_ID, "Olivia Admin");
-
-        assertEquals(TEST_RESOURCE_ID, response.resourceId());
-        assertEquals(TEST_TITLE, response.title());
-        assertEquals(ResourceReviewStatus.APPROVED, response.previousStatus());
-        assertEquals(ResourceReviewStatus.ARCHIVED, response.resourceStatus());
-        assertTrue(response.changed());
-        assertEquals("Resource archived and hidden from public discovery.", response.message());
-        verify(operationHistoryService).recordOperation(
-                "Test Resource (#100)",
-                "Resource",
-                "resource",
-                "ARCHIVE_RESOURCE Approved -> Archived",
-                "Olivia Admin"
+        assertAll(
+                () -> assertEquals(400, exception.getStatusCode()),
+                () -> assertEquals("Unsupported resource status.", exception.getMessage())
         );
     }
 
     @Test
-    @DisplayName("Archive resource - blank administrator falls back to admin")
-    void archiveResource_blankAdministratorFallsBackToAdmin() {
-        ResourceLifecycleRow before = resourceRow(APPROVED, null, null);
-        ResourceLifecycleRow after = resourceRow(ARCHIVED, LocalDateTime.now(), LocalDateTime.now());
+    @DisplayName("Archive resource rejects null resource id")
+    void archiveResource_nullId_throwsBadRequest() {
+        AppException exception = assertThrows(AppException.class, () -> service.archiveResource(null, "Olivia"));
 
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(before, after);
-        when(adminResourceLifecycleMapper.archiveApprovedResource(eq(TEST_RESOURCE_ID), any(), eq(ARCHIVED), eq(APPROVED))).thenReturn(1);
+        assertEquals("Resource id is required.", exception.getMessage());
+        assertFalse(operationHistory.called);
+    }
 
-        service.archiveResource(TEST_RESOURCE_ID, "   ");
+    @Test
+    @DisplayName("Archive resource rejects non-positive resource id boundary")
+    void archiveResource_zeroId_throwsBadRequest() {
+        AppException exception = assertThrows(AppException.class, () -> service.archiveResource(0L, "Olivia"));
 
-        verify(operationHistoryService).recordOperation(
-                "Test Resource (#100)",
-                "Resource",
-                "resource",
-                "ARCHIVE_RESOURCE Approved -> Archived",
-                "admin"
+        assertAll(
+                () -> assertEquals(400, exception.getStatusCode()),
+                () -> assertEquals("Resource id is invalid.", exception.getMessage())
         );
     }
 
     @Test
-    @DisplayName("Unarchive resource - success")
-    void unarchiveResource_success() {
-        ResourceLifecycleRow before = resourceRow(ARCHIVED, LocalDateTime.now(), LocalDateTime.now());
-        ResourceLifecycleRow after = resourceRow(APPROVED, null, LocalDateTime.now());
+    @DisplayName("Archive resource throws not found when mapper has no row")
+    void archiveResource_missingResource_throwsNotFound() {
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(null);
 
-        when(adminResourceLifecycleMapper.selectResourceLifecycle(TEST_RESOURCE_ID)).thenReturn(before, after);
-        when(adminResourceLifecycleMapper.unarchiveResource(eq(TEST_RESOURCE_ID), any(), eq(APPROVED), eq(ARCHIVED))).thenReturn(1);
+        AppException exception = assertThrows(AppException.class, () -> service.archiveResource(RESOURCE_ID, "Olivia"));
 
-        AdminResourceLifecycleResponse response = service.unarchiveResource(TEST_RESOURCE_ID, "Olivia Admin");
-
-        assertEquals(ResourceReviewStatus.ARCHIVED, response.previousStatus());
-        assertEquals(ResourceReviewStatus.APPROVED, response.resourceStatus());
-        assertTrue(response.changed());
-        assertEquals("Resource restored to approved and visible to viewers.", response.message());
-        verify(operationHistoryService).recordOperation(
-                "Test Resource (#100)",
-                "Resource",
-                "resource",
-                "UNARCHIVE_RESOURCE Archived -> Approved",
-                "Olivia Admin"
+        assertAll(
+                () -> assertEquals(404, exception.getStatusCode()),
+                () -> assertEquals("Resource does not exist.", exception.getMessage())
         );
     }
 
     @Test
-    @DisplayName("List resources - unsupported status throws bad request")
-    void listResources_unsupportedStatusThrowsBadRequest() {
-        AppException ex = assertThrows(AppException.class, () -> service.listResources("unsupported"));
+    @DisplayName("Archive resource rejects resource that is not approved")
+    void archiveResource_pendingStatus_throwsConflict() {
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(row(PENDING, null, null, "Pending item"));
 
-        assertEquals("Unsupported resource status.", ex.getMessage());
+        AppException exception = assertThrows(AppException.class, () -> service.archiveResource(RESOURCE_ID, "Olivia"));
+
+        assertAll(
+                () -> assertEquals(409, exception.getStatusCode()),
+                () -> assertEquals("Only Approved resources can be archived.", exception.getMessage()),
+                () -> assertFalse(operationHistory.called)
+        );
     }
 
-    private ResourceLifecycleRow resourceRow(String status, LocalDateTime archivedAt, LocalDateTime updatedAt) {
+    @Test
+    @DisplayName("Archive resource returns unchanged response when already archived")
+    void archiveResource_alreadyArchived_returnsUnchangedResponse() {
+        LocalDateTime archivedAt = LocalDateTime.now().minusDays(1);
+        ResourceLifecycleRow archived = row(ARCHIVED, archivedAt, LocalDateTime.now(), "Archived item");
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(archived);
+
+        AdminResourceLifecycleResponse response = service.archiveResource(RESOURCE_ID, "Olivia");
+
+        assertAll(
+                () -> assertEquals(RESOURCE_ID, response.resourceId()),
+                () -> assertEquals(ResourceReviewStatus.ARCHIVED, response.previousStatus()),
+                () -> assertEquals(ResourceReviewStatus.ARCHIVED, response.resourceStatus()),
+                () -> assertEquals(archivedAt, response.archivedAt()),
+                () -> assertFalse(response.changed()),
+                () -> assertEquals("Resource is already archived.", response.message()),
+                () -> assertFalse(operationHistory.called)
+        );
+    }
+
+    @Test
+    @DisplayName("Archive resource succeeds and records normalized operation")
+    void archiveResource_approvedStatus_returnsChangedResponse() {
+        ResourceLifecycleRow before = row(APPROVED, null, null, "  Long title  ");
+        ResourceLifecycleRow after = row(ARCHIVED, LocalDateTime.now(), LocalDateTime.now(), "Long title");
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(before, after);
+        when(mapper.archiveApprovedResource(eq(RESOURCE_ID), any(), eq(ARCHIVED), eq(APPROVED))).thenReturn(1);
+
+        AdminResourceLifecycleResponse response = service.archiveResource(RESOURCE_ID, "  Olivia Admin  ");
+
+        assertAll(
+                () -> assertEquals(ResourceReviewStatus.APPROVED, response.previousStatus()),
+                () -> assertEquals(ResourceReviewStatus.ARCHIVED, response.resourceStatus()),
+                () -> assertTrue(response.changed()),
+                () -> assertEquals("Resource archived and hidden from public discovery.", response.message()),
+                () -> assertTrue(operationHistory.called),
+                () -> assertEquals("Long title (#100)", operationHistory.itemName),
+                () -> assertEquals("Resource", operationHistory.kind),
+                () -> assertEquals("resource", operationHistory.module),
+                () -> assertEquals("ARCHIVE_RESOURCE Approved -> Archived", operationHistory.action),
+                () -> assertEquals("Olivia Admin", operationHistory.administrator)
+        );
+    }
+
+    @Test
+    @DisplayName("Archive resource handles concurrent archive as unchanged archived response")
+    void archiveResource_concurrentArchive_returnsArchivedResponse() {
+        ResourceLifecycleRow before = row(APPROVED, null, null, "Concurrent");
+        ResourceLifecycleRow latest = row(ARCHIVED, LocalDateTime.now(), LocalDateTime.now(), "Concurrent");
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(before, latest);
+        when(mapper.archiveApprovedResource(eq(RESOURCE_ID), any(), eq(ARCHIVED), eq(APPROVED))).thenReturn(0);
+
+        AdminResourceLifecycleResponse response = service.archiveResource(RESOURCE_ID, "Olivia");
+
+        assertAll(
+                () -> assertFalse(response.changed()),
+                () -> assertEquals(ResourceReviewStatus.ARCHIVED, response.resourceStatus()),
+                () -> assertEquals("Resource is already archived.", response.message()),
+                () -> assertFalse(operationHistory.called)
+        );
+    }
+
+    @Test
+    @DisplayName("Archive resource throws conflict when conditional update fails without archived latest state")
+    void archiveResource_updateFailsWithoutConcurrentArchive_throwsConflict() {
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(
+                row(APPROVED, null, null, "Approved"),
+                row(PENDING, null, null, "Pending"));
+        when(mapper.archiveApprovedResource(eq(RESOURCE_ID), any(), eq(ARCHIVED), eq(APPROVED))).thenReturn(0);
+
+        AppException exception = assertThrows(AppException.class, () -> service.archiveResource(RESOURCE_ID, "Olivia"));
+
+        assertEquals("Resource could not be archived from its current status.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Unarchive resource returns unchanged response when already approved")
+    void unarchiveResource_alreadyApproved_returnsUnchangedResponse() {
+        ResourceLifecycleRow approved = row(APPROVED, null, LocalDateTime.now(), "Approved");
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(approved);
+
+        AdminResourceLifecycleResponse response = service.unarchiveResource(RESOURCE_ID, "Olivia");
+
+        assertAll(
+                () -> assertFalse(response.changed()),
+                () -> assertEquals(ResourceReviewStatus.APPROVED, response.previousStatus()),
+                () -> assertEquals(ResourceReviewStatus.APPROVED, response.resourceStatus()),
+                () -> assertNull(response.archivedAt()),
+                () -> assertEquals("Resource is already approved and visible.", response.message()),
+                () -> assertFalse(operationHistory.called)
+        );
+    }
+
+    @Test
+    @DisplayName("Unarchive resource rejects status that is not archived")
+    void unarchiveResource_pendingStatus_throwsConflict() {
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(row(PENDING, null, null, "Pending"));
+
+        AppException exception = assertThrows(AppException.class, () -> service.unarchiveResource(RESOURCE_ID, "Olivia"));
+
+        assertEquals("Only archived resources can be unarchived.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Unarchive resource succeeds and falls back to default administrator when blank")
+    void unarchiveResource_archivedStatus_returnsChangedResponse() {
+        ResourceLifecycleRow before = row(ARCHIVED, LocalDateTime.now().minusDays(1), null, "");
+        ResourceLifecycleRow after = row(APPROVED, null, LocalDateTime.now(), "Restored");
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(before, after);
+        when(mapper.unarchiveResource(eq(RESOURCE_ID), any(), eq(APPROVED), eq(ARCHIVED))).thenReturn(1);
+
+        AdminResourceLifecycleResponse response = service.unarchiveResource(RESOURCE_ID, "   ");
+
+        assertAll(
+                () -> assertTrue(response.changed()),
+                () -> assertEquals(ResourceReviewStatus.ARCHIVED, response.previousStatus()),
+                () -> assertEquals(ResourceReviewStatus.APPROVED, response.resourceStatus()),
+                () -> assertEquals("Resource restored to approved and visible to viewers.", response.message()),
+                () -> assertTrue(operationHistory.called),
+                () -> assertEquals("Resource (#100)", operationHistory.itemName),
+                () -> assertEquals("UNARCHIVE_RESOURCE Archived -> Approved", operationHistory.action),
+                () -> assertEquals("admin", operationHistory.administrator)
+        );
+    }
+
+    @Test
+    @DisplayName("Unarchive resource handles concurrent unarchive as unchanged approved response")
+    void unarchiveResource_concurrentUnarchive_returnsApprovedResponse() {
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(
+                row(ARCHIVED, LocalDateTime.now(), null, "Archived"),
+                row(APPROVED, null, LocalDateTime.now(), "Approved"));
+        when(mapper.unarchiveResource(eq(RESOURCE_ID), any(), eq(APPROVED), eq(ARCHIVED))).thenReturn(0);
+
+        AdminResourceLifecycleResponse response = service.unarchiveResource(RESOURCE_ID, "Olivia");
+
+        assertAll(
+                () -> assertFalse(response.changed()),
+                () -> assertEquals(ResourceReviewStatus.APPROVED, response.resourceStatus()),
+                () -> assertEquals("Resource is already approved and visible.", response.message())
+        );
+    }
+
+    @Test
+    @DisplayName("Unarchive resource throws conflict when update fails without approved latest state")
+    void unarchiveResource_updateFailsWithoutConcurrentUnarchive_throwsConflict() {
+        when(mapper.selectResourceLifecycle(RESOURCE_ID)).thenReturn(
+                row(ARCHIVED, LocalDateTime.now(), null, "Archived"),
+                row(PENDING, null, null, "Pending"));
+        when(mapper.unarchiveResource(eq(RESOURCE_ID), any(), eq(APPROVED), eq(ARCHIVED))).thenReturn(0);
+
+        AppException exception = assertThrows(AppException.class, () -> service.unarchiveResource(RESOURCE_ID, "Olivia"));
+
+        assertEquals("Resource could not be unarchived from its current status.", exception.getMessage());
+    }
+
+    private ResourceLifecycleRow row(String status, LocalDateTime archivedAt, LocalDateTime updatedAt, String title) {
         ResourceLifecycleRow row = new ResourceLifecycleRow();
-        row.setResourceId(TEST_RESOURCE_ID);
-        row.setTitle(TEST_TITLE);
+        row.setResourceId(RESOURCE_ID);
+        row.setTitle(title);
         row.setStatus(status);
         row.setArchivedAt(archivedAt);
         row.setUpdatedAt(updatedAt);
         return row;
+    }
+
+    private static class RecordingOperationHistory implements AdminOperationHistoryService {
+        private boolean called;
+        private String itemName;
+        private String kind;
+        private String module;
+        private String action;
+        private String administrator;
+
+        @Override
+        public void recordOperation(String itemName, String kind, String module, String action, String administrator) {
+            this.called = true;
+            this.itemName = itemName;
+            this.kind = kind;
+            this.module = module;
+            this.action = action;
+            this.administrator = administrator;
+        }
+
+        @Override
+        public List<com.cpt202.HerLink.dto.admin.AdminOperationHistoryResponse> getOperationHistory(String module) {
+            return Collections.emptyList();
+        }
     }
 }

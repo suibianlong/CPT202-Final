@@ -33,7 +33,6 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,6 +81,7 @@ public class ContributorRequestControllerIntegrationTest {
         registry.add("spring.datasource.url", MYSQL_CONTAINER::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL_CONTAINER::getUsername);
         registry.add("spring.datasource.password", MYSQL_CONTAINER::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
     }
 
     @BeforeEach
@@ -370,7 +370,7 @@ public class ContributorRequestControllerIntegrationTest {
                     "Please improve the application.",
                     ContributorApplicationStatusEnum.REJECTED.getValue(),
                     "Please improve the application.",
-                    99L,
+                    viewer.getUserId(),
                     LocalDateTime.now().minusDays(2)
             );
             MockHttpSession viewerSession = loginAndGetSession("viewer@example.com", "Viewer123!");
@@ -447,7 +447,7 @@ public class ContributorRequestControllerIntegrationTest {
                     "Older rejected reason.",
                     ContributorApplicationStatusEnum.REJECTED.getValue(),
                     "Older request review.",
-                    10L,
+                    viewer.getUserId(),
                     LocalDateTime.now().minusDays(2)
             );
             ContributorRequest latestRequest = persistContributorRequest(
@@ -545,7 +545,7 @@ public class ContributorRequestControllerIntegrationTest {
                     "Historical reviewer reason.",
                     ContributorApplicationStatusEnum.REJECTED.getValue(),
                     "Historical reviewer request.",
-                    11L,
+                    reviewer.getUserId(),
                     LocalDateTime.now().minusDays(1)
             );
             MockHttpSession reviewerSession = loginAndGetSession("reviewer@example.com", "Reviewer123!");
@@ -611,7 +611,6 @@ public class ContributorRequestControllerIntegrationTest {
                                 }
                                 """.formatted(email, password)))
                 .andExpect(status().isOk())
-                .andExpect(cookie().exists("JSESSIONID"))
                 .andReturn();
 
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);

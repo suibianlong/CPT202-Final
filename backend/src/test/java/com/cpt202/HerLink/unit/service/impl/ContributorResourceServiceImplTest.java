@@ -1,36 +1,17 @@
 package com.cpt202.HerLink.unit.service.impl;
 
-import com.cpt202.HerLink.service.impl.*;
-import com.cpt202.HerLink.service.impl.ContributorResourceServiceImpl;
-
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.cpt202.HerLink.dto.resource.ResourceQueryRequest;
 import com.cpt202.HerLink.dto.resource.ResourceSubmitRequest;
 import com.cpt202.HerLink.dto.resource.ResourceUpdateRequest;
 import com.cpt202.HerLink.entity.Category;
 import com.cpt202.HerLink.entity.Resource;
+import com.cpt202.HerLink.entity.ResourceFile;
+import com.cpt202.HerLink.entity.ResourceSubmission;
+import com.cpt202.HerLink.entity.ResourceTag;
 import com.cpt202.HerLink.entity.ResourceType;
+import com.cpt202.HerLink.entity.ReviewRecord;
 import com.cpt202.HerLink.entity.Tag;
 import com.cpt202.HerLink.enums.ResourceStatusEnum;
-import com.cpt202.HerLink.enums.ResourceTypeEnum;
 import com.cpt202.HerLink.exception.AppException;
 import com.cpt202.HerLink.mapper.AppUserMapper;
 import com.cpt202.HerLink.mapper.CategoryMapper;
@@ -43,15 +24,41 @@ import com.cpt202.HerLink.mapper.ResourceVersionMapper;
 import com.cpt202.HerLink.mapper.ReviewRecordMapper;
 import com.cpt202.HerLink.mapper.TagMapper;
 import com.cpt202.HerLink.service.ResourceVersionService;
+import com.cpt202.HerLink.service.impl.ContributorResourceServiceImpl;
 import com.cpt202.HerLink.service.notification.EmailNotificationService;
 import com.cpt202.HerLink.util.FileStorageManager;
 import com.cpt202.HerLink.vo.CategoryTagOptionVO;
 import com.cpt202.HerLink.vo.ResourceDetailVO;
 import com.cpt202.HerLink.vo.ResourceListItemVO;
 import com.cpt202.HerLink.vo.ResourceSubmissionVO;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ContributorResourceServiceImplTest {
+
+    private static final Long USER_ID = 20L;
+    private static final Long RESOURCE_ID = 100L;
 
     @Mock
     private ResourceMapper resourceMapper;
@@ -81,427 +88,463 @@ class ContributorResourceServiceImplTest {
     private EmailNotificationService emailNotificationService;
 
     @InjectMocks
-    private ContributorResourceServiceImpl contributorResourceService;
+    private ContributorResourceServiceImpl service;
 
-    private static final Long TEST_USER_ID = 100L;
-    private static final Long TEST_RESOURCE_ID = 1L;
-    private static final Long TEST_CATEGORY_ID = 10L;
-    private static final Long TEST_TYPE_ID = 20L;
-
-    // ========================== createDraft ==========================
     @Test
-    @DisplayName("Create draft: Normal case - Successfully create draft resource")
-    void createDraft_Normal_Success() {
-        Category category = new Category();
-        category.setCategoryId(TEST_CATEGORY_ID);
-        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(category));
-
-        ResourceType type = new ResourceType();
-        type.setResourceTypeId(TEST_TYPE_ID);
-        type.setTypeName(ResourceTypeEnum.IMAGE.getValue());
-        when(resourceTypeMapper.selectActiveByTypeName(any())).thenReturn(type);
-
-        Resource res = new Resource();
-        res.setId(TEST_RESOURCE_ID);
-        res.setContributorId(TEST_USER_ID);
-        res.setStatus(ResourceStatusEnum.DRAFT.getValue());
-        when(resourceMapper.insert(any())).thenAnswer(i -> {
-            Resource arg = i.getArgument(0);
-            arg.setId(TEST_RESOURCE_ID);
+    @DisplayName("Create draft succeeds with first active category and photo resource type")
+    void createDraft_activeDefaults_returnsDraftDetail() {
+        AtomicReference<Resource> inserted = new AtomicReference<>();
+        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(category(1L, "Places", "ACTIVE")));
+        when(resourceTypeMapper.selectActiveByTypeName("photo")).thenReturn(type(2L, "photo"));
+        when(resourceMapper.insert(any(Resource.class))).thenAnswer(invocation -> {
+            Resource resource = invocation.getArgument(0);
+            resource.setId(RESOURCE_ID);
+            inserted.set(resource);
             return 1;
         });
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(res);
+        when(resourceMapper.selectById(RESOURCE_ID)).thenAnswer(invocation -> {
+            Resource resource = inserted.get();
+            resource.setCategoryName("Places");
+            return resource;
+        });
+        stubDetailLookups(RESOURCE_ID, 1);
 
-        ResourceDetailVO vo = contributorResourceService.createDraft(TEST_USER_ID);
+        ResourceDetailVO result = service.createDraft(USER_ID);
 
-        assertNotNull(vo);
-        assertEquals(TEST_RESOURCE_ID, vo.getId());
-        assertEquals(TEST_USER_ID, vo.getContributorId());
-        assertEquals(ResourceStatusEnum.DRAFT.getValue(), vo.getStatus());
+        assertAll(
+                () -> assertEquals(RESOURCE_ID, result.getId()),
+                () -> assertEquals(USER_ID, result.getContributorId()),
+                () -> assertEquals(ResourceStatusEnum.DRAFT.getValue(), result.getStatus()),
+                () -> assertEquals(1L, result.getCategoryId()),
+                () -> assertEquals("places", result.getCategoryName()),
+                () -> assertEquals("photo", result.getResourceType()),
+                () -> assertEquals("", result.getTitle()),
+                () -> assertNotNull(inserted.get().getCreatedAt()),
+                () -> assertNotNull(inserted.get().getUpdatedAt())
+        );
     }
 
     @Test
-    @DisplayName("Create draft: Boundary - No available category, throw exception")
-    void createDraft_Boundary_NoCategory_Throw() {
-        when(categoryMapper.selectActiveCategories()).thenReturn(Collections.emptyList());
-        AppException ex = assertThrows(AppException.class, () -> contributorResourceService.createDraft(TEST_USER_ID));
-        assertEquals("Cannot create draft because no active category is available.", ex.getMessage());
+    @DisplayName("Create draft rejects missing active category")
+    void createDraft_noActiveCategory_throwsConflict() {
+        when(categoryMapper.selectActiveCategories()).thenReturn(List.of());
+
+        AppException exception = assertThrows(AppException.class, () -> service.createDraft(USER_ID));
+
+        assertEquals("Cannot create draft because no active category is available.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Create draft: Exception - Draft created but cannot be reloaded")
-    void createDraft_Exception_CannotReload_Throw() {
-        Category category = new Category();
-        category.setCategoryId(TEST_CATEGORY_ID);
-        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(category));
+    @DisplayName("Create draft rejects invalid default category without id")
+    void createDraft_defaultCategoryWithoutId_throwsConflict() {
+        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(category(null, "Invalid", "ACTIVE")));
 
-        ResourceType type = new ResourceType();
-        type.setResourceTypeId(TEST_TYPE_ID);
-        when(resourceTypeMapper.selectActiveByTypeName(any())).thenReturn(type);
+        AppException exception = assertThrows(AppException.class, () -> service.createDraft(USER_ID));
 
-        when(resourceMapper.insert(any())).thenAnswer(i -> {
-            Resource arg = i.getArgument(0);
-            arg.setId(TEST_RESOURCE_ID);
+        assertEquals("Cannot create draft because the default category is invalid.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Create draft rejects missing active resource type")
+    void createDraft_noResourceType_throwsConflict() {
+        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(category(1L, "Places", "ACTIVE")));
+        when(resourceTypeMapper.selectActiveByTypeName("photo")).thenReturn(null);
+        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(List.of());
+
+        AppException exception = assertThrows(AppException.class, () -> service.createDraft(USER_ID));
+
+        assertEquals("Cannot create draft because no active resource type is available.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Get resource detail rejects missing resource")
+    void getMyResourceDetail_missingResource_throwsNotFound() {
+        when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(null);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.getMyResourceDetail(USER_ID, RESOURCE_ID));
+
+        assertEquals("Resource does not exist.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Get resource detail rejects resource owned by another contributor")
+    void getMyResourceDetail_otherOwner_throwsForbidden() {
+        when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, 999L, ResourceStatusEnum.DRAFT.getValue()));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.getMyResourceDetail(USER_ID, RESOURCE_ID));
+
+        assertEquals("Current user does not own this resource.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Update resource rejects null request")
+    void updateResource_nullRequest_throwsBadRequest() {
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.updateResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Update request cannot be null.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Update resource rejects simultaneous tag ids and names")
+    void updateResource_bothTagIdsAndNames_throwsBadRequest() {
+        ResourceUpdateRequest request = new ResourceUpdateRequest();
+        request.setTagIds(List.of(1L));
+        request.setTagNames(List.of("Festival"));
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.updateResource(USER_ID, RESOURCE_ID, request));
+
+        assertEquals("Tag ids and tag names cannot be submitted together.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Update resource rejects inactive category")
+    void updateResource_inactiveCategory_throwsConflict() {
+        ResourceUpdateRequest request = new ResourceUpdateRequest();
+        request.setCategoryId(2L);
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
+        when(categoryMapper.selectById(2L)).thenReturn(category(2L, "Stories", "INACTIVE"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.updateResource(USER_ID, RESOURCE_ID, request));
+
+        assertEquals("Selected category is inactive.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Update resource normalizes metadata and de-duplicates tag ids")
+    void updateResource_validMetadata_returnsUpdatedDetail() {
+        AtomicReference<Resource> updated = new AtomicReference<>();
+        List<ResourceTag> insertedTags = new ArrayList<>();
+        Resource existing = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        existing.setCategoryId(1L);
+        existing.setResourceTypeId(1L);
+        existing.setResourceType("photo");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(existing);
+        when(categoryMapper.selectById(2L)).thenReturn(category(2L, "Stories", "ACTIVE"));
+        when(resourceTypeMapper.selectActiveByTypeName("video")).thenReturn(type(3L, "video"));
+        when(resourceTagMapper.selectTagIdsByResourceId(RESOURCE_ID)).thenReturn(List.of(4L));
+        when(tagMapper.selectByIds(List.of(5L, 6L))).thenReturn(List.of(tag(5L, "Temple", "ACTIVE"), tag(6L, "Festival", "ACTIVE")));
+        when(resourceTagMapper.insert(any(ResourceTag.class))).thenAnswer(invocation -> {
+            insertedTags.add(invocation.getArgument(0));
             return 1;
         });
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(null);
+        when(resourceMapper.updateById(any(Resource.class))).thenAnswer(invocation -> {
+            updated.set(invocation.getArgument(0));
+            return 1;
+        });
+        when(resourceMapper.selectById(RESOURCE_ID)).thenAnswer(invocation -> {
+            Resource latest = updated.get();
+            latest.setCategoryName("Stories");
+            return latest;
+        });
+        stubDetailLookups(RESOURCE_ID, 3);
+        when(resourceTagMapper.selectTagIdsByResourceId(RESOURCE_ID)).thenReturn(List.of(4L), List.of(5L, 6L));
+        when(resourceTagMapper.selectTagNamesByResourceId(RESOURCE_ID)).thenReturn(List.of("Temple", "Festival"));
 
-        AppException ex = assertThrows(AppException.class, () -> contributorResourceService.createDraft(TEST_USER_ID));
-        assertEquals("Draft was created but cannot be reloaded.", ex.getMessage());
-    }
+        ResourceUpdateRequest request = new ResourceUpdateRequest();
+        request.setTitle("New title");
+        request.setDescription("New description");
+        request.setCopyright("Museum rights");
+        request.setPlace("Suzhou");
+        request.setCategoryId(2L);
+        request.setResourceType("Video");
+        request.setTagIds(Arrays.asList(5L, 5L, null, 6L));
 
-    // ========================== updateResource ==========================
-    @Test
-    @DisplayName("Update resource: Exception - Both tagIds and tagNames provided, throw exception")
-    void updateResource_Exception_BothTags_Throw() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
+        ResourceDetailVO result = service.updateResource(USER_ID, RESOURCE_ID, request);
 
-        ResourceUpdateRequest req = new ResourceUpdateRequest();
-        req.setTagIds(List.of(1L));
-        req.setTagNames(List.of("test"));
-
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.updateResource(TEST_USER_ID, TEST_RESOURCE_ID, req));
-        assertEquals("Tag ids and tag names cannot be submitted together.", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Update resource: Exception - Request is null, throw exception")
-    void updateResource_Exception_RequestNull_Throw() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
-
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.updateResource(TEST_USER_ID, TEST_RESOURCE_ID, null));
-        assertEquals("Update request cannot be null.", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Update resource: Boundary - Empty update, return valid detail")
-    void updateResource_Boundary_EmptyUpdate_Success() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(res);
-
-        ResourceUpdateRequest req = new ResourceUpdateRequest();
-        ResourceDetailVO vo = contributorResourceService.updateResource(TEST_USER_ID, TEST_RESOURCE_ID, req);
-
-        assertNotNull(vo);
-        assertEquals(TEST_RESOURCE_ID, vo.getId());
+        assertAll(
+                () -> assertEquals("New title", result.getTitle()),
+                () -> assertEquals("New description", result.getDescription()),
+                () -> assertEquals("Museum rights", result.getCopyright()),
+                () -> assertEquals("Suzhou", result.getPlace()),
+                () -> assertEquals(2L, result.getCategoryId()),
+                () -> assertEquals("stories", result.getCategoryName()),
+                () -> assertEquals("video", result.getResourceType()),
+                () -> assertEquals(2, insertedTags.size()),
+                () -> assertEquals(5L, insertedTags.get(0).getTagId()),
+                () -> assertEquals(6L, insertedTags.get(1).getTagId())
+        );
     }
 
     @Test
-    @DisplayName("Update resource: Normal case - Update title and category successfully")
-    void updateResource_Normal_Success() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
+    @DisplayName("Upload files rejects request without files")
+    void uploadFiles_noFiles_throwsBadRequest() {
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
 
-        // 关键修复：给 Category 设置 ACTIVE 状态
-        Category activeCategory = new Category();
-        activeCategory.setStatus("ACTIVE"); // 加上这一行！
-        when(categoryMapper.selectById(TEST_CATEGORY_ID)).thenReturn(activeCategory);
+        AppException exception = assertThrows(AppException.class,
+                () -> service.uploadFiles(USER_ID, RESOURCE_ID, null, null));
 
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(res);
-
-        ResourceUpdateRequest req = new ResourceUpdateRequest();
-        req.setTitle("Hi");
-        req.setCategoryId(TEST_CATEGORY_ID);
-
-        ResourceDetailVO vo = contributorResourceService.updateResource(TEST_USER_ID, TEST_RESOURCE_ID, req);
-        assertEquals("Hi", vo.getTitle());
-        assertEquals(TEST_CATEGORY_ID, vo.getCategoryId());
-    }
-
-    // ========================== uploadFiles ==========================
-    @Test
-    @DisplayName("Upload files: Exception - No file uploaded, throw exception")
-    void uploadFiles_Exception_NoFile_Throw() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
-
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.uploadFiles(TEST_USER_ID, TEST_RESOURCE_ID, null, null));
-        assertEquals("At least one file must be uploaded.", ex.getMessage());
+        assertEquals("At least one file must be uploaded.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Upload files: Boundary - Upload empty file, throw exception")
-    void uploadFiles_Boundary_EmptyFile_Throw() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
+    @DisplayName("Upload files rejects unsupported preview image")
+    void uploadFiles_invalidPreview_throwsBadRequest() {
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
+        MockMultipartFile preview = new MockMultipartFile("previewImage", "preview.pdf", "application/pdf", "pdf".getBytes());
 
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(true);
+        AppException exception = assertThrows(AppException.class,
+                () -> service.uploadFiles(USER_ID, RESOURCE_ID, preview, null));
 
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.uploadFiles(TEST_USER_ID, TEST_RESOURCE_ID, file, null));
-        assertEquals("At least one file must be uploaded.", ex.getMessage());
+        assertEquals("Preview image must be a JPG, JPEG, PNG, or GIF file.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Upload files: Normal case - Upload preview image successfully")
-    void uploadFiles_Normal_Image_Success() {
-        Resource res = buildOwnedResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(res);
+    @DisplayName("Upload preview image stores file and returns refreshed detail")
+    void uploadFiles_validPreview_returnsUpdatedDetail() {
+        AtomicReference<Resource> updated = new AtomicReference<>();
+        AtomicReference<ResourceFile> insertedFile = new AtomicReference<>();
+        Resource existing = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        existing.setResourceType("photo");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(existing);
+        when(fileStorageManager.storeFile(any(), eq("resource-100"))).thenReturn(storedFile("preview.jpg", "resource-100/preview.jpg", "jpg", 9L));
+        when(resourceFileMapper.insert(any(ResourceFile.class))).thenAnswer(invocation -> {
+            insertedFile.set(invocation.getArgument(0));
+            return 1;
+        });
+        when(resourceMapper.updateById(any(Resource.class))).thenAnswer(invocation -> {
+            updated.set(invocation.getArgument(0));
+            return 1;
+        });
+        when(resourceMapper.selectById(RESOURCE_ID)).thenAnswer(invocation -> updated.get());
+        stubDetailLookups(RESOURCE_ID, 2);
+        MockMultipartFile preview = new MockMultipartFile("previewImage", "preview.jpg", "image/jpeg", "image".getBytes());
 
-        MultipartFile img = mock(MultipartFile.class);
-        when(img.isEmpty()).thenReturn(false);
-        when(img.getOriginalFilename()).thenReturn("a.jpg");
-        when(img.getContentType()).thenReturn("image/jpeg");
+        ResourceDetailVO result = service.uploadFiles(USER_ID, RESOURCE_ID, preview, null);
 
-        FileStorageManager.StoredFile stored = mock(FileStorageManager.StoredFile.class);
-        when(stored.getFilePath()).thenReturn("p/a.jpg");
-        when(fileStorageManager.storeFile(any(), any())).thenReturn(stored);
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(res);
-
-        ResourceDetailVO vo = contributorResourceService.uploadFiles(TEST_USER_ID, TEST_RESOURCE_ID, img, null);
-        assertNotNull(vo);
-        assertEquals(TEST_RESOURCE_ID, vo.getId());
-    }
-
-    // ========================== listMyResources ==========================
-    @Test
-    @DisplayName("List my resources: Boundary - No resources, return empty list")
-    void listMyResources_Boundary_Empty_ReturnEmpty() {
-        when(resourceMapper.selectMyResources(any(), any(), any(), any())).thenReturn(Collections.emptyList());
-        List<ResourceListItemVO> list = contributorResourceService.listMyResources(TEST_USER_ID, null);
-        assertTrue(list.isEmpty());
-    }
-
-    @Test
-    @DisplayName("List my resources: Normal case - Query with keyword, return resource list")
-    void listMyResources_Normal_WithKeyword_ReturnList() {
-        Resource r = new Resource();
-        r.setId(TEST_RESOURCE_ID);
-        r.setTitle("Test");
-        // 关键修复：设置 status 字段，避免 fromValue 传入 null
-        r.setStatus(ResourceStatusEnum.DRAFT.getValue()); 
-
-        when(resourceMapper.selectMyResources(any(), any(), any(), any())).thenReturn(List.of(r));
-
-        ResourceQueryRequest req = new ResourceQueryRequest();
-        req.setKeyword("test");
-
-        List<ResourceListItemVO> list = contributorResourceService.listMyResources(TEST_USER_ID, req);
-        assertFalse(list.isEmpty());
-        assertEquals(1, list.size());
-        assertEquals("Test", list.get(0).getTitle());
-    }
-
-    // ========================== listSubmissionHistory ==========================
-    @Test
-    @DisplayName("List submission history: Boundary - No records, return empty list")
-    void listSubmissionHistory_Boundary_Empty_ReturnEmpty() {
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(buildOwnedResource());
-        when(resourceSubmissionMapper.selectByResourceId(TEST_RESOURCE_ID)).thenReturn(Collections.emptyList());
-
-        List<ResourceSubmissionVO> list = contributorResourceService.listSubmissionHistory(TEST_USER_ID, TEST_RESOURCE_ID);
-        assertTrue(list.isEmpty());
+        assertAll(
+                () -> assertEquals("resource-100/preview.jpg", result.getPreviewImage()),
+                () -> assertEquals("resource-100/preview.jpg", updated.get().getPreviewImage()),
+                () -> assertEquals("preview.jpg", insertedFile.get().getOriginalFilename()),
+                () -> assertEquals("jpg", insertedFile.get().getFileType()),
+                () -> assertEquals(RESOURCE_ID, insertedFile.get().getResourceId())
+        );
     }
 
     @Test
-    @DisplayName("List submission history: Exception - No permission, throw forbidden exception")
-    void listSubmissionHistory_Exception_NotOwner_Throw() {
-        Resource r = new Resource();
-        r.setId(TEST_RESOURCE_ID);
-        r.setContributorId(999L);
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(r);
+    @DisplayName("Submit resource rejects missing title boundary")
+    void submitResource_missingTitle_throwsBadRequest() {
+        Resource draft = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        draft.setTitle(" ");
+        draft.setDescription("Description");
+        draft.setCopyright("Rights");
+        draft.setCategoryId(1L);
+        draft.setResourceType("photo");
+        draft.setMediaUrl("resource-100/photo.jpg");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
 
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.listSubmissionHistory(TEST_USER_ID, TEST_RESOURCE_ID));
-        assertEquals("Current user does not own this resource.", ex.getMessage());
-    }
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
 
-    // ========================== getMyResourceDetail ==========================
-    @Test
-    @DisplayName("Get resource detail: Exception - Resource not found, throw exception")
-    void getMyResourceDetail_Exception_NotFound_Throw() {
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(null);
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.getMyResourceDetail(TEST_USER_ID, TEST_RESOURCE_ID));
-        assertEquals("Resource does not exist.", ex.getMessage());
+        assertEquals("Title is required.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Get resource detail: Exception - No permission, throw forbidden exception")
-    void getMyResourceDetail_Exception_Forbidden_Throw() {
-        Resource r = new Resource();
-        r.setId(TEST_RESOURCE_ID);
-        r.setContributorId(999L);
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(r);
+    @DisplayName("Submit resource creates next submission version and changes status")
+    void submitResource_validDraft_updatesStatusAndSubmission() {
+        AtomicReference<ResourceSubmission> insertedSubmission = new AtomicReference<>();
+        AtomicReference<Resource> updatedResource = new AtomicReference<>();
+        Resource draft = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        draft.setTitle("Title");
+        draft.setDescription("Description");
+        draft.setCopyright("Rights");
+        draft.setCategoryId(1L);
+        draft.setResourceType("photo");
+        draft.setMediaUrl("resource-100/photo.jpg");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "ACTIVE"));
+        when(resourceFileMapper.selectByResourceIdAndFilePath(RESOURCE_ID, "resource-100/photo.jpg")).thenReturn(resourceFile("jpg"));
+        ResourceSubmission latest = new ResourceSubmission();
+        latest.setVersionNo(2);
+        when(resourceSubmissionMapper.selectLatestByResourceId(RESOURCE_ID)).thenReturn(latest);
+        when(resourceSubmissionMapper.insert(any(ResourceSubmission.class))).thenAnswer(invocation -> {
+            insertedSubmission.set(invocation.getArgument(0));
+            return 1;
+        });
+        when(resourceMapper.updateById(any(Resource.class))).thenAnswer(invocation -> {
+            updatedResource.set(invocation.getArgument(0));
+            return 1;
+        });
+        ResourceSubmitRequest request = new ResourceSubmitRequest();
+        request.setSubmissionNote("Ready");
 
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.getMyResourceDetail(TEST_USER_ID, TEST_RESOURCE_ID));
-        assertEquals("Current user does not own this resource.", ex.getMessage());
+        service.submitResource(USER_ID, RESOURCE_ID, request);
+
+        assertAll(
+                () -> assertEquals(RESOURCE_ID, insertedSubmission.get().getResourceId()),
+                () -> assertEquals(3, insertedSubmission.get().getVersionNo()),
+                () -> assertEquals(USER_ID, insertedSubmission.get().getSubmittedBy()),
+                () -> assertEquals("Ready", insertedSubmission.get().getSubmissionNote()),
+                () -> assertEquals(ResourceStatusEnum.PENDING_REVIEW.getValue(), insertedSubmission.get().getStatusSnapshot()),
+                () -> assertEquals(ResourceStatusEnum.PENDING_REVIEW.getValue(), updatedResource.get().getStatus()),
+                () -> assertNotNull(updatedResource.get().getUpdatedAt())
+        );
     }
 
     @Test
-    @DisplayName("Get resource detail: Normal case - Return full resource detail VO")
-    void getMyResourceDetail_Normal_Success() {
-        Resource r = buildOwnedResource();
-        when(resourceMapper.selectById(TEST_RESOURCE_ID)).thenReturn(r);
-        when(resourceTagMapper.selectTagIdsByResourceId(TEST_RESOURCE_ID)).thenReturn(Collections.emptyList());
+    @DisplayName("List my resources maps status filter and review feedback flag")
+    void listMyResources_validFilter_returnsMappedItems() {
+        ResourceQueryRequest request = new ResourceQueryRequest();
+        request.setKeyword("wall");
+        request.setStatus("approved");
+        request.setCategoryId(1L);
+        Resource resource = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.APPROVED.getValue());
+        resource.setTitle("Wall");
+        resource.setCategoryName("Education");
+        resource.setResourceType("Picture");
+        when(resourceMapper.selectMyResources(USER_ID, "wall", ResourceStatusEnum.APPROVED.getValue(), 1L))
+                .thenReturn(List.of(resource));
+        when(resourceVersionMapper.selectMaxVersionNoByResourceId(RESOURCE_ID)).thenReturn(4);
+        ResourceSubmission submission = new ResourceSubmission();
+        submission.setSubmittedAt(LocalDateTime.now().minusHours(1));
+        when(resourceSubmissionMapper.selectLatestByResourceId(RESOURCE_ID)).thenReturn(submission);
+        ReviewRecord reviewRecord = new ReviewRecord();
+        reviewRecord.setFeedbackComment("Please revise");
+        when(reviewRecordMapper.selectLatestByResourceId(RESOURCE_ID)).thenReturn(reviewRecord);
 
-        ResourceDetailVO vo = contributorResourceService.getMyResourceDetail(TEST_USER_ID, TEST_RESOURCE_ID);
-        assertNotNull(vo);
-        assertEquals(TEST_RESOURCE_ID, vo.getId());
-        assertEquals(TEST_USER_ID, vo.getContributorId());
-    }
+        List<ResourceListItemVO> result = service.listMyResources(USER_ID, request);
 
-    // ========================== submitResource ==========================
-    @Test
-    @DisplayName("Submit resource: Exception - Title is empty, throw exception")
-    void submitResource_Exception_EmptyTitle_Throw() {
-        Resource r = buildOwnedResource();
-        r.setTitle("");
-        r.setDescription("d");
-        r.setCopyright("c");
-        r.setCategoryId(TEST_CATEGORY_ID);
-        r.setResourceType("image");
-        r.setMediaUrl("m.jpg");
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(r);
-    
-        AppException ex = assertThrows(AppException.class,
-            () -> contributorResourceService.submitResource(TEST_USER_ID, TEST_RESOURCE_ID, new ResourceSubmitRequest()));
-        assertEquals("Title is required.", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Submit resource: Boundary - First submission, status changes to pending review")
-    void submitResource_Boundary_FirstSubmission_Version1() {
-        Resource r = buildValidSubmissionResource();
-        when(resourceMapper.selectByIdForUpdate(TEST_RESOURCE_ID)).thenReturn(r);
-        
-        // 修复：设置状态为 ACTIVE
-        Category activeCategory = new Category();
-        activeCategory.setStatus("ACTIVE");
-        when(categoryMapper.selectById(TEST_CATEGORY_ID)).thenReturn(activeCategory);
-        
-        when(resourceSubmissionMapper.selectLatestByResourceId(TEST_RESOURCE_ID)).thenReturn(null);
-
-        contributorResourceService.submitResource(TEST_USER_ID, TEST_RESOURCE_ID, new ResourceSubmitRequest());
-
-        assertEquals(ResourceStatusEnum.PENDING_REVIEW.getValue(), r.getStatus());
-    }
-
-    // ========================== listCategoryOptions ==========================
-    @Test
-    @DisplayName("List category options: Boundary - No categories, return empty list")
-    void listCategoryOptions_Boundary_Empty_ReturnEmpty() {
-        when(categoryMapper.selectActiveCategories()).thenReturn(Collections.emptyList());
-        List<CategoryTagOptionVO> list = contributorResourceService.listCategoryOptions();
-        assertTrue(list.isEmpty());
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals("Wall", result.get(0).getTitle()),
+                () -> assertEquals("Approved", result.get(0).getStatus()),
+                () -> assertEquals("photo", result.get(0).getResourceType()),
+                () -> assertEquals("educational materials", result.get(0).getCategoryName()),
+                () -> assertEquals(4, result.get(0).getCurrentVersionNo()),
+                () -> assertTrue(result.get(0).getHasReviewFeedback())
+        );
     }
 
     @Test
-    @DisplayName("List category options: Exception - Category id is null, skip invalid item")
-    void listCategoryOptions_Exception_NullId_Skip() {
-        Category c = new Category();
-        c.setCategoryId(null);
-        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(c));
+    @DisplayName("List category options skips null and invalid active categories")
+    void listCategoryOptions_mixedRows_returnsValidOptionsOnly() {
+        when(categoryMapper.selectActiveCategories()).thenReturn(Arrays.asList(
+                null,
+                category(null, "Invalid", "ACTIVE"),
+                category(1L, "Places", "ACTIVE")));
 
-        List<CategoryTagOptionVO> list = contributorResourceService.listCategoryOptions();
-        assertTrue(list.isEmpty());
+        List<CategoryTagOptionVO> result = service.listCategoryOptions();
+
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals(1L, result.get(0).getId()),
+                () -> assertEquals("Places", result.get(0).getName())
+        );
     }
 
     @Test
-    @DisplayName("List category options: Normal case - Return valid category options")
-    void listCategoryOptions_Normal_Success() {
-        Category c = new Category();
-        c.setCategoryId(TEST_CATEGORY_ID);
-        c.setCategoryTopic("Art");
-        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(c));
-
-        List<CategoryTagOptionVO> list = contributorResourceService.listCategoryOptions();
-        assertEquals(1, list.size());
-        assertEquals(TEST_CATEGORY_ID, list.get(0).getId());
-        assertEquals("Art", list.get(0).getName());
-    }
-
-    // ========================== listResourceTypeOptions ==========================
-    @Test
-    @DisplayName("List resource type options: Boundary - No types, return empty list")
-    void listResourceTypeOptions_Boundary_Empty_ReturnEmpty() {
-        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(Collections.emptyList());
-        List<CategoryTagOptionVO> list = contributorResourceService.listResourceTypeOptions();
-        assertTrue(list.isEmpty());
-    }
-
-    @Test
-    @DisplayName("List resource type options: Exception - Type id is null, skip invalid item")
-    void listResourceTypeOptions_Exception_NullId_Skip() {
-        ResourceType t = new ResourceType();
-        t.setResourceTypeId(null);
-        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(List.of(t));
-
-        List<CategoryTagOptionVO> list = contributorResourceService.listResourceTypeOptions();
-        assertTrue(list.isEmpty());
-    }
-
-    @Test
-    @DisplayName("List resource type options: Normal case - Return valid type options")
-    void listResourceTypeOptions_Normal_Success() {
-        ResourceType t = new ResourceType();
-        t.setResourceTypeId(TEST_TYPE_ID);
-        t.setTypeName("Video");
-        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(List.of(t));
-
-        List<CategoryTagOptionVO> list = contributorResourceService.listResourceTypeOptions();
-        assertEquals(1, list.size());
-        assertEquals(TEST_TYPE_ID, list.get(0).getId());
-        assertEquals("Video", list.get(0).getName());
-    }
-
-    // ========================== listTagOptions ==========================
-    @Test
-    @DisplayName("List tag options: Boundary - No tags, return empty list")
-    void listTagOptions_Boundary_Empty_ReturnEmpty() {
-        when(tagMapper.selectActiveTags()).thenReturn(Collections.emptyList());
-        List<CategoryTagOptionVO> list = contributorResourceService.listTagOptions();
-        assertTrue(list.isEmpty());
-    }
-
-    @Test
-    @DisplayName("List tag options: Exception - Mapper returns null, convert to empty list")
-    void listTagOptions_Exception_MapperNull_ReturnEmpty() {
+    @DisplayName("List tag options returns empty when mapper returns null")
+    void listTagOptions_mapperReturnsNull_returnsEmptyList() {
         when(tagMapper.selectActiveTags()).thenReturn(null);
-        List<CategoryTagOptionVO> list = contributorResourceService.listTagOptions();
-        assertTrue(list.isEmpty());
+
+        List<CategoryTagOptionVO> result = service.listTagOptions();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    @DisplayName("List tag options: Normal case - Return valid tag options")
-    void listTagOptions_Normal_Success() {
-        Tag t = new Tag();
-        t.setTagId(1L);
-        t.setTagName("Java");
-        when(tagMapper.selectActiveTags()).thenReturn(List.of(t));
+    @DisplayName("List submission history returns empty list when mapper returns null")
+    void listSubmissionHistory_mapperReturnsNull_returnsEmptyList() {
+        when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
+        when(resourceSubmissionMapper.selectByResourceId(RESOURCE_ID)).thenReturn(null);
 
-        List<CategoryTagOptionVO> list = contributorResourceService.listTagOptions();
-        assertEquals(1, list.size());
-        assertEquals(1L, list.get(0).getId());
-        assertEquals("Java", list.get(0).getName());
+        List<ResourceSubmissionVO> result = service.listSubmissionHistory(USER_ID, RESOURCE_ID);
+
+        assertTrue(result.isEmpty());
     }
 
-    // ========================== Helper methods ==========================
-    private Resource buildOwnedResource() {
-        Resource r = new Resource();
-        r.setId(TEST_RESOURCE_ID);
-        r.setContributorId(TEST_USER_ID);
-        r.setStatus(ResourceStatusEnum.DRAFT.getValue());
-        return r;
+    @Test
+    @DisplayName("List submission history maps resource submission fields")
+    void listSubmissionHistory_rowsExist_returnsMappedRows() {
+        when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
+        ResourceSubmission submission = new ResourceSubmission();
+        submission.setSubmissionId(1L);
+        submission.setResourceId(RESOURCE_ID);
+        submission.setVersionNo(2);
+        submission.setSubmittedBy(USER_ID);
+        submission.setSubmittedAt(LocalDateTime.now());
+        submission.setSubmissionNote("Note");
+        submission.setStatusSnapshot(ResourceStatusEnum.PENDING_REVIEW.getValue());
+        submission.setCreatedAt(LocalDateTime.now());
+        when(resourceSubmissionMapper.selectByResourceId(RESOURCE_ID)).thenReturn(List.of(submission));
+
+        List<ResourceSubmissionVO> result = service.listSubmissionHistory(USER_ID, RESOURCE_ID);
+
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals(1L, result.get(0).getSubmissionId()),
+                () -> assertEquals(2, result.get(0).getVersionNo()),
+                () -> assertEquals("Note", result.get(0).getSubmissionNote()),
+                () -> assertEquals(ResourceStatusEnum.PENDING_REVIEW.getValue(), result.get(0).getStatusSnapshot())
+        );
     }
 
-    private Resource buildValidSubmissionResource() {
-        Resource r = buildOwnedResource();
-        r.setTitle("Valid");
-        r.setDescription("Valid");
-        r.setCopyright("Valid");
-        r.setCategoryId(TEST_CATEGORY_ID);
-        r.setResourceType("image");
-        r.setMediaUrl("m.jpg");
-        r.setPreviewImage("p.jpg");
-        return r;
+    private void stubDetailLookups(Long resourceId, int versionNo) {
+        when(resourceVersionMapper.selectMaxVersionNoByResourceId(resourceId)).thenReturn(versionNo);
+        when(resourceTagMapper.selectTagIdsByResourceId(resourceId)).thenReturn(List.of());
+        when(resourceTagMapper.selectTagNamesByResourceId(resourceId)).thenReturn(List.of());
+        when(resourceSubmissionMapper.selectLatestByResourceId(resourceId)).thenReturn(null);
+        when(reviewRecordMapper.selectLatestByResourceId(resourceId)).thenReturn(null);
+    }
+
+    private Resource resource(Long id, Long contributorId, String status) {
+        Resource resource = new Resource();
+        resource.setId(id);
+        resource.setContributorId(contributorId);
+        resource.setStatus(status);
+        resource.setCategoryId(1L);
+        resource.setCategoryName("Places");
+        resource.setResourceType("photo");
+        return resource;
+    }
+
+    private Category category(Long id, String name, String status) {
+        Category category = new Category();
+        category.setCategoryId(id);
+        category.setCategoryTopic(name);
+        category.setStatus(status);
+        return category;
+    }
+
+    private ResourceType type(Long id, String name) {
+        ResourceType type = new ResourceType();
+        type.setResourceTypeId(id);
+        type.setTypeName(name);
+        type.setStatus("ACTIVE");
+        return type;
+    }
+
+    private Tag tag(Long id, String name, String status) {
+        Tag tag = new Tag();
+        tag.setTagId(id);
+        tag.setTagName(name);
+        tag.setStatus(status);
+        return tag;
+    }
+
+    private FileStorageManager.StoredFile storedFile(String originalFilename, String path, String type, Long size) {
+        FileStorageManager.StoredFile storedFile = new FileStorageManager.StoredFile();
+        storedFile.setOriginalFilename(originalFilename);
+        storedFile.setStoredFilename(path.substring(path.lastIndexOf('/') + 1));
+        storedFile.setFilePath(path);
+        storedFile.setFileType(type);
+        storedFile.setFileSize(size);
+        return storedFile;
+    }
+
+    private ResourceFile resourceFile(String type) {
+        ResourceFile file = new ResourceFile();
+        file.setResourceId(RESOURCE_ID);
+        file.setFilePath("resource-100/photo.jpg");
+        file.setFileType(type);
+        return file;
     }
 }

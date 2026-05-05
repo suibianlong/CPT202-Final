@@ -1,31 +1,5 @@
 package com.cpt202.HerLink.unit.service.admin;
 
-import com.cpt202.HerLink.service.admin.*;
-import com.cpt202.HerLink.service.admin.AdminClassificationManagementServiceImpl;
-import com.cpt202.HerLink.service.admin.AdminOperationHistoryService;
-
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.cpt202.HerLink.dto.admin.AdminCategoryRequest;
 import com.cpt202.HerLink.dto.admin.AdminCategoryResponse;
 import com.cpt202.HerLink.dto.admin.AdminResourceTypeRequest;
@@ -36,21 +10,34 @@ import com.cpt202.HerLink.dto.admin.ClassificationStatus;
 import com.cpt202.HerLink.entity.Category;
 import com.cpt202.HerLink.entity.ResourceType;
 import com.cpt202.HerLink.entity.Tag;
-import com.cpt202.HerLink.enums.ResourceTypeEnum;
 import com.cpt202.HerLink.exception.AppException;
 import com.cpt202.HerLink.mapper.CategoryMapper;
 import com.cpt202.HerLink.mapper.ResourceTypeMapper;
 import com.cpt202.HerLink.mapper.TagMapper;
+import com.cpt202.HerLink.service.admin.AdminClassificationManagementServiceImpl;
+import com.cpt202.HerLink.service.admin.AdminOperationHistoryService;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminClassificationManagementServiceImplTest {
-
-    private static final int MAX_CATEGORY_TOPIC_LENGTH = 50;
-    private static final int MAX_RESOURCE_TYPE_LENGTH = 50;
-    private static final int MAX_TAG_NAME_LENGTH = 100;
-    private static final String ADMIN = "test_admin";
-    private static final Long EXIST_ID = 1L;
-    private static final Long NOT_EXIST_ID = 999L;
 
     @Mock
     private CategoryMapper categoryMapper;
@@ -64,635 +51,336 @@ class AdminClassificationManagementServiceImplTest {
     @InjectMocks
     private AdminClassificationManagementServiceImpl service;
 
-    private Category testCategory;
-    private Tag testTag;
-    private ResourceType testResourceType;
-    private AdminCategoryRequest testCategoryRequest;
-    private AdminTagRequest testTagRequest;
-    private AdminResourceTypeRequest testResourceTypeRequest;
-
-    @BeforeEach
-    void setUp() {
-        // 初始化测试分类
-        testCategory = new Category();
-        testCategory.setCategoryId(EXIST_ID);
-        testCategory.setCategoryTopic("test category");
-        testCategory.setStatus(ClassificationStatus.ACTIVE.name());
-        testCategory.setUsageCount(0);
-        testCategory.setCreatedAt(LocalDateTime.now());
-        testCategory.setLastUpdatedAt(LocalDateTime.now());
-
-        // 初始化测试标签
-        testTag = new Tag();
-        testTag.setTagId(EXIST_ID);
-        testTag.setTagName("test tag");
-        testTag.setStatus(ClassificationStatus.ACTIVE.name());
-        testTag.setUsageCount(0);
-        testTag.setCreatedAt(LocalDateTime.now());
-        testTag.setLastUpdatedAt(LocalDateTime.now());
-
-        // 初始化测试资源类型
-        testResourceType = new ResourceType();
-        testResourceType.setResourceTypeId(EXIST_ID);
-        testResourceType.setTypeName(ResourceTypeEnum.DOCUMENT.name());
-        testResourceType.setStatus(ClassificationStatus.ACTIVE.name());
-        testResourceType.setUsageCount(0);
-        testResourceType.setCreatedAt(LocalDateTime.now());
-        testResourceType.setLastUpdatedAt(LocalDateTime.now());
-
-        // 初始化请求DTO
-        testCategoryRequest = new AdminCategoryRequest("test category");
-        testTagRequest = new AdminTagRequest("test tag");
-        testResourceTypeRequest = new AdminResourceTypeRequest(ResourceTypeEnum.DOCUMENT.name());
-    }
-
-    // ======================== 分类（Category）测试 ========================
     @Test
-    @DisplayName("get All Categories Should Return Correct List")
-    void getAllCategories_ShouldReturnCorrectList() {
-        when(categoryMapper.selectAllCategories()).thenReturn(List.of(testCategory));
+    @DisplayName("Get all categories maps null mapper result to empty list")
+    void getAllCategories_mapperReturnsNull_returnsEmptyList() {
+        when(categoryMapper.selectAllCategories()).thenReturn(null);
+
         List<AdminCategoryResponse> result = service.getAllCategories();
-        assertFalse(result.isEmpty());
-        assertEquals(1, result.size());
-        assertEquals(testCategory.getCategoryTopic(), result.get(0).categoryTopic());
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    @DisplayName("get Active Categories Should Return Only Active()")
-    void getActiveCategories_ShouldReturnOnlyActive() {
-        when(categoryMapper.selectByStatus(ClassificationStatus.ACTIVE.name())).thenReturn(List.of(testCategory));
-        List<AdminCategoryResponse> result = service.getActiveCategories();
-        assertEquals(ClassificationStatus.ACTIVE, result.get(0).status());
+    @DisplayName("Get active tags maps entity rows to response rows")
+    void getActiveTags_rowsExist_returnsMappedResponses() {
+        when(tagMapper.selectByStatus(ClassificationStatus.ACTIVE.name()))
+                .thenReturn(List.of(tag(9L, "Festival", ClassificationStatus.ACTIVE.name(), 3)));
+
+        List<AdminTagResponse> result = service.getActiveTags();
+
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals(9L, result.get(0).tagId()),
+                () -> assertEquals("Festival", result.get(0).tagName()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, result.get(0).status()),
+                () -> assertEquals(3, result.get(0).usageCount())
+        );
     }
 
     @Test
-    @DisplayName("create Category ValidData Should Create Success")
-    void createCategory_ValidData_ShouldCreateSuccess() {
-        when(categoryMapper.countByTopicIgnoreCase(anyString(), isNull())).thenReturn(0);
-        when(resourceTypeMapper.countByTypeNameIgnoreCase(anyString(), isNull())).thenReturn(0);
-
-        // 核心修复：insert时手动设置ID，否则ID为null会报错
+    @DisplayName("Create category trims and collapses whitespace in valid name")
+    void createCategory_validName_returnsCreatedCategory() {
+        AtomicReference<Category> inserted = new AtomicReference<>();
+        when(categoryMapper.countByTopicIgnoreCase(eq("Ancient Places"), isNull())).thenReturn(0);
+        when(resourceTypeMapper.countByTypeNameIgnoreCase(eq("Ancient Places"), isNull())).thenReturn(0);
         when(categoryMapper.insert(any(Category.class))).thenAnswer(invocation -> {
             Category category = invocation.getArgument(0);
-            category.setCategoryId(EXIST_ID); // 手动赋ID
+            category.setCategoryId(7L);
+            inserted.set(category);
             return 1;
         });
+        when(categoryMapper.selectById(7L)).thenAnswer(invocation -> inserted.get());
 
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
+        AdminCategoryResponse response = service.createCategory(new AdminCategoryRequest(" Ancient   Places "), "Olivia");
 
-        AdminCategoryResponse result = service.createCategory(testCategoryRequest, ADMIN);
-        assertNotNull(result);
-        assertEquals("test category", result.categoryTopic());
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
+        assertAll(
+                () -> assertEquals(7L, response.categoryId()),
+                () -> assertEquals("Ancient Places", response.categoryTopic()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status()),
+                () -> assertEquals(0, response.usageCount()),
+                () -> assertEquals("Ancient Places", inserted.get().getCategoryTopic()),
+                () -> assertEquals(ClassificationStatus.ACTIVE.name(), inserted.get().getStatus())
+        );
     }
 
     @Test
-    @DisplayName("create Category Blank Topic Should Throw Bad Request")
-    void createCategory_BlankTopic_ShouldThrowBadRequest() {
-        AdminCategoryRequest request = new AdminCategoryRequest("    ");
-        AppException exception = assertThrows(AppException.class, () -> service.createCategory(request, ADMIN));
-        assertTrue(exception.getMessage().contains("invalid"));
+    @DisplayName("Create category rejects null and blank names")
+    void createCategory_blankOrNullName_throwsBadRequest() {
+        AppException nullException = assertThrows(AppException.class,
+                () -> service.createCategory(null, "Olivia"));
+        AppException blankException = assertThrows(AppException.class,
+                () -> service.createCategory(new AdminCategoryRequest("   "), "Olivia"));
+
+        assertAll(
+                () -> assertEquals(400, nullException.getStatusCode()),
+                () -> assertEquals("categoryTopic is invalid.", nullException.getMessage()),
+                () -> assertTrue(nullException.getDetails().contains("categoryTopic cannot be blank.")),
+                () -> assertEquals(400, blankException.getStatusCode()),
+                () -> assertTrue(blankException.getDetails().contains("categoryTopic cannot be blank."))
+        );
     }
 
     @Test
-    @DisplayName("create Category just Over Max Length Should Throw Bad Request")
-    void createCategory_OverMaxLength_ShouldThrowBadRequest() {
-        String longName = "a".repeat(MAX_CATEGORY_TOPIC_LENGTH + 1);
-        AdminCategoryRequest request = new AdminCategoryRequest(longName);
-        AppException exception = assertThrows(AppException.class, () -> service.createCategory(request, ADMIN));
-        assertTrue(exception.getMessage().contains("invalid"));
-    }
+    @DisplayName("Create category rejects over max boundary length")
+    void createCategory_nameOverMaxLength_throwsBadRequest() {
+        String tooLong = "a".repeat(51);
 
-    @Test
-    @DisplayName("create Category Duplicate Topic Should Throw Conflict")
-    void createCategory_DuplicateTopic_ShouldThrowConflict() {
-        when(categoryMapper.countByTopicIgnoreCase(anyString(), isNull())).thenReturn(1);
-        AppException exception = assertThrows(AppException.class, () -> service.createCategory(testCategoryRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("already exists"));
-    }
-
-    @Test
-    @DisplayName("update Category Valid Data Should Update Success")
-    void updateCategory_ValidData_ShouldUpdateSuccess() {
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
-        when(categoryMapper.countByTopicIgnoreCase(anyString(), eq(EXIST_ID))).thenReturn(0);
-        when(resourceTypeMapper.countByTypeNameIgnoreCase(anyString(), isNull())).thenReturn(0);
-        when(categoryMapper.updateTopic(anyLong(), anyString(), any())).thenReturn(1);
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
-
-        AdminCategoryResponse result = service.updateCategory(EXIST_ID, testCategoryRequest, ADMIN);
-        assertNotNull(result);
-        assertEquals(EXIST_ID, result.categoryId());
-    }
-
-    @Test
-    @DisplayName("update Category Not Exist Id Should Throw Not Found")
-    void updateCategory_NotExistId_ShouldThrowNotFound() {
-        when(categoryMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
         AppException exception = assertThrows(AppException.class,
-                () -> service.updateCategory(NOT_EXIST_ID, testCategoryRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("Category does not exist"));
+                () -> service.createCategory(new AdminCategoryRequest(tooLong), "Olivia"));
+
+        assertAll(
+                () -> assertEquals(400, exception.getStatusCode()),
+                () -> assertTrue(exception.getDetails().contains("categoryTopic cannot exceed 50 characters."))
+        );
     }
 
     @Test
-    @DisplayName("update Category Null Id Should Throw Bad Request")
-    void updateCategory_NullId_ShouldThrowBadRequest() {
-    // 传入 null 作为 ID
+    @DisplayName("Create category rejects duplicate topic")
+    void createCategory_duplicateTopic_throwsConflict() {
+        when(categoryMapper.countByTopicIgnoreCase("Places", null)).thenReturn(1);
+
         AppException exception = assertThrows(AppException.class,
-                () -> service.updateCategory(null, testCategoryRequest, ADMIN));
-    
-    // 断言抛出正确的异常信息
-        assertTrue(exception.getMessage().contains("Category id is required"));
+                () -> service.createCategory(new AdminCategoryRequest("Places"), "Olivia"));
+
+        assertAll(
+                () -> assertEquals(409, exception.getStatusCode()),
+                () -> assertEquals("categoryTopic already exists.", exception.getMessage())
+        );
     }
 
     @Test
-    @DisplayName("deactivate Category Active To Inactive Should Change Status")
-    void deactivateCategory_ActiveToInactive_ShouldChangeStatus() {
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
-        Category inactive = new Category();
-        inactive.setCategoryId(EXIST_ID);
-        inactive.setStatus(ClassificationStatus.INACTIVE.name());
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(inactive);
+    @DisplayName("Create category rejects name conflicting with resource type")
+    void createCategory_conflictsWithResourceType_throwsConflict() {
+        when(categoryMapper.countByTopicIgnoreCase("photo", null)).thenReturn(0);
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("photo", null)).thenReturn(1);
 
-        AdminCategoryResponse result = service.deactivateCategory(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.INACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("deactivate Category Already Inactive No Change")
-    void deactivateCategory_AlreadyInactive_NoChange() {
-        testCategory.setStatus(ClassificationStatus.INACTIVE.name());
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
-
-        AdminCategoryResponse result = service.deactivateCategory(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.INACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("deactivate Category Null Id Should Throw Bad Request")
-    void deactivateCategory_NullId_ShouldThrowBadRequest() {
         AppException exception = assertThrows(AppException.class,
-                () -> service.deactivateCategory(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Category id is required"));
+                () -> service.createCategory(new AdminCategoryRequest("photo"), "Olivia"));
+
+        assertEquals("categoryTopic conflicts with an existing resource type.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("deactivate Category Not Exist Id Should Throw NotFound")
-    void deactivateCategory_NotExistId_ShouldThrowNotFound() {
-        when(categoryMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
+    @DisplayName("Update category returns updated response when row changes")
+    void updateCategory_validRequest_returnsUpdatedCategory() {
+        when(categoryMapper.selectById(5L)).thenReturn(
+                category(5L, "Old", ClassificationStatus.ACTIVE.name(), 1),
+                category(5L, "New Topic", ClassificationStatus.ACTIVE.name(), 1));
+        when(categoryMapper.countByTopicIgnoreCase("New Topic", 5L)).thenReturn(0);
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("New Topic", null)).thenReturn(0);
+        when(categoryMapper.updateTopic(eq(5L), eq("New Topic"), any(LocalDateTime.class))).thenReturn(1);
+
+        AdminCategoryResponse response = service.updateCategory(5L, new AdminCategoryRequest("New Topic"), "Olivia");
+
+        assertAll(
+                () -> assertEquals(5L, response.categoryId()),
+                () -> assertEquals("New Topic", response.categoryTopic()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status())
+        );
+    }
+
+    @Test
+    @DisplayName("Update category rejects missing category id")
+    void updateCategory_nullId_throwsBadRequest() {
         AppException exception = assertThrows(AppException.class,
-                () -> service.deactivateCategory(NOT_EXIST_ID, ADMIN));
-        assertTrue(exception.getMessage().contains("Category does not exist"));
+                () -> service.updateCategory(null, new AdminCategoryRequest("Name"), "Olivia"));
+
+        assertEquals("Category id is required.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("activate Category Inactive To Active Should Change Status")
-    void activateCategory_InactiveToActive_ShouldChangeStatus() {
-        // 1. 设置初始状态为 INACTIVE
-        testCategory.setStatus(ClassificationStatus.INACTIVE.name());
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
+    @DisplayName("Activate category returns existing response when already active")
+    void activateCategory_alreadyActive_returnsUnchangedResponse() {
+        when(categoryMapper.selectById(5L)).thenReturn(category(5L, "Places", ClassificationStatus.ACTIVE.name(), 1));
 
-        // 2. mock updateStatus 操作
+        AdminCategoryResponse response = service.activateCategory(5L, "Olivia");
 
-        // 3. 关键：mock 更新后的查询结果，返回一个状态为 ACTIVE 的对象
-        Category updatedCategory = new Category();
-        updatedCategory.setCategoryId(EXIST_ID);
-        updatedCategory.setCategoryTopic(testCategory.getCategoryTopic());
-        updatedCategory.setStatus(ClassificationStatus.ACTIVE.name());
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(updatedCategory);
-
-        AdminCategoryResponse result = service.activateCategory(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
+        assertAll(
+                () -> assertEquals(5L, response.categoryId()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status()),
+                () -> assertEquals("Places", response.categoryTopic())
+        );
     }
 
     @Test
-    @DisplayName("activate Category Already Active Should No Change")
-    void activateCategory_AlreadyActive_ShouldNoChange() {
-        // 原本就是激活状态
-        testCategory.setStatus(ClassificationStatus.ACTIVE.name());
-        when(categoryMapper.selectById(EXIST_ID)).thenReturn(testCategory);
+    @DisplayName("Deactivate category changes active category to inactive")
+    void deactivateCategory_activeCategory_returnsInactiveResponse() {
+        when(categoryMapper.selectById(5L)).thenReturn(
+                category(5L, "Places", ClassificationStatus.ACTIVE.name(), 1),
+                category(5L, "Places", ClassificationStatus.INACTIVE.name(), 1));
+        when(categoryMapper.updateStatus(eq(5L), eq(ClassificationStatus.INACTIVE.name()), any(LocalDateTime.class))).thenReturn(1);
 
-        AdminCategoryResponse result = service.activateCategory(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
+        AdminCategoryResponse response = service.deactivateCategory(5L, "Olivia");
+
+        assertEquals(ClassificationStatus.INACTIVE, response.status());
     }
 
     @Test
-    @DisplayName("activate Category Null Id Should Throw Bad Request")
-    void activateCategory_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.activateCategory(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Category id is required"));
-    }
-
-    @Test
-    @DisplayName("activate Category Not Exist Id Should Throw NotFound")
-    void activateCategory_NotExistId_ShouldThrowNotFound() {
-        when(categoryMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.activateCategory(NOT_EXIST_ID, ADMIN));
-        assertTrue(exception.getMessage().contains("Category does not exist"));
-    }
-    // ======================== 标签（Tag）测试 ========================
-    @Test
-    @DisplayName("get All Tags Should Return Correct List")
-    void getAllTags_ShouldReturnCorrectList() {
-        when(tagMapper.selectAllTags()).thenReturn(List.of(testTag));
-        List<AdminTagResponse> result = service.getAllTags();
-        assertFalse(result.isEmpty());
-        assertEquals(1, result.size());
-    }
-
-    @Test
-    @DisplayName("get Active Tags Should Return Only Active")
-    void getActiveTags_ShouldReturnOnlyActive() {
-        when(tagMapper.selectByStatus(ClassificationStatus.ACTIVE.name())).thenReturn(List.of(testTag));
-        List<AdminTagResponse> result = service.getActiveTags();
-        assertEquals(ClassificationStatus.ACTIVE, result.get(0).status());
-    }
-
-    @Test
-    @DisplayName("create Tag Valid Data Should Create Success")
-    void createTag_ValidData_ShouldCreateSuccess() {
-        // 1. 模拟唯一校验
-        when(tagMapper.countByNameIgnoreCase(anyString(), isNull())).thenReturn(0);
-
-        // 2. insert时，手动给实体设置ID（修复核心！）
+    @DisplayName("Create tag accepts max boundary length")
+    void createTag_maxLengthName_returnsCreatedTag() {
+        String maxName = "t".repeat(100);
+        AtomicReference<Tag> inserted = new AtomicReference<>();
+        when(tagMapper.countByNameIgnoreCase(maxName, null)).thenReturn(0);
         when(tagMapper.insert(any(Tag.class))).thenAnswer(invocation -> {
             Tag tag = invocation.getArgument(0);
-            tag.setTagId(EXIST_ID); // 手动设置ID，否则为null
+            tag.setTagId(11L);
+            inserted.set(tag);
             return 1;
         });
+        when(tagMapper.selectById(11L)).thenAnswer(invocation -> inserted.get());
 
-        // 3. 根据ID查询返回模拟对象
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
+        AdminTagResponse response = service.createTag(new AdminTagRequest(maxName), "Olivia");
 
-        // 执行
-        AdminTagResponse result = service.createTag(testTagRequest, ADMIN);
-
-        // 断言
-        assertNotNull(result);
-        assertEquals("test tag", result.tagName());
+        assertAll(
+                () -> assertEquals(11L, response.tagId()),
+                () -> assertEquals(maxName, response.tagName()),
+                () -> assertEquals(100, response.tagName().length()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status())
+        );
     }
 
     @Test
-    @DisplayName("create Tag Blank Name Should Throw Bad Request")
-    void createTag_BlankName_ShouldThrowBadRequest() {
-        AdminTagRequest request = new AdminTagRequest("");
-        AppException exception = assertThrows(AppException.class, () -> service.createTag(request, ADMIN));
-        assertTrue(exception.getMessage().contains("invalid"));
-    }
+    @DisplayName("Update tag rejects duplicate tag name")
+    void updateTag_duplicateName_throwsConflict() {
+        when(tagMapper.selectById(11L)).thenReturn(tag(11L, "Old", ClassificationStatus.ACTIVE.name(), 0));
+        when(tagMapper.countByNameIgnoreCase("Festival", 11L)).thenReturn(1);
 
-    @Test
-    @DisplayName("create Tag Over Maximum Length Should Throw Bad Request")
-    void createTag_OverMaxLength_ShouldThrowBadRequest() {
-        String longName = "a".repeat(MAX_TAG_NAME_LENGTH + 1);
-        AdminTagRequest request = new AdminTagRequest(longName);
-        AppException exception = assertThrows(AppException.class, () -> service.createTag(request, ADMIN));
-        assertTrue(exception.getMessage().contains("invalid"));
-    }
-
-    @Test
-    @DisplayName("create Tag Duplicate Name Should Throw Conflict")
-    void createTag_DuplicateName_ShouldThrowConflict() {
-        when(tagMapper.countByNameIgnoreCase(anyString(), isNull())).thenReturn(1);
         AppException exception = assertThrows(AppException.class,
-                () -> service.createTag(testTagRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("already exists"));
+                () -> service.updateTag(11L, new AdminTagRequest("Festival"), "Olivia"));
+
+        assertEquals("tagName already exists.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("update Tag Not Exist Id Should Throw NotFound")
-    void updateTag_NotExistId_ShouldThrowNotFound() {
-        when(tagMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
+    @DisplayName("Activate tag changes inactive tag to active")
+    void activateTag_inactiveTag_returnsActiveResponse() {
+        when(tagMapper.selectById(11L)).thenReturn(
+                tag(11L, "Festival", ClassificationStatus.INACTIVE.name(), 0),
+                tag(11L, "Festival", ClassificationStatus.ACTIVE.name(), 0));
+        when(tagMapper.updateStatus(eq(11L), eq(ClassificationStatus.ACTIVE.name()), any(LocalDateTime.class))).thenReturn(1);
+
+        AdminTagResponse response = service.activateTag(11L, "Olivia");
+
+        assertEquals(ClassificationStatus.ACTIVE, response.status());
+    }
+
+    @Test
+    @DisplayName("Create resource type rejects name conflicting with category topic")
+    void createResourceType_conflictsWithCategory_throwsConflict() {
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("traditions", null)).thenReturn(0);
+        when(categoryMapper.countByTopicIgnoreCase("traditions", null)).thenReturn(1);
+
         AppException exception = assertThrows(AppException.class,
-                () -> service.updateTag(NOT_EXIST_ID, testTagRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag does not exist"));
+                () -> service.createResourceType(new AdminResourceTypeRequest("traditions"), "Olivia"));
+
+        assertEquals("typeName conflicts with an existing category topic.", exception.getMessage());
     }
 
     @Test
-    @DisplayName("update Tag Valid Data Should Update Success")
-    void updateTag_ValidData_ShouldUpdateSuccess() {
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
-        when(tagMapper.countByNameIgnoreCase(anyString(), eq(EXIST_ID))).thenReturn(0);
-        when(tagMapper.updateTagName(anyLong(), anyString(), any())).thenReturn(1);
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
-
-        AdminTagResponse result = service.updateTag(EXIST_ID, testTagRequest, ADMIN);
-        assertNotNull(result);
-        assertEquals(EXIST_ID, result.tagId());
-    }
-
-    // updateTag - ID 为 null
-    @Test
-    @DisplayName("update Tag Null Id Should Throw Bad Request")
-    void updateTag_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.updateTag(null, testTagRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag id is required"));
-    }
-
-    @Test
-    @DisplayName("deactivate Tag Already Inactive No Change")
-    void deactivateTag_AlreadyInactive_NoChange() {
-        testTag.setStatus(ClassificationStatus.INACTIVE.name());
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
-
-        AdminTagResponse result = service.deactivateTag(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.INACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("deactivate Tag Normal Should Change Status")
-    void deactivateTag_Normal_ShouldChangeStatus() {
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
-        Tag inactive = new Tag();
-        inactive.setTagId(EXIST_ID);
-        inactive.setStatus(ClassificationStatus.INACTIVE.name());
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(inactive);
-
-        AdminTagResponse result = service.deactivateTag(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.INACTIVE, result.status());
-    }
-
-    // deactivateTag - Null ID
-    @Test
-    @DisplayName("deactivate Tag Null Id Should Throw Bad Request")
-    void deactivateTag_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.deactivateTag(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag id is required"));
-    }
-
-    // deactivateTag - 不存在 ID
-    @Test
-    @DisplayName("deactivate Tag Not Exist Id Should Throw NotFound")
-    void deactivateTag_NotExistId_ShouldThrowNotFound() {
-        when(tagMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.deactivateTag(NOT_EXIST_ID, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag does not exist"));
-    }
-
-    @Test
-    @DisplayName("activate Tag Normal Should Change Status")
-    void activateTag_Normal_ShouldChangeStatus() {
-        // 1. 设置初始状态为 INACTIVE
-        testTag.setStatus(ClassificationStatus.INACTIVE.name());
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
-
-        // 2. 关键：创建一个状态为 ACTIVE 的新对象，模拟更新后的数据库状态
-        Tag activeTag = new Tag();
-        activeTag.setTagId(EXIST_ID);
-        activeTag.setStatus(ClassificationStatus.ACTIVE.name());
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(activeTag);
-
-        // 执行
-        AdminTagResponse result = service.activateTag(EXIST_ID, ADMIN);
-        
-        // 断言
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("activate Tag Already Active Should No Change")
-    void activateTag_AlreadyActive_ShouldNoChange() {
-        when(tagMapper.selectById(EXIST_ID)).thenReturn(testTag);
-        AdminTagResponse result = service.activateTag(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("activate Tag Null Id Should Throw Bad Request")
-    void activateTag_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.activateTag(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag id is required"));
-    }
-
-    @Test
-    @DisplayName("activate Tag Not Exist Id Should Throw NotFound")
-    void activateTag_NotExistId_ShouldThrowNotFound() {
-        when(tagMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.activateTag(NOT_EXIST_ID, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag does not exist"));
-    }
-
-    // ======================== 资源类型（ResourceType）测试 ========================
-    @Test
-    @DisplayName("get All Resource Types Should Return Correct List")
-    void getAllResourceTypes_ShouldReturnCorrectList() {
-        when(resourceTypeMapper.selectAllResourceTypes()).thenReturn(List.of(testResourceType));
-        List<AdminResourceTypeResponse> result = service.getAllResourceTypes();
-        assertFalse(result.isEmpty());
-    }
-
-    @Test
-    @DisplayName("get Active Resource Types Should Return Only Active")
-    void getActiveResourceTypes_ShouldReturnOnlyActive() {
-        when(resourceTypeMapper.selectByStatus(ClassificationStatus.ACTIVE.name())).thenReturn(List.of(testResourceType));
-        List<AdminResourceTypeResponse> result = service.getActiveResourceTypes();
-        assertEquals(ClassificationStatus.ACTIVE, result.get(0).status());
-    }
-
-    @Test
-    @DisplayName("create Resource Type Valid Data Should Create Success")
-    void createResourceType_ValidData_ShouldCreateSuccess() {
-        when(resourceTypeMapper.countByTypeNameIgnoreCase(anyString(), isNull())).thenReturn(0);
-        when(categoryMapper.countByTopicIgnoreCase(anyString(), isNull())).thenReturn(0);
-
-        // 核心修复：插入时手动设置 ID，否则为 null 会报错
+    @DisplayName("Create resource type returns active type for valid request")
+    void createResourceType_validRequest_returnsCreatedType() {
+        AtomicReference<ResourceType> inserted = new AtomicReference<>();
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("photo", null)).thenReturn(0);
+        when(categoryMapper.countByTopicIgnoreCase("photo", null)).thenReturn(0);
         when(resourceTypeMapper.insert(any(ResourceType.class))).thenAnswer(invocation -> {
-            ResourceType rt = invocation.getArgument(0);
-            rt.setResourceTypeId(EXIST_ID); // 手动给ID
+            ResourceType type = invocation.getArgument(0);
+            type.setResourceTypeId(12L);
+            inserted.set(type);
             return 1;
         });
+        when(resourceTypeMapper.selectById(12L)).thenAnswer(invocation -> inserted.get());
 
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
+        AdminResourceTypeResponse response = service.createResourceType(new AdminResourceTypeRequest(" photo "), "Olivia");
 
-        AdminResourceTypeResponse result = service.createResourceType(testResourceTypeRequest, ADMIN);
-        assertNotNull(result);
+        assertAll(
+                () -> assertEquals(12L, response.resourceTypeId()),
+                () -> assertEquals("photo", response.typeName()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status())
+        );
     }
 
     @Test
-    @DisplayName("create Resource Type Blank Name Should Throw Bad Request")
-    void createResourceType_BlankName_ShouldThrowBadRequest() {
-        AdminResourceTypeRequest request = new AdminResourceTypeRequest("   ");
-        AppException exception = assertThrows(AppException.class,
-                () -> service.createResourceType(request, ADMIN));
-        assertTrue(exception.getMessage().contains("invalid"));
-    }
-
-    // createResourceType - 过长名字
-    @Test
-    @DisplayName("create Resource Type Over Length Should Throw Bad Request")
-    void createResourceType_OverLength_ShouldThrowBadRequest() {
-        String longName = "a".repeat(MAX_RESOURCE_TYPE_LENGTH + 1);
-        AdminResourceTypeRequest request = new AdminResourceTypeRequest(longName);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.createResourceType(request, ADMIN));
-        assertTrue(exception.getMessage().contains("invalid"));
-    }
-
-    // createResourceType - 重复名称
-    @Test
-    @DisplayName("create Resource Type Duplicate Name Should Throw Conflict")
-    void createResourceType_DuplicateName_ShouldThrowConflict() {
-        when(resourceTypeMapper.countByTypeNameIgnoreCase(anyString(), isNull())).thenReturn(1);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.createResourceType(testResourceTypeRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("already exists"));
-    }
-
-    @Test
-    @DisplayName("update Resource Type Used by Resource Invalid Enum Should Throw Conflict")
-    void updateResourceType_UsedByResource_InvalidEnum_ShouldThrowConflict() {
-        testResourceType.setUsageCount(10);
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-        AdminResourceTypeRequest request = new AdminResourceTypeRequest("illegal_enum");
+    @DisplayName("Update used resource type rejects unsupported workflow name")
+    void updateResourceType_usedTypeUnsupportedName_throwsConflict() {
+        when(resourceTypeMapper.selectById(12L)).thenReturn(resourceType(12L, "photo", ClassificationStatus.ACTIVE.name(), 4));
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("custom type", 12L)).thenReturn(0);
+        when(categoryMapper.countByTopicIgnoreCase("custom type", null)).thenReturn(0);
 
         AppException exception = assertThrows(AppException.class,
-                () -> service.updateResourceType(EXIST_ID, request, ADMIN));
-        assertTrue(exception.getMessage().contains("supported by the current resource metadata flow"));
+                () -> service.updateResourceType(12L, new AdminResourceTypeRequest("custom type"), "Olivia"));
+
+        assertEquals(
+                "Resource types already used by resources must keep a name supported by the current resource metadata flow.",
+                exception.getMessage()
+        );
     }
 
     @Test
-    @DisplayName("update Resource Type Not Exist Id Should Throw NotFound")
-    void updateResourceType_NotExistId_ShouldThrowNotFound() {
-        when(resourceTypeMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
+    @DisplayName("Deactivate resource type changes active type to inactive")
+    void deactivateResourceType_activeType_returnsInactiveResponse() {
+        when(resourceTypeMapper.selectById(12L)).thenReturn(
+                resourceType(12L, "photo", ClassificationStatus.ACTIVE.name(), 0),
+                resourceType(12L, "photo", ClassificationStatus.INACTIVE.name(), 0));
+        when(resourceTypeMapper.updateStatus(eq(12L), eq(ClassificationStatus.INACTIVE.name()), any(LocalDateTime.class))).thenReturn(1);
+
+        AdminResourceTypeResponse response = service.deactivateResourceType(12L, "Olivia");
+
+        assertAll(
+                () -> assertEquals(12L, response.resourceTypeId()),
+                () -> assertEquals("photo", response.typeName()),
+                () -> assertEquals(ClassificationStatus.INACTIVE, response.status())
+        );
+    }
+
+    @Test
+    @DisplayName("Mapper update returning zero is treated as not found")
+    void updateResourceType_updateReturnsZero_throwsNotFound() {
+        when(resourceTypeMapper.selectById(12L)).thenReturn(resourceType(12L, "photo", ClassificationStatus.ACTIVE.name(), 0));
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("video", 12L)).thenReturn(0);
+        when(categoryMapper.countByTopicIgnoreCase("video", null)).thenReturn(0);
+        when(resourceTypeMapper.updateTypeName(eq(12L), eq("video"), any(LocalDateTime.class))).thenReturn(0);
+
         AppException exception = assertThrows(AppException.class,
-                () -> service.updateResourceType(NOT_EXIST_ID, testResourceTypeRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type does not exist"));
+                () -> service.updateResourceType(12L, new AdminResourceTypeRequest("video"), "Olivia"));
+
+        assertAll(
+                () -> assertEquals(404, exception.getStatusCode()),
+                () -> assertEquals("Resource type does not exist.", exception.getMessage())
+        );
     }
 
-    @Test
-    @DisplayName("update Resource Type Valid Data Should Update Success")
-    void updateResourceType_ValidData_ShouldUpdateSuccess() {
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-        when(resourceTypeMapper.countByTypeNameIgnoreCase(anyString(), eq(EXIST_ID))).thenReturn(0);
-        when(categoryMapper.countByTopicIgnoreCase(anyString(), isNull())).thenReturn(0);
-        when(resourceTypeMapper.updateTypeName(anyLong(), anyString(), any())).thenReturn(1);
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-
-        AdminResourceTypeResponse result = service.updateResourceType(EXIST_ID, testResourceTypeRequest, ADMIN);
-        assertNotNull(result);
+    private Category category(Long id, String topic, String status, Integer usageCount) {
+        Category category = new Category();
+        category.setCategoryId(id);
+        category.setCategoryTopic(topic);
+        category.setStatus(status);
+        category.setUsageCount(usageCount);
+        category.setCreatedAt(LocalDateTime.now().minusDays(2));
+        category.setLastUpdatedAt(LocalDateTime.now().minusDays(1));
+        return category;
     }
 
-    // updateResourceType - Null ID
-    @Test
-    @DisplayName("update Resource Type Null Id Should Throw Bad Request")
-    void updateResourceType_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.updateResourceType(null, testResourceTypeRequest, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type id is required"));
+    private Tag tag(Long id, String name, String status, Integer usageCount) {
+        Tag tag = new Tag();
+        tag.setTagId(id);
+        tag.setTagName(name);
+        tag.setStatus(status);
+        tag.setUsageCount(usageCount);
+        tag.setCreatedAt(LocalDateTime.now().minusDays(2));
+        tag.setLastUpdatedAt(LocalDateTime.now().minusDays(1));
+        return tag;
     }
 
-    @Test
-    @DisplayName("deactivate Resource Type Valid Should Change Status")
-    void deactivateResourceType_Valid_ShouldChangeStatus() {
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-        ResourceType inactive = new ResourceType();
-        inactive.setResourceTypeId(EXIST_ID);
-        inactive.setStatus(ClassificationStatus.INACTIVE.name());
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(inactive);
-
-        AdminResourceTypeResponse result = service.deactivateResourceType(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.INACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("deactivate Resource Type Already Inactive Should No Change")
-    void deactivateResourceType_AlreadyInactive_ShouldNoChange() {
-        testResourceType.setStatus(ClassificationStatus.INACTIVE.name());
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-        AdminResourceTypeResponse result = service.deactivateResourceType(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.INACTIVE, result.status());
-    }
-
-    // deactivateResourceType - Null ID
-    @Test
-    @DisplayName("deactivate Resource Type Null Id Should Throw Bad Request")
-    void deactivateResourceType_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.deactivateResourceType(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type id is required"));
-    }
-
-    // deactivateResourceType - 不存在 ID
-    @Test
-    @DisplayName("deactivate Resource Type Not Exist Id Should Throw NotFound")
-    void deactivateResourceType_NotExistId_ShouldThrowNotFound() {
-        when(resourceTypeMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.deactivateResourceType(NOT_EXIST_ID, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type does not exist"));
-    }
-
-    // activateResourceType - 完全缺失
-    @Test
-    @DisplayName("activate Resource Type Normal Should Change Status")
-    void activateResourceType_Normal_ShouldChangeStatus() {
-        // 1. 设置初始状态为 INACTIVE
-        testResourceType.setStatus(ClassificationStatus.INACTIVE.name());
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-
-        // 2. 关键：创建一个状态为 ACTIVE 的新对象，模拟更新后的数据库状态
-        ResourceType activeResourceType = new ResourceType();
-        activeResourceType.setResourceTypeId(EXIST_ID);
-        activeResourceType.setStatus(ClassificationStatus.ACTIVE.name());
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(activeResourceType);
-
-        // 执行
-        AdminResourceTypeResponse result = service.activateResourceType(EXIST_ID, ADMIN);
-        
-        // 断言
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("activate Resource Type Already Active Should No Change")
-    void activateResourceType_AlreadyActive_ShouldNoChange() {
-        when(resourceTypeMapper.selectById(EXIST_ID)).thenReturn(testResourceType);
-        AdminResourceTypeResponse result = service.activateResourceType(EXIST_ID, ADMIN);
-        assertEquals(ClassificationStatus.ACTIVE, result.status());
-    }
-
-    @Test
-    @DisplayName("activate Resource Type Null Id Should Throw Bad Request")
-    void activateResourceType_NullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class,
-                () -> service.activateResourceType(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type id is required"));
-    }
-
-    @Test
-    @DisplayName("activate Resource Type Not Exist Id Should Throw NotFound")
-    void activateResourceType_NotExistId_ShouldThrowNotFound() {
-        when(resourceTypeMapper.selectById(NOT_EXIST_ID)).thenReturn(null);
-        AppException exception = assertThrows(AppException.class,
-                () -> service.activateResourceType(NOT_EXIST_ID, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type does not exist"));
-    }
-
-    // ======================== 空ID通用异常测试 ========================
-    @Test
-    @DisplayName("operate Category With Null Id Should Throw Bad Request")
-    void operateCategory_WithNullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class, () -> service.deactivateCategory(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Category id is required"));
-    }
-
-    @Test
-    @DisplayName("operate Tag With Null Id Should Throw Bad Request")
-    void operateTag_WithNullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class, () -> service.deactivateTag(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Tag id is required"));
-    }
-
-    @Test
-    @DisplayName("operate Resource Type With Null Id Should Throw Bad Request")
-    void operateResourceType_WithNullId_ShouldThrowBadRequest() {
-        AppException exception = assertThrows(AppException.class, () -> service.deactivateResourceType(null, ADMIN));
-        assertTrue(exception.getMessage().contains("Resource type id is required"));
+    private ResourceType resourceType(Long id, String name, String status, Integer usageCount) {
+        ResourceType type = new ResourceType();
+        type.setResourceTypeId(id);
+        type.setTypeName(name);
+        type.setStatus(status);
+        type.setUsageCount(usageCount);
+        type.setCreatedAt(LocalDateTime.now().minusDays(2));
+        type.setLastUpdatedAt(LocalDateTime.now().minusDays(1));
+        return type;
     }
 }

@@ -1,28 +1,27 @@
 package com.cpt202.HerLink.unit.service.admin;
 
-import com.cpt202.HerLink.service.admin.*;
+import com.cpt202.HerLink.dto.admin.AdminOperationHistoryResponse;
+import com.cpt202.HerLink.mapper.AdminOperationHistoryMapper;
 import com.cpt202.HerLink.service.admin.AdminOperationHistoryServiceImpl;
-
+import java.time.LocalDateTime;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.cpt202.HerLink.dto.admin.AdminOperationHistoryResponse;
-import com.cpt202.HerLink.mapper.AdminOperationHistoryMapper;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminOperationHistoryServiceImplTest {
@@ -31,149 +30,99 @@ class AdminOperationHistoryServiceImplTest {
     private AdminOperationHistoryMapper adminOperationHistoryMapper;
 
     @InjectMocks
-    private AdminOperationHistoryServiceImpl adminOperationHistoryService;
-
-    private static final String TEST_ITEM = "TestItem";
-    private static final String TEST_KIND = "TestKind";
-    private static final String TEST_MODULE = "UserManagement";
-    private static final String TEST_ACTION = "Update";
-    private static final String TEST_ADMIN = "admin01";
-
-    private AdminOperationHistoryResponse mockResponse;
-
-    @BeforeEach
-    void setUp() {
-        mockResponse = new AdminOperationHistoryResponse();
-        mockResponse.setItemName(TEST_ITEM);
-        mockResponse.setModule(TEST_MODULE);
-        mockResponse.setAction(TEST_ACTION);
-        mockResponse.setAdministrator(TEST_ADMIN);
-    }
-
-    // recordOperation 测试
+    private AdminOperationHistoryServiceImpl service;
 
     @Test
-    @DisplayName("Record operation with valid parameters should execute without exception")
-    void recordOperation_WithValidParams_ShouldNotThrowException() {
-        // JUnit 断言：无异常抛出
-        assertDoesNotThrow(() -> {
-            adminOperationHistoryService.recordOperation(TEST_ITEM, TEST_KIND, TEST_MODULE, TEST_ACTION, TEST_ADMIN);
-        });
-    }
+    @DisplayName("Record operation stores all supplied fields and generated timestamp")
+    void recordOperation_validInput_capturesAllFields() {
+        AtomicReference<Object[]> captured = new AtomicReference<>();
+        when(adminOperationHistoryMapper.insert(any(), any(), any(), any(), any(), any(LocalDateTime.class)))
+                .thenAnswer(invocation -> {
+                    captured.set(new Object[] {
+                            invocation.getArgument(0),
+                            invocation.getArgument(1),
+                            invocation.getArgument(2),
+                            invocation.getArgument(3),
+                            invocation.getArgument(4),
+                            invocation.getArgument(5)
+                    });
+                    return 1;
+                });
 
-    @Test
-    @DisplayName("Record operation with null itemName should not throw exception")
-    void recordOperation_WithNullItemName_ShouldNotThrowException() {
-        assertDoesNotThrow(() -> {
-            adminOperationHistoryService.recordOperation(null, TEST_KIND, TEST_MODULE, TEST_ACTION, TEST_ADMIN);
-        });
+        assertDoesNotThrow(() ->
+                service.recordOperation("Temple", "Resource", "resource", "ARCHIVE", "Olivia"));
+
+        Object[] values = captured.get();
+        assertAll(
+                () -> assertNotNull(values),
+                () -> assertEquals("Temple", values[0]),
+                () -> assertEquals("Resource", values[1]),
+                () -> assertEquals("resource", values[2]),
+                () -> assertEquals("ARCHIVE", values[3]),
+                () -> assertEquals("Olivia", values[4]),
+                () -> assertTrue(values[5] instanceof LocalDateTime)
+        );
     }
 
     @Test
-    @DisplayName("Record operation with empty itemName should not throw exception")
-    void recordOperation_WithEmptyItemName_ShouldNotThrowException() {
-        assertDoesNotThrow(() -> {
-            adminOperationHistoryService.recordOperation("", TEST_KIND, TEST_MODULE, TEST_ACTION, TEST_ADMIN);
-        });
+    @DisplayName("Record operation swallows mapper runtime exception")
+    void recordOperation_mapperThrows_doesNotPropagate() {
+        when(adminOperationHistoryMapper.insert(any(), any(), any(), any(), any(), any(LocalDateTime.class)))
+                .thenThrow(new RuntimeException("database unavailable"));
+
+        assertDoesNotThrow(() ->
+                service.recordOperation("Temple", "Resource", "resource", "ARCHIVE", "Olivia"));
     }
 
     @Test
-    @DisplayName("Record operation with blank kind should not throw exception")
-    void recordOperation_WithBlankKind_ShouldNotThrowException() {
-        assertDoesNotThrow(() -> {
-            adminOperationHistoryService.recordOperation(TEST_ITEM, "   ", TEST_MODULE, TEST_ACTION, TEST_ADMIN);
-        });
+    @DisplayName("Get operation history returns all rows when module is null")
+    void getOperationHistory_nullModule_returnsAllRows() {
+        List<AdminOperationHistoryResponse> expected = List.of(history("resource"));
+        when(adminOperationHistoryMapper.selectAll()).thenReturn(expected);
+
+        List<AdminOperationHistoryResponse> result = service.getOperationHistory(null);
+
+        assertSame(expected, result);
+        assertEquals(1, result.size());
+        assertEquals("resource", result.get(0).getModule());
     }
 
     @Test
-    @DisplayName("Record operation with null administrator should not throw exception")
-    void recordOperation_WithNullAdministrator_ShouldNotThrowException() {
-        assertDoesNotThrow(() -> {
-            adminOperationHistoryService.recordOperation(TEST_ITEM, TEST_KIND, TEST_MODULE, TEST_ACTION, null);
-        });
+    @DisplayName("Get operation history returns all rows when module is blank")
+    void getOperationHistory_blankModule_returnsAllRows() {
+        List<AdminOperationHistoryResponse> expected = List.of(history("classification"));
+        when(adminOperationHistoryMapper.selectAll()).thenReturn(expected);
+
+        List<AdminOperationHistoryResponse> result = service.getOperationHistory("   ");
+
+        assertSame(expected, result);
+        assertEquals("classification", result.get(0).getModule());
     }
 
     @Test
-    @DisplayName("When mapper throws exception, record operation should catch and not propagate")
-    void recordOperation_MapperThrowsRuntimeException_ShouldNotThrowToCaller() {
-        doThrow(new RuntimeException("DB insertion failed"))
-                .when(adminOperationHistoryMapper)
-                .insert(anyString(), anyString(), anyString(), anyString(), anyString(), any());
+    @DisplayName("Get operation history trims module before filtered query")
+    void getOperationHistory_moduleWithSpaces_queriesTrimmedModule() {
+        List<AdminOperationHistoryResponse> expected = List.of(history("tag"));
+        when(adminOperationHistoryMapper.selectByModule(eq("tag"))).thenReturn(expected);
 
-        assertDoesNotThrow(() -> {
-            adminOperationHistoryService.recordOperation(TEST_ITEM, TEST_KIND, TEST_MODULE, TEST_ACTION, TEST_ADMIN);
-        });
+        List<AdminOperationHistoryResponse> result = service.getOperationHistory("  tag  ");
+
+        assertSame(expected, result);
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals("tag", result.get(0).getModule()),
+                () -> assertEquals("Updated", result.get(0).getAction())
+        );
     }
 
-    // getOperationHistory
-
-    @Test
-    @DisplayName("Get history with valid module should return non-empty list")
-    void getOperationHistory_WithValidModule_ShouldReturnMatchedList() {
-        String module = "SystemConfig";
-        List<AdminOperationHistoryResponse> expected = List.of(mockResponse);
-
-        when(adminOperationHistoryMapper.selectByModule(module)).thenReturn(expected);
-
-        List<AdminOperationHistoryResponse> actual = adminOperationHistoryService.getOperationHistory(module);
-
-        assertEquals(expected.size(), actual.size());
-        assertFalse(actual.isEmpty());
-    }
-
-
-    @Test
-    @DisplayName("Get history with null module should return all records")
-    void getOperationHistory_WithNullModule_ShouldReturnAllRecords() {
-        List<AdminOperationHistoryResponse> expected = List.of(mockResponse);
-        when(adminOperationHistoryMapper.selectAll()).thenReturn(expected); // 加这句
-
-        List<AdminOperationHistoryResponse> actual = adminOperationHistoryService.getOperationHistory(null);
-
-        assertEquals(expected.size(), actual.size());
-        assertFalse(actual.isEmpty());
-    }
-
-    @Test
-    @DisplayName("Get history with empty module should return all records")
-    void getOperationHistory_WithEmptyModule_ShouldReturnAllRecords() {
-        List<AdminOperationHistoryResponse> expected = List.of(mockResponse);
-        when(adminOperationHistoryMapper.selectAll()).thenReturn(expected); // 加这句
-
-        List<AdminOperationHistoryResponse> actual = adminOperationHistoryService.getOperationHistory("");
-
-        assertEquals(expected.size(), actual.size());
-    }
-
-    @Test
-    @DisplayName("Get history with blank module should return all records")
-    void getOperationHistory_WithBlankModule_ShouldReturnAllRecords() {
-        List<AdminOperationHistoryResponse> expected = List.of(mockResponse);
-        when(adminOperationHistoryMapper.selectAll()).thenReturn(expected); // 加这句
-
-        List<AdminOperationHistoryResponse> actual = adminOperationHistoryService.getOperationHistory("   ");
-
-        assertEquals(expected.size(), actual.size());
-    }
-
-    @Test
-    @DisplayName("Get history with whitespace wrapped module should trim and return results")
-    void getOperationHistory_WithWhitespaceModule_ShouldTrimAndReturnResults() {
-        String trimmedModule = "UserManagement";
-        List<AdminOperationHistoryResponse> expected = List.of(mockResponse);
-        when(adminOperationHistoryMapper.selectByModule(trimmedModule)).thenReturn(expected); // 加这句
-
-        List<AdminOperationHistoryResponse> actual = adminOperationHistoryService.getOperationHistory("  UserManagement  ");
-
-        assertEquals(expected.size(), actual.size());
-    }
-
-    @Test
-    @DisplayName("Get history with no matching data should return empty list")
-    void getOperationHistory_WithNoMatchedData_ShouldReturnEmptyList() {
-        List<AdminOperationHistoryResponse> actual = adminOperationHistoryService.getOperationHistory(TEST_MODULE);
-
-        assertTrue(actual.isEmpty());
-        assertEquals(0, actual.size());
+    private AdminOperationHistoryResponse history(String module) {
+        AdminOperationHistoryResponse response = new AdminOperationHistoryResponse();
+        response.setItemName("Temple");
+        response.setKind("Resource");
+        response.setModule(module);
+        response.setAction("Updated");
+        response.setAdministrator("Olivia");
+        response.setCreatedAt(LocalDateTime.now());
+        return response;
     }
 }

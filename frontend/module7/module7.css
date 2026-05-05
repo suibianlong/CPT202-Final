@@ -236,6 +236,7 @@ body.admin-page {
     color: #315c3d;
 }
 
+
 .admin-btn:disabled {
     cursor: not-allowed;
     opacity: 0.58;
