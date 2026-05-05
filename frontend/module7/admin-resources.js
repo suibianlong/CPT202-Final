@@ -98,3 +98,97 @@
       .toLowerCase();
     if (!keyword) {
       return rows;
+    }
+    return rows.filter((resource) => {
+      const id = String(resource.resourceId ?? '').toLowerCase();
+      const title = String(resource.title ?? '').toLowerCase();
+      return id.includes(keyword) || title.includes(keyword);
+    });
+  }
+
+  function renderResourceRow(resource) {
+    const admin = window.AdminModule;
+    const status = normalizeStatus(resource.status);
+    const lifecycleControl = renderLifecycleControl(resource, status);
+    return `
+            <tr>
+                <td>${resource.resourceId ?? '-'}</td>
+                <td>${admin.escapeHtml(resource.title || 'Untitled Resource')}</td>
+                <td>${admin.statusBadge(resource.status)}</td>
+                <td>${admin.escapeHtml(admin.formatDateTime(resource.archivedAt))}</td>
+                <td>${admin.escapeHtml(admin.formatDateTime(resource.updatedAt))}</td>
+                <td>
+                    <div class="admin-row-actions">
+                        ${lifecycleControl}
+                    </div>
+                </td>
+            </tr>
+        `;
+  }
+
+  function renderLifecycleControl(resource, status) {
+    if (status === 'approved') {
+      return `<button type="button" class="admin-btn danger" data-admin-resource-archive="${resource.resourceId}">Archive</button>`;
+    }
+    if (status === 'archived') {
+      return `<button type="button" class="admin-btn restore" data-admin-resource-unarchive="${resource.resourceId}">Unarchive</button>`;
+    }
+    return `<span class="admin-muted">No lifecycle action</span>`;
+  }
+
+  async function archiveResource(resourceId, button) {
+    if (!resourceId) {
+      window.AdminModule.showToast('Resource id is required.');
+      return;
+    }
+
+    if (!window.confirm(ARCHIVE_CONFIRMATION)) {
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      const response = await window.AdminModule.jsonRequest(`${ADMIN_RESOURCE_API}/${resourceId}/archive`, {
+        method: 'POST'
+      });
+      window.AdminModule.showToast(response?.message || 'Resource archived.');
+      await loadResources();
+    } catch (error) {
+      window.AdminModule.showToast(window.AdminModule.getErrorMessage(error, 'Unable to archive resource.'));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function unarchiveResource(resourceId, button) {
+    if (!resourceId) {
+      window.AdminModule.showToast('Resource id is required.');
+      return;
+    }
+
+    if (!window.confirm(UNARCHIVE_CONFIRMATION)) {
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      const response = await window.AdminModule.jsonRequest(`${ADMIN_RESOURCE_API}/${resourceId}/unarchive`, {
+        method: 'POST'
+      });
+      window.AdminModule.showToast(response?.message || 'Resource restored to approved and visible to viewers.');
+      await loadResources();
+    } catch (error) {
+      window.AdminModule.showToast(window.AdminModule.getErrorMessage(error, 'Unable to unarchive resource.'));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function normalizeStatus(value) {
+    return String(value || '')
+      .replaceAll('_', ' ')
+      .replaceAll('-', ' ')
+      .trim()
+      .toLowerCase();
+  }
+})();
