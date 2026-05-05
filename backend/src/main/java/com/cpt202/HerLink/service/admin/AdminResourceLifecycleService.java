@@ -13,4 +13,10 @@ public interface AdminResourceLifecycleService {
     }
 
     AdminResourceLifecycleResponse archiveResource(Long resourceId, String administrator);
+
+    default AdminResourceLifecycleResponse unarchiveResource(Long resourceId) {
+        return unarchiveResource(resourceId, null);
+    }
+
+    AdminResourceLifecycleResponse unarchiveResource(Long resourceId, String administrator);
 }

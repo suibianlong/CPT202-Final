@@ -40,6 +40,12 @@ public class AdminResourceController {
         return lifecycleService.archiveResource(resourceId, resolveAdministratorName(currentUser));
     }
 
+    @PostMapping("/{resourceId}/unarchive")
+    public AdminResourceLifecycleResponse unarchiveResource(@PathVariable Long resourceId, HttpServletRequest request) {
+        CurrentUserVO currentUser = resourcePermissionChecker.requireAdminUser(request);
+        return lifecycleService.unarchiveResource(resourceId, resolveAdministratorName(currentUser));
+    }
+
     private String resolveAdministratorName(CurrentUserVO currentUser) {
         if (currentUser == null) {
             return "admin";

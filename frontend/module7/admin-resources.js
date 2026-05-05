@@ -1,6 +1,7 @@
 (() => {
     const ADMIN_RESOURCE_API = "/api/admin/resources";
     const ARCHIVE_CONFIRMATION = "Archive this approved resource? It will be hidden from public discovery but kept in the system records.";
+    const UNARCHIVE_CONFIRMATION = "Unarchive this resource? It will become approved and visible to viewers again.";
 
     let resources = [];
 
@@ -30,8 +31,15 @@
 
         document.addEventListener("click", async event => {
             const archiveButton = event.target.closest("[data-admin-resource-archive]");
-            if (!archiveButton) return;
-            await archiveResource(Number(archiveButton.dataset.adminResourceArchive), archiveButton);
+            if (archiveButton) {
+                await archiveResource(Number(archiveButton.dataset.adminResourceArchive), archiveButton);
+                return;
+            }
+
+            const unarchiveButton = event.target.closest("[data-admin-resource-unarchive]");
+            if (unarchiveButton) {
+                await unarchiveResource(Number(unarchiveButton.dataset.adminResourceUnarchive), unarchiveButton);
+            }
         });
     }
 
@@ -54,12 +62,13 @@
         const panel = document.getElementById("resourceListPanel");
         if (!panel) return;
         const admin = window.AdminModule;
+        const filteredResources = filterResources(resources);
 
         panel.innerHTML = `
             <div class="admin-panel-header">
                 <div>
                     <h2>Resources</h2>
-                    <p>${resources.length} resource${resources.length === 1 ? "" : "s"} loaded.</p>
+                    <p>${filteredResources.length} resource${filteredResources.length === 1 ? "" : "s"} shown.</p>
                 </div>
             </div>
             <div class="admin-table-wrap">
@@ -75,17 +84,31 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${resources.length ? resources.map(renderResourceRow).join("") : admin.emptyRow(6, "No resources found.")}
+                        ${filteredResources.length ? filteredResources.map(renderResourceRow).join("") : admin.emptyRow(6, "No resources match the selected filters.")}
                     </tbody>
                 </table>
             </div>
         `;
     }
 
+    function filterResources(rows) {
+        const keyword = String(document.getElementById("resourceSearchInput")?.value || "")
+            .trim()
+            .toLowerCase();
+        if (!keyword) {
+            return rows;
+        }
+        return rows.filter(resource => {
+            const id = String(resource.resourceId ?? "").toLowerCase();
+            const title = String(resource.title ?? "").toLowerCase();
+            return id.includes(keyword) || title.includes(keyword);
+        });
+    }
+
     function renderResourceRow(resource) {
         const admin = window.AdminModule;
         const status = normalizeStatus(resource.status);
-        const archiveControl = renderArchiveControl(resource, status);
+        const lifecycleControl = renderLifecycleControl(resource, status);
         return `
             <tr>
                 <td>${resource.resourceId ?? "-"}</td>
@@ -95,20 +118,19 @@
                 <td>${admin.escapeHtml(admin.formatDateTime(resource.updatedAt))}</td>
                 <td>
                     <div class="admin-row-actions">
-                        ${archiveControl}
+                        ${lifecycleControl}
                     </div>
                 </td>
             </tr>
         `;
     }
 
-    function renderArchiveControl(resource, status) {
-        const admin = window.AdminModule;
+    function renderLifecycleControl(resource, status) {
         if (status === "approved") {
             return `<button type="button" class="admin-btn danger" data-admin-resource-archive="${resource.resourceId}">Archive</button>`;
         }
         if (status === "archived") {
-            return admin.statusBadge("Archived");
+            return `<button type="button" class="admin-btn restore" data-admin-resource-unarchive="${resource.resourceId}">Unarchive</button>`;
         }
         return `<span class="admin-muted">No lifecycle action</span>`;
     }
@@ -132,6 +154,30 @@
             await loadResources();
         } catch (error) {
             window.AdminModule.showToast(window.AdminModule.getErrorMessage(error, "Unable to archive resource."));
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function unarchiveResource(resourceId, button) {
+        if (!resourceId) {
+            window.AdminModule.showToast("Resource id is required.");
+            return;
+        }
+
+        if (!window.confirm(UNARCHIVE_CONFIRMATION)) {
+            return;
+        }
+
+        button.disabled = true;
+        try {
+            const response = await window.AdminModule.jsonRequest(`${ADMIN_RESOURCE_API}/${resourceId}/unarchive`, {
+                method: "POST"
+            });
+            window.AdminModule.showToast(response?.message || "Resource restored to approved and visible to viewers.");
+            await loadResources();
+        } catch (error) {
+            window.AdminModule.showToast(window.AdminModule.getErrorMessage(error, "Unable to unarchive resource."));
         } finally {
             button.disabled = false;
         }

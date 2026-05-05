@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Resource Management</title>
     <link rel="stylesheet" href="./shared/shared.css" />
-    <link rel="stylesheet" href="./module7/module7.css" />
+    <link rel="stylesheet" href="./module7/module7.css?v=20260504-resource-filter" />
 </head>
 <body class="admin-page" data-page="admin-resources">
 <header class="admin-top-bar">
@@ -29,8 +29,8 @@
     </div>
 
     <section class="admin-panel">
-        <form class="admin-form-row" id="resourceFilterForm">
-            <div class="admin-field">
+        <form class="admin-resource-filter-row" id="resourceFilterForm">
+            <div class="filter-field filter-status">
                 <label for="resourceStatusFilter">Status</label>
                 <select class="admin-input" id="resourceStatusFilter">
                     <option value="">All Status</option>
@@ -41,7 +41,13 @@
                     <option value="Rejected">Rejected</option>
                 </select>
             </div>
-            <button type="submit" class="admin-btn primary">Apply Filter</button>
+            <div class="filter-field filter-search">
+                <label for="resourceSearchInput">Search</label>
+                <input class="admin-input" id="resourceSearchInput" type="search" placeholder="Search by ID or title" />
+            </div>
+            <div class="filter-action">
+                <button type="submit" class="admin-btn primary">Apply Filter</button>
+            </div>
         </form>
     </section>
 
@@ -54,6 +60,6 @@
 
 <script src="./shared/shared.js"></script>
 <script src="./module7/module7.js"></script>
-<script src="./module7/admin-resources.js"></script>
+<script src="./module7/admin-resources.js?v=20260504-unarchive-filter"></script>
 </body>
 </html>

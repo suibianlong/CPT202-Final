@@ -18,6 +18,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
     private static final String RESOURCE_MODULE = "resource";
     private static final String RESOURCE_KIND = "Resource";
     private static final String ARCHIVE_ACTION = "ARCHIVE_RESOURCE Approved -> Archived";
+    private static final String UNARCHIVE_ACTION = "UNARCHIVE_RESOURCE Archived -> Approved";
     private static final int OPERATION_ITEM_NAME_MAX_LENGTH = 255;
 
     private final AdminResourceLifecycleMapper adminResourceLifecycleMapper;
@@ -87,6 +88,50 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         );
     }
 
+    @Override
+    @Transactional
+    public AdminResourceLifecycleResponse unarchiveResource(Long resourceId, String administrator) {
+        ResourceLifecycleRow current = loadResource(resourceId);
+        ResourceReviewStatus currentStatus = ResourceReviewStatus.fromDatabaseValue(current.getStatus());
+
+        if (currentStatus == ResourceReviewStatus.APPROVED) {
+            return approvedResponse(current);
+        }
+
+        if (currentStatus != ResourceReviewStatus.ARCHIVED) {
+            throw AppException.conflict("Only archived resources can be unarchived.");
+        }
+
+        LocalDateTime updatedAt = LocalDateTime.now();
+        int updatedRows = adminResourceLifecycleMapper.unarchiveResource(
+                resourceId,
+                updatedAt,
+                ResourceStatusEnum.APPROVED.getValue(),
+                ResourceStatusEnum.ARCHIVED.getValue()
+        );
+        if (updatedRows == 0) {
+            ResourceLifecycleRow latest = loadResource(resourceId);
+            ResourceReviewStatus latestStatus = ResourceReviewStatus.fromDatabaseValue(latest.getStatus());
+            if (latestStatus == ResourceReviewStatus.APPROVED) {
+                return approvedResponse(latest);
+            }
+            throw AppException.conflict("Resource could not be unarchived from its current status.");
+        }
+
+        ResourceLifecycleRow approved = loadResource(resourceId);
+        recordUnarchiveOperation(current, administrator);
+        return new AdminResourceLifecycleResponse(
+                approved.getResourceId(),
+                approved.getTitle(),
+                currentStatus,
+                ResourceReviewStatus.fromDatabaseValue(approved.getStatus()),
+                approved.getArchivedAt(),
+                approved.getUpdatedAt(),
+                true,
+                "Resource restored to approved and visible to viewers."
+        );
+    }
+
     private ResourceLifecycleRow loadResource(Long resourceId) {
         if (resourceId == null) {
             throw AppException.badRequest("Resource id is required.");
@@ -114,7 +159,28 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         );
     }
 
+    private AdminResourceLifecycleResponse approvedResponse(ResourceLifecycleRow resource) {
+        return new AdminResourceLifecycleResponse(
+                resource.getResourceId(),
+                resource.getTitle(),
+                ResourceReviewStatus.APPROVED,
+                ResourceReviewStatus.APPROVED,
+                resource.getArchivedAt(),
+                resource.getUpdatedAt(),
+                false,
+                "Resource is already approved and visible."
+        );
+    }
+
     private void recordArchiveOperation(ResourceLifecycleRow resource, String administrator) {
+        recordLifecycleOperation(resource, administrator, ARCHIVE_ACTION);
+    }
+
+    private void recordUnarchiveOperation(ResourceLifecycleRow resource, String administrator) {
+        recordLifecycleOperation(resource, administrator, UNARCHIVE_ACTION);
+    }
+
+    private void recordLifecycleOperation(ResourceLifecycleRow resource, String administrator, String action) {
         String title = resource.getTitle() == null || resource.getTitle().isBlank()
                 ? "Resource"
                 : resource.getTitle().trim();
@@ -127,7 +193,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
                 itemName,
                 RESOURCE_KIND,
                 RESOURCE_MODULE,
-                ARCHIVE_ACTION,
+                action,
                 operator
         );
     }
