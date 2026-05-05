@@ -1,8 +1,28 @@
 package com.cpt202.HerLink.service.impl;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.cpt202.HerLink.dto.auth.AccountUpdateRequest;
-import com.cpt202.HerLink.dto.auth.ContributorReviewDecisionRequest;
 import com.cpt202.HerLink.dto.auth.ContributorRequestSubmitRequest;
+import com.cpt202.HerLink.dto.auth.ContributorReviewDecisionRequest;
 import com.cpt202.HerLink.dto.auth.LoginRequest;
 import com.cpt202.HerLink.dto.auth.RegisterRequest;
 import com.cpt202.HerLink.dto.auth.RegisterVerificationCodeRequest;
@@ -19,24 +39,6 @@ import com.cpt202.HerLink.service.notification.EmailNotificationService;
 import com.cpt202.HerLink.util.PasswordHashService;
 import com.cpt202.HerLink.vo.ContributorRequestVO;
 import com.cpt202.HerLink.vo.CurrentUserVO;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
-import java.security.SecureRandom;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserAccessServiceImpl implements UserAccessService {

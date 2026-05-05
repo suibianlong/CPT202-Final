@@ -9,22 +9,39 @@
 </head>
 <body data-page="heritage-viewer">
 <div class="viewer-shell">
+
     <header class="viewer-topbar">
         <div class="viewer-topbar-actions">
-            <button id="backBtn" type="button" class="viewer-topbar-btn viewer-back-btn">Back</button>
+            <button id="backBtn" type="button" class="viewer-topbar-btn viewer-back-btn">
+                Back
+            </button>
         </div>
+
         <div class="viewer-topbar-right">
-            <button id="feedbackBtn" type="button" class="viewer-topbar-btn viewer-account-btn">Feedback</button>
-            <button id="accountBtn" type="button" class="viewer-topbar-btn viewer-account-btn">Account</button>
+            <button id="feedbackBtn" type="button" class="viewer-topbar-btn viewer-account-btn">
+                Feedback
+            </button>
+            <button id="accountBtn" type="button" class="viewer-topbar-btn viewer-account-btn">
+                Account
+            </button>
         </div>
     </header>
 
     <main class="viewer-main">
+
         <section class="viewer-hero">
-            <p class="viewer-hero-kicker">Archive Catalogue</p>
-            <h1>Heritage Resource Viewer</h1>
-            <p>Browse, search and explore approved heritage resources</p>
+            <div class="viewer-hero-decor viewer-hero-decor-left"></div>
+            <div class="viewer-hero-decor viewer-hero-decor-right"></div>
+
+            <div class="viewer-hero-content">
+                <h1>
+                    <span>Herlink:</span>
+                    Explore history with us
+                </h1>
+                <p>Go search for the historic heritage you're interested in</p>
+            </div>
         </section>
+
         <div class="viewer-archive-sheet">
             <section class="viewer-controls scenic-card">
                 <div class="viewer-control-row">
@@ -44,8 +61,12 @@
                         <option value="title">Sort by Title</option>
                     </select>
 
-                    <button id="loadAllBtn" type="button" class="btn btn-secondary">Load All</button>
-                    <button id="searchBtn" type="button" class="btn btn-primary">Search</button>
+                    <button id="loadAllBtn" type="button" class="btn btn-secondary">
+                        Load All
+                    </button>
+                    <button id="searchBtn" type="button" class="btn btn-primary">
+                        Search
+                    </button>
                 </div>
             </section>
 
@@ -54,6 +75,7 @@
                 <div id="resourceList" class="viewer-resource-list"></div>
             </section>
         </div>
+
     </main>
 </div>
 

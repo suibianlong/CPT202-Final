@@ -1,6 +1,5 @@
 (() => {
     const REVIEW_API = "/api/reviewer/reviews";
-    const ADMIN_RESOURCE_API = "/api/admin/resources";
     const PAGE_SIZE = 10;
 
     let pendingSubmissions = [];
@@ -46,10 +45,6 @@
                 return;
             }
 
-            const archiveButton = event.target.closest("[data-archive-resource]");
-            if (archiveButton) {
-                await archiveResource(Number(archiveButton.dataset.archiveResource), archiveButton);
-            }
         });
     }
 
@@ -124,9 +119,6 @@
         const contributor = detail.contributor || {};
         const category = detail.category || {};
         const submission = detail.submission || {};
-        const archiveAction = canArchiveResource(detail, resource)
-            ? `<button type="button" class="admin-btn danger" data-archive-resource="${detail.resourceId}">Archive Resource</button>`
-            : "";
         panel.innerHTML = `
             <div class="admin-panel-header">
                 <div>
@@ -157,7 +149,6 @@
             <div class="admin-row-actions review-feedback-box">
                 <button type="button" class="admin-btn primary" data-resource-decision="approve">Approve Resource</button>
                 <button type="button" class="admin-btn danger" data-resource-decision="reject">Reject Resource</button>
-                ${archiveAction}
             </div>
             ${renderReviewHistory(detail.reviewHistory)}
         `;
@@ -271,39 +262,6 @@
         } finally {
             button.disabled = false;
         }
-    }
-
-    async function archiveResource(resourceId, button) {
-        if (!resourceId) {
-            window.AdminModule.showToast("Resource id is required.");
-            return;
-        }
-
-        const confirmed = window.confirm("Are you sure you want to archive this resource? Archived resources will no longer be visible to viewers.");
-        if (!confirmed) {
-            return;
-        }
-
-        button.disabled = true;
-        try {
-            await window.AdminModule.jsonRequest(`${ADMIN_RESOURCE_API}/${resourceId}/archive`, {
-                method: "POST"
-            });
-            window.AdminModule.showToast("Resource archived successfully.");
-            await loadResourceReviewData();
-            if (selectedSubmission?.submissionId) {
-                await loadResourceDetail(selectedSubmission.submissionId);
-            }
-        } catch (error) {
-            window.AdminModule.showToast(window.AdminModule.getErrorMessage(error, "Failed to archive resource."));
-        } finally {
-            button.disabled = false;
-        }
-    }
-
-    function canArchiveResource(detail, resource) {
-        const status = String(detail?.resourceStatus || resource?.status || "").trim().toUpperCase();
-        return status === "APPROVED" || status === "PUBLISHED";
     }
 
     function toPublicMediaUrl(value) {
