@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/heritageResourcePlatform?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:remote_user}
-    password: ${DB_PASSWORD:Test@123456}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:zlylt1106}
 
   mail:
     host: smtp.qq.com
