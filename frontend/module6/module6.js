@@ -1,6 +1,7 @@
 const VIEWER_AUTH_API_BASE = "/api/auth";
 const VIEWER_API_BASE = "/api/viewer/resources";
 const VIEWER_FEEDBACK_API_BASE = "/api/viewer/feedback";
+const VIEWER_DEFAULT_PREVIEW_IMAGE = "./assets/heritage-view1.png";
 const {
     requestJson: viewerRequestJson,
     showMessageFromQuery: showViewerMessageFromQuery,
@@ -12,14 +13,6 @@ const {
 let viewerCurrentUser = null;
 let viewerCategoryOptions = [];
 let viewerResourceTypeOptions = [];
-const VIEWER_CATEGORY_BADGE_ASSETS = {
-    places: "./assets/category-places.png",
-    traditions: "./assets/category-traditions.png",
-    stories: "./assets/category-stories.png",
-    objects: "./assets/category-objects.png",
-    "educational materials": "./assets/category-education.png",
-    education: "./assets/category-education.png"
-};
 
 document.addEventListener("DOMContentLoaded", async () => {
     const page = document.body.dataset.page;
@@ -68,7 +61,6 @@ async function initViewerDetailPage() {
 
         await loadApprovedResourceDetail();
         await loadViewerComments();
-        await loadViewerFeedbackHistory();
     } catch (error) {
         handleViewerError(error, "Unable to load the approved resource detail.");
     }
@@ -292,20 +284,21 @@ function renderApprovedResources(resources) {
     }
 
     resourceList.innerHTML = resources.map(resource => {
-        const preview = resource.previewImage
-                ? `<img class="viewer-resource-cover" src="${escapeViewerHtml(toPublicMediaUrl(resource.previewImage))}" alt="${escapeViewerHtml(resource.title || "Resource preview")}" />`
-                : "";
+        const previewUrl = getViewerPreviewImageUrl(resource.previewImage);
+        const defaultPreviewUrl = escapeViewerHtml(VIEWER_DEFAULT_PREVIEW_IMAGE);
+        const preview = `<img class="viewer-resource-cover" src="${escapeViewerHtml(previewUrl)}" alt="${escapeViewerHtml(resource.title || "Resource preview")}" />`;
         const description = buildViewerExcerpt(resource.description, 120);
         const resolvedCategoryName = resource.categoryName || resolveCategoryName(resource.categoryId);
         const categoryName = escapeViewerHtml(capitalizeViewerLabel(resolvedCategoryName));
-        const categoryBadge = buildViewerCategoryBadge(resolvedCategoryName);
         const resourceType = escapeViewerHtml(formatViewerResourceType(resource.resourceType));
         const updatedAt = escapeViewerHtml(formatViewerDateTime(resource.updatedAt, { emptyText: "-" }));
 
         return `
             <article class="viewer-resource-card">
-                ${categoryBadge}
-                ${preview}
+                ${preview.replace(
+                    "/>",
+                    ` onerror="this.onerror=null;this.src='${defaultPreviewUrl}'" />`
+                )}
                 <div class="viewer-resource-copy">
                     <h3 class="viewer-resource-title">${escapeViewerHtml(resource.title || "Untitled resource")}</h3>
                     <p class="viewer-resource-summary">${escapeViewerHtml(description)}</p>
@@ -321,21 +314,6 @@ function renderApprovedResources(resources) {
             </article>
         `;
     }).join("");
-}
-
-function buildViewerCategoryBadge(categoryName) {
-    const categoryKey = normalizeViewerCategoryKey(categoryName);
-    const badgeSrc = VIEWER_CATEGORY_BADGE_ASSETS[categoryKey];
-
-    if (!badgeSrc) {
-        return "";
-    }
-
-    return `
-        <div class="viewer-resource-badge" aria-hidden="true">
-            <img class="viewer-category-icon" src="${escapeViewerHtml(badgeSrc)}" alt="" />
-        </div>
-    `;
 }
 
 async function loadApprovedResourceDetail() {
@@ -360,7 +338,6 @@ function renderApprovedResourceDetail(detail) {
     }
 
     document.getElementById("detailTitle").textContent = detail.title || "Approved resource detail";
-    document.getElementById("detailSubtitle").textContent = `Browse the published information for resource #${detail.id ?? "-"}.`;
     document.getElementById("detailId").textContent = detail.id ?? "-";
     document.getElementById("detailType").textContent = formatViewerResourceType(detail.resourceType);
     document.getElementById("detailCategory").textContent =
@@ -603,13 +580,10 @@ function renderPreviewMedia(previewImage) {
     const container = document.getElementById("previewContainer");
     if (!container) return;
 
-    if (!previewImage) {
-        container.innerHTML = '<div class="viewer-empty-message">No preview image provided.</div>';
-        return;
-    }
-
+    const previewUrl = getViewerPreviewImageUrl(previewImage);
+    const defaultPreviewUrl = escapeViewerHtml(VIEWER_DEFAULT_PREVIEW_IMAGE);
     container.innerHTML = `
-        <img src="${escapeViewerHtml(toPublicMediaUrl(previewImage))}" alt="Preview image" />
+        <img src="${escapeViewerHtml(previewUrl)}" alt="Preview image" onerror="this.onerror=null;this.src='${defaultPreviewUrl}'" />
     `;
 }
 
@@ -723,18 +697,6 @@ function capitalizeViewerLabel(value) {
             .filter(Boolean)
             .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
             .join(" ");
-}
-
-function normalizeViewerCategoryKey(value) {
-    if (!value) {
-        return "";
-    }
-
-    const normalizedValue = value.toString().trim().replaceAll(/\s+/g, " ").toLowerCase();
-    if (normalizedValue === "education") {
-        return "educational materials";
-    }
-    return normalizedValue;
 }
 
 function normalizeViewerResourceTypeOptions(options) {
@@ -856,6 +818,13 @@ function toPublicMediaUrl(value) {
     }
 
     return `/uploads/${normalized.replace(/^\/+/, "")}`;
+}
+
+function getViewerPreviewImageUrl(previewImage) {
+    if (!previewImage) {
+        return VIEWER_DEFAULT_PREVIEW_IMAGE;
+    }
+    return toPublicMediaUrl(previewImage);
 }
 
 function redirectViewerToLogin() {

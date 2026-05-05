@@ -4,6 +4,7 @@ body[data-page="viewer-feedback"] {
     min-height: 100vh;
     background: linear-gradient(180deg, #f4efe8 0%, #f8f5f0 100%);
     color: #5f5a55;
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 body[data-page="heritage-viewer"] .viewer-shell,
@@ -77,13 +78,17 @@ body[data-page="viewer-feedback"] .viewer-detail-main {
     margin: 0;
     font-size: clamp(2.2rem, 5vw, 3.9rem);
     color: #7a593a;
+    font-family: Baskerville, "Times New Roman", Georgia, serif;
+    font-weight: 700;
 }
+
 
 .viewer-hero p,
 .viewer-detail-hero p {
     margin: 10px 0 0;
     color: #8a8178;
     font-size: 1.02rem;
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 .viewer-controls {
@@ -121,6 +126,8 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     margin: 0 0 18px;
     font-size: 2rem;
     color: #7a593a;
+    font-family: Baskerville, "Times New Roman", Georgia, serif;
+    font-weight: 700;
 }
 
 .viewer-resource-list {
@@ -159,6 +166,8 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     margin: 0;
     color: #5f4531;
     font-size: 1.22rem;
+    font-family: Baskerville, "Times New Roman", Georgia, serif;
+    font-weight: 700;
 }
 
 .viewer-resource-summary {
@@ -248,6 +257,7 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     background-color: #f8f5f1;
     color: #5f5a55;
     box-shadow: none;
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 .viewer-form-stack textarea:focus,
@@ -335,20 +345,20 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
 }
 
 .viewer-detail-meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: 24px;
 }
 
 .viewer-meta-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 14px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.68);
-    border: 1px solid rgba(214, 205, 195, 0.92);
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
 }
 
 .viewer-meta-label {
@@ -357,6 +367,11 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    margin: 0;
+}
+
+.viewer-meta-item strong {
+    margin: 0;
 }
 
 .viewer-detail-copy h3,
@@ -446,11 +461,40 @@ body[data-page="heritage-viewer"]::after {
 
 body[data-page="heritage-viewer"]::before {
     z-index: 0;
-    background: url("./assets/heritage-view.png") top center / contain no-repeat;
+    background-image: url("./assets/heritage-view.png");
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
 }
 
 body[data-page="heritage-viewer"]::after {
     content: none;
+}
+
+body[data-page="viewer-detail"],
+body[data-page="viewer-feedback"] {
+    position: relative;
+    overflow-x: hidden;
+    background: #dbc4a0;
+}
+
+body[data-page="viewer-detail"]::before,
+body[data-page="viewer-feedback"]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("./assets/heritage-view.png");
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
+}
+
+body[data-page="viewer-detail"] .viewer-shell,
+body[data-page="viewer-feedback"] .viewer-shell {
+    position: relative;
+    z-index: 1;
 }
 
 body[data-page="heritage-viewer"] .viewer-shell {
@@ -529,11 +573,6 @@ body[data-page="heritage-viewer"] .viewer-back-btn::before {
     font-size: 1.15rem;
 }
 
-body[data-page="heritage-viewer"] .viewer-back-btn::before {
-    content: "\2190";
-    font-size: 1.15rem;
-}
-
 body[data-page="heritage-viewer"] .viewer-back-btn::after {
     content: none;
 }
@@ -546,7 +585,7 @@ body[data-page="heritage-viewer"] .viewer-hero {
     padding: 56px 120px 64px;
     border: 1px solid rgba(134, 96, 60, 0.22);
     border-radius: 30px;
-    background: rgba(248, 236, 214, 0.94);
+    background: rgba(255, 252, 246, 0.92);
     box-shadow:
         0 14px 34px rgba(120, 78, 35, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.46);
@@ -568,7 +607,7 @@ body[data-page="heritage-viewer"] .viewer-hero h1 {
     z-index: 1;
     max-width: 920px;
     margin: 0 auto;
-    color: #7a593a;
+    color: #5f6070;
     font-family: Baskerville, "Times New Roman", Georgia, serif;
     font-size: clamp(2.8rem, 5.6vw, 4.8rem);
     line-height: 1.02;
@@ -577,9 +616,15 @@ body[data-page="heritage-viewer"] .viewer-hero h1 {
     text-wrap: balance;
 }
 
-body[data-page="heritage-viewer"] .viewer-hero h1 span {
+body[data-page="heritage-viewer"] .viewer-hero h1 span,
+body[data-page="heritage-viewer"] .viewer-hero-line-top {
     display: block;
     color: #7a593a;
+}
+
+body[data-page="heritage-viewer"] .viewer-hero-line-bottom {
+    display: block;
+    color: #5f6070;
 }
 
 body[data-page="heritage-viewer"] .viewer-hero p {
@@ -600,7 +645,7 @@ body[data-page="heritage-viewer"] .viewer-archive-sheet {
     margin: 0 auto;
     padding: 16px 32px 20px;
     background:
-            linear-gradient(180deg, rgba(248, 236, 214, 0.98), rgba(241, 225, 197, 0.95));
+            linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(250, 245, 236, 0.94));
     border: 1px solid var(--viewer-edge);
     border-radius: 26px;
     box-shadow:
@@ -700,31 +745,63 @@ body[data-page="heritage-viewer"] .btn {
     font-size: 1rem;
     letter-spacing: 0.01em;
     box-shadow: none;
+    text-decoration: none;
 }
 
 body[data-page="heritage-viewer"] .btn:hover,
 body[data-page="heritage-viewer"] .btn:active {
     transform: none;
+    text-decoration: none;
 }
 
-body[data-page="heritage-viewer"] .btn-primary {
-    background:
-            linear-gradient(180deg, #d3a96c, #b88345);
-    color: #fbf4e8;
-    border-color: rgba(130, 88, 44, 0.3);
-}
-
-body[data-page="heritage-viewer"] .btn-secondary {
-    background:
-            linear-gradient(180deg, #d3a96c, #b88345);
+body[data-page="heritage-viewer"] .btn-primary,
+body[data-page="heritage-viewer"] .btn-primary:link,
+body[data-page="heritage-viewer"] .btn-primary:visited {
+    background: linear-gradient(180deg, #d3a96c, #b88345);
     color: #fff8ed;
     border-color: rgba(130, 88, 44, 0.3);
+    text-decoration: none;
+}
+
+body[data-page="heritage-viewer"] .btn-secondary,
+body[data-page="heritage-viewer"] .btn-secondary:link,
+body[data-page="heritage-viewer"] .btn-secondary:visited {
+    background: linear-gradient(180deg, #d3a96c, #b88345);
+    color: #fff8ed;
+    border-color: rgba(130, 88, 44, 0.3);
+    text-decoration: none;
 }
 
 body[data-page="heritage-viewer"] .btn-primary:hover,
 body[data-page="heritage-viewer"] .btn-secondary:hover {
     color: #fff9ef;
     filter: brightness(1.02);
+    text-decoration: none;
+}
+
+
+body[data-page="viewer-detail"] .btn-primary,
+body[data-page="viewer-detail"] .btn-secondary,
+body[data-page="viewer-feedback"] .btn-primary,
+body[data-page="viewer-feedback"] .btn-secondary {
+    background: linear-gradient(180deg, #d3a96c, #b88345);
+    color: #fff8ed;
+    border: 1px solid rgba(130, 88, 44, 0.3);
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(120, 78, 35, 0.16);
+    font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-weight: 700;
+}
+
+body[data-page="viewer-detail"] .btn-primary:hover,
+body[data-page="viewer-detail"] .btn-secondary:hover,
+body[data-page="viewer-feedback"] .btn-primary:hover,
+body[data-page="viewer-feedback"] .btn-secondary:hover {
+    background: linear-gradient(180deg, #c9944d, #a96f2f);
+    color: #fff9ef;
+    border-color: rgba(130, 88, 44, 0.42);
+    box-shadow: 0 10px 22px rgba(120, 78, 35, 0.2);
+    transform: translateY(-1px);
 }
 
 body[data-page="heritage-viewer"] .viewer-section {
@@ -763,7 +840,7 @@ body[data-page="heritage-viewer"] .viewer-resource-card {
     min-height: 100%;
     padding: 18px 20px 16px;
     background:
-            linear-gradient(180deg, rgba(255, 252, 246, 0.12), rgba(244, 228, 201, 0.04));
+            linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(252, 248, 241, 0.44));
     border: 1px solid rgba(136, 100, 64, 0.12);
     border-radius: 14px;
     box-shadow: none;
@@ -773,7 +850,7 @@ body[data-page="heritage-viewer"] .viewer-resource-card {
 body[data-page="heritage-viewer"] .viewer-resource-card:hover {
     transform: none;
     background:
-            linear-gradient(180deg, rgba(255, 252, 246, 0.16), rgba(244, 228, 201, 0.08));
+            linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(253, 250, 245, 0.58));
     border-color: rgba(136, 100, 64, 0.18);
 }
 
@@ -791,31 +868,9 @@ body[data-page="heritage-viewer"] .viewer-resource-copy {
     padding-right: 72px;
 }
 
-body[data-page="heritage-viewer"] .viewer-resource-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: grid;
-    place-items: center;
-    width: 68px;
-    height: 68px;
-    background: none;
-    pointer-events: none;
-    z-index: 2;
-}
-
-body[data-page="heritage-viewer"] .viewer-category-icon {
-    display: block;
-    width: 58px;
-    height: 58px;
-    object-fit: contain;
-    opacity: 0.96;
-    filter: drop-shadow(0 2px 4px rgba(96, 71, 45, 0.08));
-}
-
 body[data-page="heritage-viewer"] .viewer-resource-cover {
     border-radius: 10px;
-    background: rgba(249, 240, 223, 0.68);
+    background: rgba(255, 252, 246, 0.9);
     border: 1px solid rgba(145, 108, 71, 0.16);
     box-shadow: none;
 }
@@ -883,7 +938,12 @@ body[data-page="heritage-viewer"] .viewer-error {
     }
 
     .viewer-detail-meta {
+        gap: 8px;
+    }
+
+    .viewer-meta-item {
         grid-template-columns: 1fr;
+        gap: 4px;
     }
 
     .viewer-comment-head,
@@ -978,15 +1038,4 @@ body[data-page="heritage-viewer"] .viewer-error {
         padding-right: 62px;
     }
 
-    body[data-page="heritage-viewer"] .viewer-resource-badge {
-        top: 10px;
-        right: 8px;
-        width: 58px;
-        height: 58px;
-    }
-
-    body[data-page="heritage-viewer"] .viewer-category-icon {
-        width: 50px;
-        height: 50px;
-    }
 }
