@@ -1,79 +1,100 @@
-services:
-  db:
-    image: mysql:8.4
-    container_name: herlink-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: heritageResourcePlatform
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./backend/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql:ro
-    healthcheck:
-      test: ['CMD-SHELL', 'mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1']
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - herlink-network
+(() => {
+  const ADMIN_RESOURCE_API = '/api/admin/resources';
+  const ARCHIVE_CONFIRMATION =
+    'Archive this approved resource? It will be hidden from public discovery but kept in the system records.';
+  const UNARCHIVE_CONFIRMATION = 'Unarchive this resource? It will become approved and visible to viewers again.';
 
-  app:
-    image: ${APP_IMAGE:-herlink-app:local}
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: herlink-app
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:mysql://db:3306/heritageResourcePlatform?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
-      DB_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+  let resources = [];
 
-      DEMO_DATA_ENABLED: 'false'
+  document.addEventListener('DOMContentLoaded', async () => {
+    const admin = window.AdminModule;
+    admin.bindAdminBasics();
+    const currentUser = await admin.requireAdmin();
+    if (!currentUser) return;
 
-      MAIL_HOST: ${MAIL_HOST}
-      MAIL_PORT: ${MAIL_PORT}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_FROM: ${MAIL_FROM}
-      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH}
-      MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_SMTP_STARTTLS_ENABLE}
+    bindResourceActions();
+    await loadResources();
+  });
 
-      HERLINK_UPLOAD_DIR: /app/uploads
-      HERLINK_FRONTEND_DIR: /app/frontend
+  function bindResourceActions() {
+    const refreshButton = document.getElementById('resourceRefreshBtn');
+    if (refreshButton) {
+      refreshButton.addEventListener('click', loadResources);
+    }
 
-      JAVA_OPTS: ${JAVA_OPTS}
-    volumes:
-      - app_uploads:/app/uploads
-    expose:
-      - '8080'
-    networks:
-      - herlink-network
+    const filterForm = document.getElementById('resourceFilterForm');
+    if (filterForm) {
+      filterForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await loadResources();
+      });
+    }
 
-  nginx:
-    image: nginx:stable-alpine
-    container_name: herlink-nginx
-    restart: unless-stopped
-    depends_on:
-      - app
-    ports:
-      - '80:80'
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - herlink-network
+    document.addEventListener('click', async (event) => {
+      const archiveButton = event.target.closest('[data-admin-resource-archive]');
+      if (archiveButton) {
+        await archiveResource(Number(archiveButton.dataset.adminResourceArchive), archiveButton);
+        return;
+      }
 
-volumes:
-  mysql_data:
-  app_uploads:
+      const unarchiveButton = event.target.closest('[data-admin-resource-unarchive]');
+      if (unarchiveButton) {
+        await unarchiveResource(Number(unarchiveButton.dataset.adminResourceUnarchive), unarchiveButton);
+      }
+    });
+  }
 
-networks:
-  herlink-network:
-    driver: bridge
+  async function loadResources() {
+    const admin = window.AdminModule;
+    admin.setState('resourceListPanel', 'Loading resources...');
+
+    try {
+      const status = document.getElementById('resourceStatusFilter')?.value || '';
+      const query = status ? `?status=${encodeURIComponent(status)}` : '';
+      const rows = await admin.requestJson(`${ADMIN_RESOURCE_API}${query}`, { method: 'GET' });
+      resources = Array.isArray(rows) ? rows : [];
+      renderResources();
+    } catch (error) {
+      admin.setState('resourceListPanel', admin.getErrorMessage(error, 'Unable to load resources.'), 'error');
+    }
+  }
+
+  function renderResources() {
+    const panel = document.getElementById('resourceListPanel');
+    if (!panel) return;
+    const admin = window.AdminModule;
+    const filteredResources = filterResources(resources);
+
+    panel.innerHTML = `
+            <div class="admin-panel-header">
+                <div>
+                    <h2>Resources</h2>
+                    <p>${filteredResources.length} resource${filteredResources.length === 1 ? '' : 's'} shown.</p>
+                </div>
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Archived At</th>
+                            <th>Updated At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredResources.length ? filteredResources.map(renderResourceRow).join('') : admin.emptyRow(6, 'No resources match the selected filters.')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+  }
+
+  function filterResources(rows) {
+    const keyword = String(document.getElementById('resourceSearchInput')?.value || '')
+      .trim()
+      .toLowerCase();
+    if (!keyword) {
+      return rows;
