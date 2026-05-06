@@ -87,6 +87,7 @@ describe("module3.js", () => {
     afterEach(() => {
         jest.clearAllMocks();
         jest.clearAllTimers();
+        jest.restoreAllMocks();
         jest.useRealTimers();
     });
 
@@ -312,6 +313,105 @@ describe("module3.js", () => {
     });
 
     describe("resource editor save flow", () => {
+        test("does not auto create a draft when autosave runs before the first explicit save", async () => {
+            jest.useFakeTimers();
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html");
+            document.body.innerHTML = `
+                <form id="metadataForm">
+                    <input id="title" value="Temple archive">
+                    <input id="copyright" value="Museum rights">
+                    <select id="categoryId"><option value="7" selected>Topic</option></select>
+                    <input id="place" value="Suzhou">
+                    <textarea id="description">Historical description</textarea>
+                    <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                    <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                    <input id="tagInput">
+                    <div id="tagOptions"></div>
+                </form>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+
+            hooks.bindMetadataForm();
+            document.getElementById("title")
+                .dispatchEvent(new Event("input", { bubbles: true }));
+
+            jest.advanceTimersByTime(900);
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).not.toHaveBeenCalled();
+            expect(sharedApp.showToast).not.toHaveBeenCalled();
+            expect(window.location.search).toBe("");
+        });
+
+        test("creates a draft on the first explicit metadata save and updates the url", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html");
+            document.body.innerHTML = `
+                <form id="metadataForm">
+                    <input id="title" value="Temple archive">
+                    <input id="copyright" value="Museum rights">
+                    <select id="categoryId"><option value="7" selected>Topic</option></select>
+                    <input id="place" value="Suzhou">
+                    <textarea id="description">Historical description</textarea>
+                    <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                    <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                    <input id="tagInput">
+                    <div id="tagOptions"></div>
+                </form>
+                <input id="mediaFile" type="file">
+                <input id="previewImage" type="file">
+                <span id="mediaFileNameText"></span>
+                <span id="previewImageNameText"></span>
+                <span id="mediaFilePathText"></span>
+                <span id="previewImagePathText"></span>
+                <div id="previewImageFrame"></div>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    id: 108,
+                    status: "Draft"
+                })
+                .mockResolvedValueOnce({
+                    id: 108,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    updatedAt: "2026-05-06T10:00:00",
+                    status: "Draft"
+                });
+
+            hooks.bindMetadataForm();
+            document.getElementById("metadataForm")
+                .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/108",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(window.location.search).toBe("?id=108");
+            expect(document.getElementById("resourceIdText").textContent).toBe("108");
+            expect(document.getElementById("updatedAtText").textContent).toBe("FMT:2026-05-06T10:00:00");
+            expect(sharedApp.showToast).toHaveBeenLastCalledWith("Metadata saved successfully.");
+        });
+
         test("auto saves metadata changes after a short debounce", async () => {
             jest.useFakeTimers();
             const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
@@ -567,6 +667,76 @@ describe("module3.js", () => {
                 "/api/contributor/resources/42/submit",
                 expect.objectContaining({ method: "POST" })
             );
+        });
+
+        test("creates then submits when review is requested before the first save", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html");
+            jest.spyOn(window, "confirm").mockReturnValue(true);
+            document.body.innerHTML = `
+                <form id="submitForm">
+                    <textarea id="submissionNote">Ready</textarea>
+                </form>
+                <input id="title" value="Temple archive">
+                <input id="copyright" value="Museum rights">
+                <select id="categoryId"><option value="7" selected>Topic</option></select>
+                <input id="place" value="Suzhou">
+                <textarea id="description">Historical description</textarea>
+                <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                <input id="tagInput">
+                <div id="tagOptions"></div>
+                <input id="mediaFile" type="file">
+                <input id="previewImage" type="file">
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    id: 88,
+                    status: "Draft"
+                })
+                .mockResolvedValueOnce({
+                    id: 88,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    status: "Draft"
+                })
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({
+                    id: 88,
+                    title: "Temple archive",
+                    status: "Pending Review"
+                });
+
+            hooks.bindSubmitForm();
+            document.getElementById("submitForm")
+                .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            await flushPromises();
+            await flushPromises();
+
+            expect(window.confirm).toHaveBeenCalled();
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/88",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                3,
+                "/api/contributor/resources/88/submit",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(window.location.search).toBe("?id=88");
         });
     });
 

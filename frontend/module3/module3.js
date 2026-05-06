@@ -124,7 +124,7 @@ async function initResourceEditPage() {
     if (resourceId) {
         await loadResourceDetail(resourceId);
     } else {
-        await createDraftFromDirectEditorEntry();
+        updateEditorMeta(null);
     }
 }
 
@@ -981,7 +981,8 @@ function bindMetadataForm() {
             includeFiles: true,
             skipUnchanged: false,
             successMessage: "Metadata saved successfully.",
-            updateFields: true
+            updateFields: true,
+            createIfMissing: true
         });
     });
 }
@@ -1023,11 +1024,19 @@ async function saveMetadata({
     skipUnchanged = false,
     successMessage = null,
     updateFields = false,
+    createIfMissing = false,
+    missingResourceMessage = "Please save metadata first.",
     throwOnError = false
 } = {}) {
-    const resourceId = getResourceIdFromQuery();
+    let resourceId = getResourceIdFromQuery();
+    if (!resourceId && createIfMissing) {
+        const createdResource = await createDraftForEditing({ throwOnError });
+        resourceId = createdResource?.id ? String(createdResource.id) : getResourceIdFromQuery();
+    }
     if (!resourceId) {
-        showToast("Please create a draft first.");
+        if (!skipUnchanged) {
+            showToast(missingResourceMessage);
+        }
         return null;
     }
 
@@ -1111,7 +1120,9 @@ async function uploadSelectedFiles({
 
     const resourceId = getResourceIdFromQuery();
     if (!resourceId) {
-        showToast("Please create a draft first.");
+        if (showError) {
+            showToast("Please save metadata first.");
+        }
         return null;
     }
 
@@ -1189,8 +1200,11 @@ function bindSubmitForm() {
 
         const resourceId = getResourceIdFromQuery();
         if (!resourceId) {
-            showToast("Please create a draft first.");
-            return;
+            const confirmed = window.confirm("This resource has not been saved yet. Save metadata now and continue to submit for review?");
+            if (!confirmed) {
+                showToast("Please save metadata first.");
+                return;
+            }
         }
 
         const payload = {
@@ -1199,22 +1213,29 @@ function bindSubmitForm() {
 
         try {
             cancelScheduledMetadataAutoSave();
-            await saveMetadata({
+            const savedDetail = await saveMetadata({
                 includeFiles: true,
                 skipUnchanged: true,
                 successMessage: null,
                 updateFields: false,
+                createIfMissing: true,
+                missingResourceMessage: "Please save metadata first.",
                 throwOnError: true
             });
+            const targetResourceId = savedDetail?.id ?? getResourceIdFromQuery();
+            if (!targetResourceId) {
+                showToast("Please save metadata first.");
+                return;
+            }
 
-            await requestJson(`${API_BASE}/${resourceId}/submit`, {
+            await requestJson(`${API_BASE}/${targetResourceId}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
             showToast("Submitted for review.");
-            await loadResourceDetail(resourceId);
+            await loadResourceDetail(targetResourceId);
         } catch (error) {
             showToast(error.message || "Failed to submit resource.");
         }
@@ -1308,7 +1329,7 @@ function updateEditorMeta(detail) {
     const updatedAtText = document.getElementById("updatedAtText");
     const badge = document.getElementById("resourceStatusBadge");
 
-    const idValue = detail?.id ?? getResourceIdFromQuery() ?? "Not created";
+    const idValue = detail?.id ?? getResourceIdFromQuery() ?? "Not saved yet";
     const statusValue = detail?.status ?? "Draft";
     const updatedValue = detail?.updatedAt ? formatDateTime(detail.updatedAt) : "—";
 
@@ -1340,12 +1361,7 @@ function applyEditorLifecycleLock(status) {
     }
 }
 
-async function createDraftFromDirectEditorEntry() {
-    updateEditorMetaMessage("Creating draft...");
-    setActionDisabled("metadataSaveBtn", true);
-    setActionDisabled("submitReviewBtn", true);
-    setFilePickerDisabled(true);
-
+async function createDraftForEditing({ throwOnError = false } = {}) {
     try {
         const draft = await requestJson(API_BASE, {
             method: "POST"
@@ -1355,30 +1371,26 @@ async function createDraftFromDirectEditorEntry() {
             throw new Error("Draft was created but no resource id was returned.");
         }
 
-        const nextUrl = new URL(window.location.href);
-        nextUrl.searchParams.set("id", newResourceId);
-        window.location.replace(nextUrl.toString());
+        updateEditorUrlWithResourceId(newResourceId);
+        updateEditorMeta(draft);
+        return draft;
     } catch (error) {
-        updateEditorMeta(null);
-        showEditorAlert(error.message || "Failed to create draft.");
+        if (throwOnError) {
+            throw error;
+        }
         showToast(error.message || "Failed to create draft.");
+        return null;
     }
 }
 
-function updateEditorMetaMessage(message) {
-    const resourceIdText = document.getElementById("resourceIdText");
-    const resourceStatusText = document.getElementById("resourceStatusText");
-    const updatedAtText = document.getElementById("updatedAtText");
-    const badge = document.getElementById("resourceStatusBadge");
-
-    if (resourceIdText) resourceIdText.textContent = message;
-    if (resourceStatusText) resourceStatusText.textContent = "Draft";
-    if (updatedAtText) updatedAtText.textContent = "—";
-
-    if (badge) {
-        badge.textContent = "Draft";
-        badge.className = "status-pill status-draft";
+function updateEditorUrlWithResourceId(resourceId) {
+    if (!resourceId || !window.history?.replaceState) {
+        return;
     }
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("id", resourceId);
+    window.history.replaceState(null, "", nextUrl.toString());
 }
 
 function getInitialModuleId() {
