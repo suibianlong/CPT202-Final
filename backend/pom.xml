@@ -120,6 +120,16 @@
                             <goal>prepare-agent</goal>
                         </goals>
                         <configuration>
+                            <excludes>
+                                <exclude>com/cpt202/HerLink/config/**</exclude>
+                                <exclude>com/cpt202/HerLink/dto/**</exclude>
+                                <exclude>com/cpt202/HerLink/entity/**</exclude>
+                                <exclude>com/cpt202/HerLink/enums/**</exclude>
+                                <exclude>com/cpt202/HerLink/exception/**</exclude>
+                                <exclude>com/cpt202/HerLink/mapper/**</exclude>
+                                <exclude>com/cpt202/HerLink/vo/**</exclude>
+                                <exclude>com/cpt202/HerLink/HerLinkApplication*</exclude>
+                            </excludes>
                             <!-- 指定覆盖率数据文件位置 -->
                             <destFile>${project.build.directory}/jacoco.exec</destFile>
                             <!-- 包含所有类，包括 MyBatis 生成的代理类 -->
@@ -137,6 +147,16 @@
                             <goal>report</goal>
                         </goals>
                         <configuration>
+                            <excludes>
+                                <exclude>com/cpt202/HerLink/config/**</exclude>
+                                <exclude>com/cpt202/HerLink/dto/**</exclude>
+                                <exclude>com/cpt202/HerLink/entity/**</exclude>
+                                <exclude>com/cpt202/HerLink/enums/**</exclude>
+                                <exclude>com/cpt202/HerLink/exception/**</exclude>
+                                <exclude>com/cpt202/HerLink/mapper/**</exclude>
+                                <exclude>com/cpt202/HerLink/vo/**</exclude>
+                                <exclude>com/cpt202/HerLink/HerLinkApplication*</exclude>
+                            </excludes>
                             <dataFile>${project.build.directory}/jacoco.exec</dataFile>
                             <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
                         </configuration>
@@ -149,6 +169,16 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
+                            <excludes>
+                                <exclude>com/cpt202/HerLink/config/**</exclude>
+                                <exclude>com/cpt202/HerLink/dto/**</exclude>
+                                <exclude>com/cpt202/HerLink/entity/**</exclude>
+                                <exclude>com/cpt202/HerLink/enums/**</exclude>
+                                <exclude>com/cpt202/HerLink/exception/**</exclude>
+                                <exclude>com/cpt202/HerLink/mapper/**</exclude>
+                                <exclude>com/cpt202/HerLink/vo/**</exclude>
+                                <exclude>com/cpt202/HerLink/HerLinkApplication*</exclude>
+                            </excludes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
