@@ -52,6 +52,8 @@ services:
       JAVA_OPTS: ${JAVA_OPTS}
     volumes:
       - app_uploads:/app/uploads
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     expose:
       - "8080"
     networks:
