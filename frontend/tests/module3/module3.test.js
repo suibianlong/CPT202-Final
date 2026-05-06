@@ -46,6 +46,12 @@ function loadModule3TestHooks() {
                 renderResourceTypeSelectOptions,
                 ensureResourceTypeOption,
                 updateMediaFileAccept,
+                bindMetadataForm,
+                bindFilePickerUI,
+                bindSubmitForm,
+                scheduleMetadataAutoSave,
+                saveMetadata,
+                uploadSelectedFiles,
                 loadCategorySelectOptions,
                 loadResourceTypeSelectOptions,
                 populateWorkspaceSession,
@@ -69,6 +75,12 @@ function setupModule3(url = "/") {
 
     const hooks = loadModule3TestHooks();
     return { hooks, sharedApp };
+}
+
+async function flushPromises(times = 6) {
+    for (let i = 0; i < times; i += 1) {
+        await Promise.resolve();
+    }
 }
 
 describe("module3.js", () => {
@@ -296,6 +308,265 @@ describe("module3.js", () => {
             expect(document.getElementById("editorAlert").textContent)
                 .toBe("Resource types failed to load. Metadata save and submit are temporarily disabled.");
             expect(sharedApp.showToast).toHaveBeenCalledWith("No active resource types are available.");
+        });
+    });
+
+    describe("resource editor save flow", () => {
+        test("auto saves metadata changes after a short debounce", async () => {
+            jest.useFakeTimers();
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
+            document.body.innerHTML = `
+                <form id="metadataForm">
+                    <input id="title" value="Temple archive">
+                    <input id="copyright" value="Museum rights">
+                    <select id="categoryId"><option value="7" selected>Topic</option></select>
+                    <input id="place" value="Suzhou">
+                    <textarea id="description">Historical description</textarea>
+                    <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                    <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                    <input id="tagInput">
+                    <div id="tagOptions"></div>
+                </form>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            sharedApp.requestJson.mockResolvedValue({
+                id: 42,
+                title: "Temple archive",
+                copyright: "Museum rights",
+                categoryId: 7,
+                place: "Suzhou",
+                description: "Historical description",
+                resourceType: "photo",
+                status: "Draft"
+            });
+
+            hooks.bindMetadataForm();
+            document.getElementById("title")
+                .dispatchEvent(new Event("input", { bubbles: true }));
+            jest.advanceTimersByTime(899);
+            await flushPromises();
+            expect(sharedApp.requestJson).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(1);
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor/resources/42",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(sharedApp.showToast).not.toHaveBeenCalledWith("Metadata saved successfully.");
+        });
+
+        test("saves selected files through the metadata save action", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
+            document.body.innerHTML = `
+                <form id="metadataForm">
+                    <input id="title" value="Temple archive">
+                    <input id="copyright" value="Museum rights">
+                    <select id="categoryId"><option value="7" selected>Topic</option></select>
+                    <input id="place" value="Suzhou">
+                    <textarea id="description">Historical description</textarea>
+                    <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                    <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                    <input id="tagInput">
+                    <div id="tagOptions"></div>
+                </form>
+                <input id="mediaFile" type="file">
+                <input id="previewImage" type="file">
+                <span id="mediaFileNameText"></span>
+                <span id="previewImageNameText"></span>
+                <span id="mediaFilePathText"></span>
+                <span id="previewImagePathText"></span>
+                <div id="previewImageFrame"></div>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            const mediaFile = new File(["image"], "temple.jpg", { type: "image/jpeg" });
+            Object.defineProperty(document.getElementById("mediaFile"), "files", {
+                value: [mediaFile],
+                configurable: true
+            });
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    status: "Draft"
+                })
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    mediaUrl: "resource-42/temple.jpg",
+                    status: "Draft"
+                });
+
+            hooks.bindMetadataForm();
+            document.getElementById("metadataForm")
+                .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources/42",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/42/files",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.showToast).toHaveBeenLastCalledWith("Metadata saved successfully.");
+        });
+
+        test("auto uploads selected media through the metadata save flow", async () => {
+            jest.useFakeTimers();
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
+            document.body.innerHTML = `
+                <form id="metadataForm">
+                    <input id="title" value="Temple archive">
+                    <input id="copyright" value="Museum rights">
+                    <select id="categoryId"><option value="7" selected>Topic</option></select>
+                    <input id="place" value="Suzhou">
+                    <textarea id="description">Historical description</textarea>
+                    <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                    <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                    <input id="tagInput">
+                    <div id="tagOptions"></div>
+                </form>
+                <button data-file-target="mediaFile"></button>
+                <button data-file-target="previewImage"></button>
+                <input id="mediaFile" type="file">
+                <input id="previewImage" type="file">
+                <span id="mediaFileNameText"></span>
+                <span id="previewImageNameText"></span>
+                <span id="mediaFilePathText"></span>
+                <span id="previewImagePathText"></span>
+                <div id="previewImageFrame"></div>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            const mediaFile = new File(["image"], "temple.jpg", { type: "image/jpeg" });
+            Object.defineProperty(document.getElementById("mediaFile"), "files", {
+                value: [mediaFile],
+                configurable: true
+            });
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    status: "Draft"
+                })
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    mediaUrl: "resource-42/temple.jpg",
+                    status: "Draft"
+                });
+
+            hooks.bindFilePickerUI();
+            document.getElementById("mediaFile")
+                .dispatchEvent(new Event("change", { bubbles: true }));
+            jest.advanceTimersByTime(0);
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources/42",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/42/files",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(document.getElementById("mediaFileNameText").textContent).toBe("Uploaded: temple.jpg");
+        });
+
+        test("flushes autosave before submitting for review", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
+            document.body.innerHTML = `
+                <form id="submitForm">
+                    <textarea id="submissionNote">Ready</textarea>
+                </form>
+                <input id="title" value="Temple archive">
+                <input id="copyright" value="Museum rights">
+                <select id="categoryId"><option value="7" selected>Topic</option></select>
+                <input id="place" value="Suzhou">
+                <textarea id="description">Historical description</textarea>
+                <select id="resourceType"><option value="photo" selected>Photo</option></select>
+                <select id="resourceTypeMirror"><option value="photo" selected>Photo</option></select>
+                <input id="tagInput">
+                <div id="tagOptions"></div>
+                <input id="mediaFile" type="file">
+                <input id="previewImage" type="file">
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple archive",
+                    copyright: "Museum rights",
+                    categoryId: 7,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    status: "Draft"
+                })
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple archive",
+                    status: "Pending Review"
+                });
+
+            hooks.bindSubmitForm();
+            document.getElementById("submitForm")
+                .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources/42",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/42/submit",
+                expect.objectContaining({ method: "POST" })
+            );
         });
     });
 

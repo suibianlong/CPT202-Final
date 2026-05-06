@@ -9,6 +9,7 @@ const {
     showToast
 } = window.SharedApp;
 const formatDateTime = value => window.SharedApp.formatDateTime(value, { emptyText: "—" });
+const AUTO_SAVE_DELAY_MS = 900;
 const HERITAGE_MODULE_META = {
     "module-identity": {
         label: "Heritage Identity",
@@ -54,6 +55,8 @@ let pendingResourceTypeSave = Promise.resolve();
 let tagDraftValues = [];
 let historyModalState = createEmptyHistoryState();
 let fileUploadBusy = false;
+let metadataAutoSaveTimer = null;
+let lastSavedMetadataPayload = "";
 
 document.addEventListener("DOMContentLoaded", () => {
     const page = document.body.dataset.page;
@@ -126,8 +129,8 @@ async function initResourceEditPage() {
 }
 
 function bindFilePickerUI() {
-    bindSingleFilePicker("mediaFile", "mediaFileNameText", { autoUpload: true });
-    bindSingleFilePicker("previewImage", "previewImageNameText", { autoUpload: true });
+    bindSingleFilePicker("mediaFile", "mediaFileNameText");
+    bindSingleFilePicker("previewImage", "previewImageNameText");
     updateMediaFileAccept(document.getElementById("resourceType")?.value || "");
 }
 
@@ -155,11 +158,13 @@ function bindSingleFilePicker(inputId, textId, options = {}) {
     input.addEventListener("change", () => {
         const file = input.files?.[0];
         text.textContent = file ? file.name : "No file selected";
-        if (!file || !options.autoUpload) return;
-
         if (inputId === "previewImage") {
             renderLocalPreviewImage(file);
         }
+        if (file) {
+            scheduleMetadataAutoSave({ delay: 0, includeFiles: true });
+        }
+        if (!file || !options.autoUpload) return;
 
         uploadSelectedFiles({
             includeMediaFile: inputId === "mediaFile",
@@ -288,7 +293,7 @@ function bindResourceTypeMirror() {
     mirrorSelect.addEventListener("change", () => {
         primarySelect.value = mirrorSelect.value;
         updateMediaFileAccept(mirrorSelect.value);
-        pendingResourceTypeSave = persistResourceTypeSelection({ showError: true });
+        scheduleMetadataAutoSave();
     });
 
     syncResourceTypeMirror();
@@ -960,38 +965,125 @@ function bindMetadataForm() {
     const form = document.getElementById("metadataForm");
     if (!form) return;
 
+    form.addEventListener("input", () => {
+        scheduleMetadataAutoSave();
+    });
+
+    form.addEventListener("change", () => {
+        scheduleMetadataAutoSave();
+    });
+
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const resourceId = getResourceIdFromQuery();
-        if (!resourceId) {
-            showToast("Please create a draft first.");
-            return;
-        }
+        cancelScheduledMetadataAutoSave();
+        await saveMetadata({
+            includeFiles: true,
+            skipUnchanged: false,
+            successMessage: "Metadata saved successfully.",
+            updateFields: true
+        });
+    });
+}
 
-        const payload = {
-            title: document.getElementById("title").value.trim(),
-            copyright: document.getElementById("copyright").value.trim(),
-            categoryId: parseNullableLong(document.getElementById("categoryId").value),
-            place: document.getElementById("place").value.trim(),
-            description: document.getElementById("description").value.trim(),
-            resourceType: document.getElementById("resourceType")?.value || null,
-            tagNames: getSelectedTagNames()
-        };
+function scheduleMetadataAutoSave({ delay = AUTO_SAVE_DELAY_MS, includeFiles = false } = {}) {
+    cancelScheduledMetadataAutoSave();
+    metadataAutoSaveTimer = window.setTimeout(() => {
+        metadataAutoSaveTimer = null;
+        saveMetadata({
+            includeFiles,
+            skipUnchanged: true,
+            successMessage: null,
+            updateFields: false
+        });
+    }, delay);
+}
 
-        try {
-            const detail = await requestJson(`${API_BASE}/${resourceId}`, {
+function cancelScheduledMetadataAutoSave() {
+    if (metadataAutoSaveTimer) {
+        window.clearTimeout(metadataAutoSaveTimer);
+        metadataAutoSaveTimer = null;
+    }
+}
+
+function buildMetadataPayload() {
+    return {
+        title: document.getElementById("title")?.value.trim() || "",
+        copyright: document.getElementById("copyright")?.value.trim() || "",
+        categoryId: parseNullableLong(document.getElementById("categoryId")?.value),
+        place: document.getElementById("place")?.value.trim() || "",
+        description: document.getElementById("description")?.value.trim() || "",
+        resourceType: document.getElementById("resourceType")?.value || null,
+        tagNames: getSelectedTagNames()
+    };
+}
+
+async function saveMetadata({
+    includeFiles = true,
+    skipUnchanged = false,
+    successMessage = null,
+    updateFields = false,
+    throwOnError = false
+} = {}) {
+    const resourceId = getResourceIdFromQuery();
+    if (!resourceId) {
+        showToast("Please create a draft first.");
+        return null;
+    }
+
+    const payload = buildMetadataPayload();
+    const payloadSignature = JSON.stringify(payload);
+    let detail = null;
+
+    try {
+        if (!skipUnchanged || payloadSignature !== lastSavedMetadataPayload) {
+            detail = await requestJson(`${API_BASE}/${resourceId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
+            lastSavedMetadataPayload = payloadSignature;
 
-            fillEditor(detail);
-            showToast("Metadata saved successfully.");
-        } catch (error) {
-            showToast(error.message || "Failed to save metadata.");
+            if (updateFields) {
+                fillEditor(detail);
+            } else {
+                applySavedMetadataDetail(detail);
+            }
         }
-    });
+
+        if (includeFiles) {
+            detail = await uploadSelectedFiles({
+                showEmptyToast: false,
+                successMessage: null,
+                showError: false,
+                throwOnError: true
+            }) || detail;
+            if (detail) {
+                if (updateFields) {
+                    fillEditor(detail);
+                } else {
+                    applySavedMetadataDetail(detail);
+                }
+            }
+        }
+
+        if (successMessage) {
+            showToast(successMessage);
+        }
+        return detail;
+    } catch (error) {
+        showToast(error.message || "Failed to save metadata.");
+        if (throwOnError) {
+            throw error;
+        }
+        return null;
+    }
+}
+
+function applySavedMetadataDetail(detail) {
+    if (!detail) return;
+    savedResourceTypeValue = normalizeResourceTypeValue(detail.resourceType);
+    updateEditorMeta(detail);
 }
 
 function bindUploadForm() {
@@ -1004,16 +1096,23 @@ function bindUploadForm() {
     });
 }
 
-async function uploadSelectedFiles({ includeMediaFile = true, includePreviewImage = true } = {}) {
+async function uploadSelectedFiles({
+    includeMediaFile = true,
+    includePreviewImage = true,
+    showEmptyToast = true,
+    successMessage = "File uploaded successfully.",
+    showError = true,
+    throwOnError = false
+} = {}) {
     if (fileUploadBusy) {
         showToast("Please wait for the current upload to finish.");
-        return;
+        return null;
     }
 
     const resourceId = getResourceIdFromQuery();
     if (!resourceId) {
         showToast("Please create a draft first.");
-        return;
+        return null;
     }
 
     const previewInput = document.getElementById("previewImage");
@@ -1022,8 +1121,10 @@ async function uploadSelectedFiles({ includeMediaFile = true, includePreviewImag
     const mediaFile = includeMediaFile ? mediaInput?.files?.[0] : null;
 
     if (!previewImage && !mediaFile) {
-        showToast("Select at least one file.");
-        return;
+        if (showEmptyToast) {
+            showToast("Select at least one file.");
+        }
+        return null;
     }
 
     const formData = new FormData();
@@ -1048,9 +1149,18 @@ async function uploadSelectedFiles({ includeMediaFile = true, includePreviewImag
 
         fillEditor(detail);
         clearUploadedFileInputs({ mediaFile, mediaInput, previewImage, previewInput });
-        showToast("File uploaded successfully.");
+        if (successMessage) {
+            showToast(successMessage);
+        }
+        return detail;
     } catch (error) {
-        showToast(error.message || "Failed to upload file.");
+        if (showError) {
+            showToast(error.message || "Failed to upload file.");
+        }
+        if (throwOnError) {
+            throw error;
+        }
+        return null;
     } finally {
         setFileUploadBusy(false);
     }
@@ -1088,6 +1198,15 @@ function bindSubmitForm() {
         };
 
         try {
+            cancelScheduledMetadataAutoSave();
+            await saveMetadata({
+                includeFiles: true,
+                skipUnchanged: true,
+                successMessage: null,
+                updateFields: false,
+                throwOnError: true
+            });
+
             await requestJson(`${API_BASE}/${resourceId}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1140,6 +1259,7 @@ function fillEditor(detail) {
     updateMediaFileAccept(detail.resourceType);
     savedResourceTypeValue = normalizeResourceTypeValue(detail.resourceType);
     updateEditorMeta(detail);
+    lastSavedMetadataPayload = JSON.stringify(buildMetadataPayload());
 }
 
 function renderLocalPreviewImage(file) {
@@ -1557,6 +1677,7 @@ function commitTagInputValue(input) {
 
     setTagValues([...tagDraftValues, ...nextValues]);
     input.value = "";
+    scheduleMetadataAutoSave();
 }
 
 function setTagValues(values) {
@@ -1586,6 +1707,7 @@ function renderTagChips(container, tagNames) {
         chip.addEventListener("click", () => {
             const targetTagName = chip.dataset.tagName || "";
             setTagValues(tagDraftValues.filter(tagName => tagName.toLowerCase() !== targetTagName.toLowerCase()));
+            scheduleMetadataAutoSave();
         });
     });
 }
