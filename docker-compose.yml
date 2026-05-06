@@ -6,9 +6,11 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: heritageResourcePlatform
+      TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
     volumes:
       - mysql_data:/var/lib/mysql
       - ./backend/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init_database.sql:ro
@@ -50,10 +52,9 @@ services:
       HERLINK_FRONTEND_DIR: /app/frontend
 
       JAVA_OPTS: ${JAVA_OPTS}
+      TZ: Asia/Shanghai
     volumes:
       - app_uploads:/app/uploads
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
     expose:
       - "8080"
     networks:
@@ -67,6 +68,8 @@ services:
       - app
     ports:
       - "80:80"
+    environment:
+      TZ: Asia/Shanghai
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:

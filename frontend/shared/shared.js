@@ -100,11 +100,20 @@
             .replaceAll("'", "&#39;");
     }
 
+    function parseShanghaiDate(value) {
+        if (value instanceof Date) return value;
+        if (typeof value === "string") {
+            const hasTimeZone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value);
+            return new Date(hasTimeZone ? value : `${value}+08:00`);
+        }
+        return new Date(value);
+    }
+
     function formatDateTime(value, { emptyText = "-" } = {}) {
         if (!value) return emptyText;
-        const date = new Date(value);
+        const date = parseShanghaiDate(value);
         if (Number.isNaN(date.getTime())) return String(value);
-        return date.toLocaleString();
+        return date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
     }
 
     function setText(id, value) {
