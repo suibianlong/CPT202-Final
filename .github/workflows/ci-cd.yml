@@ -28,19 +28,11 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json  # ← 加这行
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend tooling dependencies
         working-directory: frontend
         run: npm ci
-
-      # - name: Run ESLint
-      #   working-directory: frontend
-      #   run: npm run lint
-
-      # - name: Run Prettier format check
-      #   working-directory: frontend
-      #   run: npm run format:check
 
       - name: Package static frontend resources
         run: |
@@ -75,9 +67,81 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x backend/mvnw
 
-      - name: Run backend automated tests
+      - name: Run backend automated tests with coverage
         working-directory: backend
-        run: ./mvnw -B clean test
+        run: ./mvnw -B clean test jacoco:report
+
+      - name: Generate JaCoCo coverage badge
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          jacoco-csv-file: backend/target/site/jacoco/jacoco.csv
+          generate-branches-badge: true
+          badges-directory: backend/.github/badges
+
+      - name: Print coverage summary to console
+        working-directory: backend
+        run: |
+          echo "==========================================="
+          echo "📊 JaCoCo Coverage Report Summary"
+          echo "==========================================="
+          
+          # 从 CSV 文件读取覆盖率数据
+          CSV_FILE="target/site/jacoco/jacoco.csv"
+          if [ -f "$CSV_FILE" ]; then
+            # 跳过表头，计算总体覆盖率
+            tail -n +2 "$CSV_FILE" | awk -F',' '
+            {
+              INSTRUCTION_COVERED += $4
+              INSTRUCTION_MISSED += $5
+              BRANCH_COVERED += $6
+              BRANCH_MISSED += $7
+              LINE_COVERED += $8
+              LINE_MISSED += $9
+            }
+            END {
+              INSTRUCTION_TOTAL = INSTRUCTION_COVERED + INSTRUCTION_MISSED
+              BRANCH_TOTAL = BRANCH_COVERED + BRANCH_MISSED
+              LINE_TOTAL = LINE_COVERED + LINE_MISSED
+              
+              if (INSTRUCTION_TOTAL > 0) {
+                printf "📈 指令覆盖率 (Instruction Coverage): %.2f%% (%d/%d)\n", 
+                  (INSTRUCTION_COVERED / INSTRUCTION_TOTAL) * 100, INSTRUCTION_COVERED, INSTRUCTION_TOTAL
+              }
+              if (BRANCH_TOTAL > 0) {
+                printf "🎯 分支覆盖率 (Branch Coverage): %.2f%% (%d/%d)\n", 
+                  (BRANCH_COVERED / BRANCH_TOTAL) * 100, BRANCH_COVERED, BRANCH_TOTAL
+              }
+              if (LINE_TOTAL > 0) {
+                printf "📝 行覆盖率 (Line Coverage): %.2f%% (%d/%d)\n", 
+                  (LINE_COVERED / LINE_TOTAL) * 100, LINE_COVERED, LINE_TOTAL
+              }
+            }'
+          else
+            echo "⚠️ 未找到 jacoco.csv 文件"
+          fi
+          echo "==========================================="
+
+      - name: Upload JaCoCo HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+          retention-days: 30
+
+      - name: Upload JaCoCo CSV report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-csv-report
+          path: backend/target/site/jacoco/jacoco.csv
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: backend/target/surefire-reports/
+          retention-days: 30
 
   backend-build:
     name: Backend Build
