@@ -149,6 +149,91 @@ jobs:
             backend/backend-test.log
           retention-days: 30
 
+      - name: Summarize test timing by suite
+        if: always()
+        working-directory: backend
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          def collect(pattern: str, classifier):
+              total_tests = 0
+              total_time = 0.0
+              for path in glob.glob(pattern):
+                  try:
+                      root = ET.parse(path).getroot()
+                  except ET.ParseError:
+                      continue
+                  tests = int(root.attrib.get("tests", "0") or 0)
+                  time = float(root.attrib.get("time", "0") or 0)
+                  suite_name = root.attrib.get("name", "")
+                  suite_class = root.attrib.get("classname", "")
+                  bucket = classifier(path, suite_name, suite_class)
+                  if bucket is None:
+                      continue
+                  total_tests += tests
+                  total_time += time
+              avg_ms = (total_time / total_tests * 1000.0) if total_tests else None
+              return total_tests, total_time, avg_ms
+
+          def classify_unit(path: str, suite_name: str, suite_class: str):
+              return "unit"
+
+          def classify_failsafe(path: str, suite_name: str, suite_class: str):
+              text = f"{path} {suite_name} {suite_class}".lower()
+              if "controller" in text:
+                  return "web-slice"
+              if "integration" in text:
+                  return "integration"
+              return None
+
+          unit_tests, unit_time, unit_avg = collect("target/surefire-reports/TEST-*.xml", classify_unit)
+          web_tests, web_time, web_avg = collect("target/failsafe-reports/TEST-*.xml", classify_failsafe)
+          # Split the failsafe totals a second time so the summary can show both slices explicitly.
+          integration_tests = integration_time = integration_avg = 0
+          web_slice_tests = web_slice_time = web_slice_avg = 0
+          for path in glob.glob("target/failsafe-reports/TEST-*.xml"):
+              try:
+                  root = ET.parse(path).getroot()
+              except ET.ParseError:
+                  continue
+              tests = int(root.attrib.get("tests", "0") or 0)
+              time = float(root.attrib.get("time", "0") or 0)
+              text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
+              if "controller" in text:
+                  web_slice_tests += tests
+                  web_slice_time += time
+              elif "integration" in text:
+                  integration_tests += tests
+                  integration_time += time
+
+          web_slice_avg = (web_slice_time / web_slice_tests * 1000.0) if web_slice_tests else None
+          integration_avg = (integration_time / integration_tests * 1000.0) if integration_tests else None
+
+          def fmt(avg):
+              return f"{avg:.2f} ms" if avg is not None else "N/A"
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          lines = [
+              "## Test Timing Summary",
+              "",
+              "| Suite | Test cases | Total time | Average per case |",
+              "| --- | ---: | ---: | ---: |",
+              f"| Unit tests | {unit_tests} | {unit_time:.2f}s | {fmt(unit_avg)} |",
+              f"| Web slice tests | {web_slice_tests} | {web_slice_time:.2f}s | {fmt(web_slice_avg)} |",
+              f"| Integration tests | {integration_tests} | {integration_time:.2f}s | {fmt(integration_avg)} |",
+          ]
+          text = "\n".join(lines) + "\n"
+          print(text)
+          if summary:
+              with open(summary, "a", encoding="utf-8") as fh:
+                  fh.write(text)
+          PY
+
   backend-build:
     name: Backend Build
     runs-on: ubuntu-latest

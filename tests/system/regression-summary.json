@@ -1,0 +1,487 @@
+{
+    "root_group": {
+        "checks": {},
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+                "auth + viewer critical flow": {
+                    "checks": {
+                        "anon /auth/me should be 401": {
+                            "name": "anon /auth/me should be 401",
+                            "path": "::auth + viewer critical flow::anon /auth/me should be 401",
+                            "id": "1612c8decb24dfb88b68cdb20c8c8173",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "viewer login status 200": {
+                            "name": "viewer login status 200",
+                            "path": "::auth + viewer critical flow::viewer login status 200",
+                            "id": "f622b5af3acce2c771c743e2d723b5f5",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "viewer login has userId": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer login has userId",
+                            "path": "::auth + viewer critical flow::viewer login has userId",
+                            "id": "c67d1952d40d13b8fcff037f0712529c"
+                        },
+                        "viewer /auth/me status 200": {
+                            "id": "3e16c2f2ebea5edef9c0e1cd88e2e818",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer /auth/me status 200",
+                            "path": "::auth + viewer critical flow::viewer /auth/me status 200"
+                        },
+                        "viewer /auth/me role exists": {
+                            "id": "5d550ee371e9af59863ac28e2caba808",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer /auth/me role exists",
+                            "path": "::auth + viewer critical flow::viewer /auth/me role exists"
+                        },
+                        "viewer resources status 200": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer resources status 200",
+                            "path": "::auth + viewer critical flow::viewer resources status 200",
+                            "id": "5decf905333f72b29f24ddb44ef29a88"
+                        },
+                        "viewer resources is array": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer resources is array",
+                            "path": "::auth + viewer critical flow::viewer resources is array",
+                            "id": "2d1beea11eb1081263f1465885f7c9a0"
+                        },
+                        "viewer detail status 200": {
+                            "name": "viewer detail status 200",
+                            "path": "::auth + viewer critical flow::viewer detail status 200",
+                            "id": "bd144472b7f45cc35903a03a622eacea",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "viewer detail id matches": {
+                            "name": "viewer detail id matches",
+                            "path": "::auth + viewer critical flow::viewer detail id matches",
+                            "id": "11521b470e03447182f8df7923d14f21",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "viewer create comment status 201": {
+                            "name": "viewer create comment status 201",
+                            "path": "::auth + viewer critical flow::viewer create comment status 201",
+                            "id": "8b99f7a3672732290948d0c7926dd883",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "viewer create comment id exists": {
+                            "fails": 0,
+                            "name": "viewer create comment id exists",
+                            "path": "::auth + viewer critical flow::viewer create comment id exists",
+                            "id": "2c07c258c58e016fb157c178333fa55b",
+                            "passes": 1
+                        },
+                        "viewer list comments status 200": {
+                            "name": "viewer list comments status 200",
+                            "path": "::auth + viewer critical flow::viewer list comments status 200",
+                            "id": "a9c0af74f3367f59eacaf13273657d99",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "viewer list comments is array": {
+                            "path": "::auth + viewer critical flow::viewer list comments is array",
+                            "id": "326886340cfbda809e4ecd2f4266e0cc",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer list comments is array"
+                        },
+                        "viewer list comments includes created comment": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer list comments includes created comment",
+                            "path": "::auth + viewer critical flow::viewer list comments includes created comment",
+                            "id": "9b25f30e9686221ead7aaf90857694b7"
+                        },
+                        "viewer delete comment status 204": {
+                            "fails": 0,
+                            "name": "viewer delete comment status 204",
+                            "path": "::auth + viewer critical flow::viewer delete comment status 204",
+                            "id": "cb664b511a88e228589b1dc3852dfac7",
+                            "passes": 1
+                        },
+                        "viewer logout status 204": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "viewer logout status 204",
+                            "path": "::auth + viewer critical flow::viewer logout status 204",
+                            "id": "e41541fd61f2891ccfa337d90354d7dd"
+                        }
+                    },
+                    "name": "auth + viewer critical flow",
+                    "path": "::auth + viewer critical flow",
+                    "id": "b3a506d2ff0f346fba67ef3cb0e683c1",
+                    "groups": {}
+                },
+                "contributor critical flow": {
+                    "id": "b0bf3ab7c40865e7f9ba3b34a4afd247",
+                    "groups": {},
+                    "checks": {
+                            "contributor login status 200": {
+                                "name": "contributor login status 200",
+                                "path": "::contributor critical flow::contributor login status 200",
+                                "id": "c1d1cd46374c0a68d30c3cbcea6aaf16",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "contributor flag true": {
+                                "name": "contributor flag true",
+                                "path": "::contributor critical flow::contributor flag true",
+                                "id": "686cdfe21bd19917b3c18d56c1a7fdab",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "create draft status 200": {
+                                "path": "::contributor critical flow::create draft status 200",
+                                "id": "2bdb18bbe963a7cc2039b7b77c934bbb",
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "create draft status 200"
+                            },
+                            "create draft id exists": {
+                                "fails": 0,
+                                "name": "create draft id exists",
+                                "path": "::contributor critical flow::create draft id exists",
+                                "id": "d80e776975d1ae64faa78628e23f8abb",
+                                "passes": 1
+                            },
+                            "category options status 200": {
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "category options status 200",
+                                "path": "::contributor critical flow::category options status 200",
+                                "id": "1fab775b4ba0ddceb9c17054978c3795"
+                            },
+                            "category options is non-empty array": {
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "category options is non-empty array",
+                                "path": "::contributor critical flow::category options is non-empty array",
+                                "id": "0fac0bf6709dc7132870f8b10d61ea8a"
+                            },
+                            "resource type options status 200": {
+                                "id": "9a11209c80c28cca4be70ddb03289588",
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "resource type options status 200",
+                                "path": "::contributor critical flow::resource type options status 200"
+                            },
+                            "resource type options is non-empty array": {
+                                "name": "resource type options is non-empty array",
+                                "path": "::contributor critical flow::resource type options is non-empty array",
+                                "id": "f10d2ebd45e41cbad412f9d89bf2a696",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "tag options status 200": {
+                                "fails": 0,
+                                "name": "tag options status 200",
+                                "path": "::contributor critical flow::tag options status 200",
+                                "id": "3737374bf1cb9398f84e4f227a26d928",
+                                "passes": 1
+                            },
+                            "tag options is non-empty array": {
+                                "name": "tag options is non-empty array",
+                                "path": "::contributor critical flow::tag options is non-empty array",
+                                "id": "a8cd036420033c75fbe068a879f419df",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "update draft status 200": {
+                                "fails": 0,
+                                "name": "update draft status 200",
+                                "path": "::contributor critical flow::update draft status 200",
+                                "id": "f6d8c595035aa3ed78291facd746510b",
+                                "passes": 1
+                            },
+                            "update draft title matches": {
+                                "path": "::contributor critical flow::update draft title matches",
+                                "id": "5e4cc59aba257519f5f9b7a5687a40e8",
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "update draft title matches"
+                            },
+                            "update draft category matches": {
+                                "fails": 0,
+                                "name": "update draft category matches",
+                                "path": "::contributor critical flow::update draft category matches",
+                                "id": "8cef2d32dbc61f4c2d255a5a305432d7",
+                                "passes": 1
+                            },
+                            "my resources status 200": {
+                                "path": "::contributor critical flow::my resources status 200",
+                                "id": "5d67f6dd5d8692582565f9ef7df51370",
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "my resources status 200"
+                            },
+                            "my resources includes new draft": {
+                                "path": "::contributor critical flow::my resources includes new draft",
+                                "id": "9f0f607a58cae4c435b1446e9dbdfcae",
+                                "passes": 1,
+                                "fails": 0,
+                                "name": "my resources includes new draft"
+                            },
+                            "draft detail status 200": {
+                                "fails": 0,
+                                "name": "draft detail status 200",
+                                "path": "::contributor critical flow::draft detail status 200",
+                                "id": "87cf30938dac4fe9c21db058a69e49b2",
+                                "passes": 1
+                            },
+                            "draft detail id matches": {
+                                "name": "draft detail id matches",
+                                "path": "::contributor critical flow::draft detail id matches",
+                                "id": "3b8bb37654e242a2eb361d04b1ef4f03",
+                                "passes": 1,
+                                "fails": 0
+                            },
+                            "contributor logout status 204": {
+                                "name": "contributor logout status 204",
+                                "path": "::contributor critical flow::contributor logout status 204",
+                                "id": "47f0e5d67a7251656ab0661ae33df868",
+                                "passes": 1,
+                                "fails": 0
+                            }
+                        },
+                    "name": "contributor critical flow",
+                    "path": "::contributor critical flow"
+                },
+                "admin critical flow": {
+                    "checks": {
+                        "admin login status 200": {
+                            "path": "::admin critical flow::admin login status 200",
+                            "id": "2f2a6e0913383125f47ac60646cbe422",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin login status 200"
+                        },
+                        "admin role is administrator": {
+                            "name": "admin role is administrator",
+                            "path": "::admin critical flow::admin role is administrator",
+                            "id": "80c29adecb9ab524e69ef5ae195c4fc0",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "admin pending requests status 200": {
+                            "path": "::admin critical flow::admin pending requests status 200",
+                            "id": "cd544dd480599107edd1313dcbc62d39",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin pending requests status 200"
+                        },
+                        "admin pending requests is array": {
+                            "name": "admin pending requests is array",
+                            "path": "::admin critical flow::admin pending requests is array",
+                            "id": "fe93df156f1b5f7ea7bda07d57a071c8",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "admin categories status 200": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin categories status 200",
+                            "path": "::admin critical flow::admin categories status 200",
+                            "id": "4ad1ba0ca67eee2ec6e9e87fd94a0612"
+                        },
+                        "admin categories is array": {
+                            "name": "admin categories is array",
+                            "path": "::admin critical flow::admin categories is array",
+                            "id": "f479baeba963343b1c5e7ae0d7cf997c",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "admin resource types status 200": {
+                            "fails": 0,
+                            "name": "admin resource types status 200",
+                            "path": "::admin critical flow::admin resource types status 200",
+                            "id": "9e4f4f90e4d575d8dc88af02be14e308",
+                            "passes": 1
+                        },
+                        "admin resource types is array": {
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin resource types is array",
+                            "path": "::admin critical flow::admin resource types is array",
+                            "id": "f8bf3aee2ee38d5b1ffb09e4a7d78d04"
+                        },
+                        "admin tags status 200": {
+                            "fails": 0,
+                            "name": "admin tags status 200",
+                            "path": "::admin critical flow::admin tags status 200",
+                            "id": "561216b987ea157d7c50d0f35db9b4d4",
+                            "passes": 1
+                        },
+                        "admin tags is array": {
+                            "name": "admin tags is array",
+                            "path": "::admin critical flow::admin tags is array",
+                            "id": "255b55fdbc3ee09baf37ab9e9afc5fe2",
+                            "passes": 1,
+                            "fails": 0
+                        },
+                        "admin operation history status 200": {
+                            "id": "6a76d66781d21041f9cfb44ad130238c",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin operation history status 200",
+                            "path": "::admin critical flow::admin operation history status 200"
+                        },
+                        "admin operation history is array": {
+                            "id": "3765a849346688d4476e98f1ad652ae7",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin operation history is array",
+                            "path": "::admin critical flow::admin operation history is array"
+                        },
+                        "admin logout status 204": {
+                            "id": "a488e40f037a84f6d82a00ac3547ece6",
+                            "passes": 1,
+                            "fails": 0,
+                            "name": "admin logout status 204",
+                            "path": "::admin critical flow::admin logout status 204"
+                        }
+                    },
+                    "name": "admin critical flow",
+                    "path": "::admin critical flow",
+                    "id": "09c4eddd437cc1354c24b7296d809d77",
+                    "groups": {}
+                }
+            }
+    },
+    "metrics": {
+        "vus_max": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "http_reqs": {
+            "count": 25,
+            "rate": 18.408128381527163
+        },
+        "http_req_duration{expected_response:true}": {
+            "med": 28.5101,
+            "max": 455.341,
+            "p(90)": 59.981660000000005,
+            "p(95)": 70.31657999999996,
+            "avg": 51.70943199999998,
+            "min": 14.6163
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "iterations": {
+            "count": 1,
+            "rate": 0.7363251352610866
+        },
+        "data_sent": {
+            "count": 4430,
+            "rate": 3261.920349206613
+        },
+        "data_received": {
+            "count": 25988,
+            "rate": 19135.617615165116
+        },
+        "http_req_waiting": {
+            "avg": 47.54904799999999,
+            "min": 9.9516,
+            "med": 23.9802,
+            "max": 455.341,
+            "p(90)": 58.56862,
+            "p(95)": 69.96017999999997
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 25,
+            "thresholds": {
+                "rate<0.001": false
+            },
+            "value": 0
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0,
+            "max": 23.7002,
+            "p(90)": 0,
+            "p(95)": 0.4074399999999985,
+            "avg": 0.9683799999999999
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "http_req_connecting": {
+            "avg": 0.948008,
+            "min": 0,
+            "med": 0,
+            "max": 23.7002,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_receiving": {
+            "avg": 4.1603840000000005,
+            "min": 0,
+            "med": 2.1879,
+            "max": 14.7588,
+            "p(90)": 11.686660000000003,
+            "p(95)": 13.254459999999998
+        },
+        "checks": {
+            "passes": 47,
+            "fails": 0,
+            "thresholds": {
+                "rate==1": false
+            },
+            "value": 1
+        },
+        "http_req_duration": {
+            "avg": 51.70943199999998,
+            "min": 14.6163,
+            "med": 28.5101,
+            "max": 455.341,
+            "p(90)": 59.981660000000005,
+            "p(95)": 70.31657999999996
+        },
+        "iteration_duration": {
+            "p(95)": 1350.8107,
+            "avg": 1350.8107,
+            "min": 1350.8107,
+            "med": 1350.8107,
+            "max": 1350.8107,
+            "p(90)": 1350.8107
+        },
+        "group_duration": {
+            "avg": 450.27023333333335,
+            "min": 222.0824,
+            "med": 359.5358,
+            "max": 769.1925,
+            "p(90)": 687.26116,
+            "p(95)": 728.22683
+        },
+        "http_req_sending": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        }
+    }
+}

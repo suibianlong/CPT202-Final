@@ -3,11 +3,18 @@ package com.cpt202.HerLink.unit.service.impl;
 import com.cpt202.HerLink.service.impl.*;
 import com.cpt202.HerLink.service.impl.ResourceVersionServiceImpl;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,8 +32,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.cpt202.HerLink.entity.Category;
 import com.cpt202.HerLink.entity.Resource;
+import com.cpt202.HerLink.entity.ResourceSubmission;
 import com.cpt202.HerLink.entity.ResourceType;
 import com.cpt202.HerLink.entity.ResourceVersion;
+import com.cpt202.HerLink.entity.ReviewRecord;
 import com.cpt202.HerLink.enums.ResourceStatusEnum;
 import com.cpt202.HerLink.exception.AppException;
 import com.cpt202.HerLink.mapper.CategoryMapper;
