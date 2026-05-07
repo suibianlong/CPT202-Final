@@ -31,6 +31,8 @@ import com.cpt202.HerLink.vo.CategoryTagOptionVO;
 import com.cpt202.HerLink.vo.ResourceDetailVO;
 import com.cpt202.HerLink.vo.ResourceListItemVO;
 import com.cpt202.HerLink.vo.ResourceSubmissionVO;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -477,6 +479,132 @@ class ContributorResourceServiceImplTest {
     }
 
     @Test
+    @DisplayName("Submit resource rejects missing description")
+    void submitResource_missingDescription_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setDescription(" ");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Description is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects missing copyright")
+    void submitResource_missingCopyright_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setCopyright(" ");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Copyright is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects missing category")
+    void submitResource_missingCategory_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setCategoryId(null);
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Category is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects non-existing category")
+    void submitResource_categoryNotFound_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setCategoryId(99L);
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(99L)).thenReturn(null);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Selected category does not exist.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects inactive category")
+    void submitResource_categoryInactive_throwsConflict() {
+        Resource draft = submittableDraft();
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "INACTIVE"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Selected category is inactive.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects missing resource type")
+    void submitResource_missingResourceType_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setResourceType(" ");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "ACTIVE"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Resource type is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects missing media url")
+    void submitResource_missingMediaUrl_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setMediaUrl(" ");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "ACTIVE"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Media file is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects stored preview image with non-image type")
+    void submitResource_storedPreviewNotImage_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setPreviewImage("resource-100/preview.pdf");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "ACTIVE"));
+        when(resourceFileMapper.selectByResourceIdAndFilePath(RESOURCE_ID, "resource-100/preview.pdf"))
+                .thenReturn(resourceFileWithPath("resource-100/preview.pdf", "pdf"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertEquals("Preview image must be an image file.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Submit resource rejects stored media not matching known resource type")
+    void submitResource_storedMediaTypeMismatchForKnownType_throwsBadRequest() {
+        Resource draft = submittableDraft();
+        draft.setMediaUrl("resource-100/file.pdf");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "ACTIVE"));
+        when(resourceFileMapper.selectByResourceIdAndFilePath(RESOURCE_ID, "resource-100/file.pdf"))
+                .thenReturn(resourceFileWithPath("resource-100/file.pdf", "pdf"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertTrue(exception.getMessage().contains("Media file must match the selected resource type."));
+    }
+
+    @Test
     @DisplayName("Submit resource creates next submission version and changes status")
     void submitResource_validDraft_updatesStatusAndSubmission() {
         AtomicReference<ResourceSubmission> insertedSubmission = new AtomicReference<>();
@@ -667,6 +795,67 @@ class ContributorResourceServiceImplTest {
         );
     }
 
+    @Test
+    @DisplayName("Resolve active resource type rejects blank value")
+    void resolveActiveResourceType_blank_throwsBadRequest() {
+        AppException exception = assertThrows(AppException.class,
+                () -> invokeResolveActiveResourceType("  "));
+
+        assertEquals("Resource type is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Resolve active resource type uses normalized lookup aliases")
+    void resolveActiveResourceType_lookupAlias_returnsMatchedType() {
+        when(resourceTypeMapper.selectActiveByTypeName("photo")).thenReturn(type(null, "photo"));
+        when(resourceTypeMapper.selectActiveByTypeName("Picture")).thenReturn(type(77L, "photo"));
+
+        ResourceType resolved = invokeResolveActiveResourceType("PHOTO_IMAGE");
+
+        assertAll(
+                () -> assertNotNull(resolved),
+                () -> assertEquals(77L, resolved.getResourceTypeId()),
+                () -> assertEquals("photo", resolved.getTypeName())
+        );
+    }
+
+    @Test
+    @DisplayName("Resolve active resource type uses direct match for custom type")
+    void resolveActiveResourceType_customDirectMatch_returnsType() {
+        when(resourceTypeMapper.selectActiveByTypeName("customType")).thenReturn(type(66L, "customType"));
+
+        ResourceType resolved = invokeResolveActiveResourceType(" customType ");
+
+        assertEquals(66L, resolved.getResourceTypeId());
+    }
+
+    @Test
+    @DisplayName("Resolve active resource type throws conflict when no active match")
+    void resolveActiveResourceType_noMatch_throwsConflict() {
+        when(resourceTypeMapper.selectActiveByTypeName("document")).thenReturn(type(null, "document"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> invokeResolveActiveResourceType("document"));
+
+        assertEquals("Selected resource type is unavailable.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("isCurrentResourceFile checks preview and media path correctly")
+    void isCurrentResourceFile_coversAllDecisionPaths() {
+        Resource resource = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        resource.setPreviewImage("resource-100/preview.jpg");
+        resource.setMediaUrl("resource-100/media.mp4");
+
+        assertAll(
+                () -> assertFalse(invokeIsCurrentResourceFile("resource-100/preview.jpg", null)),
+                () -> assertFalse(invokeIsCurrentResourceFile(null, resource)),
+                () -> assertTrue(invokeIsCurrentResourceFile("resource-100/preview.jpg", resource)),
+                () -> assertTrue(invokeIsCurrentResourceFile("resource-100/media.mp4", resource)),
+                () -> assertFalse(invokeIsCurrentResourceFile("resource-100/other.bin", resource))
+        );
+    }
+
     private void stubDetailLookups(Long resourceId, int versionNo) {
         when(resourceVersionMapper.selectMaxVersionNoByResourceId(resourceId)).thenReturn(versionNo);
         when(resourceTagMapper.selectTagIdsByResourceId(resourceId)).thenReturn(List.of());
@@ -726,5 +915,57 @@ class ContributorResourceServiceImplTest {
         file.setFilePath("resource-100/photo.jpg");
         file.setFileType(type);
         return file;
+    }
+
+    private ResourceFile resourceFileWithPath(String path, String type) {
+        ResourceFile file = new ResourceFile();
+        file.setResourceId(RESOURCE_ID);
+        file.setFilePath(path);
+        file.setFileType(type);
+        return file;
+    }
+
+    private Resource submittableDraft() {
+        Resource draft = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        draft.setTitle("Title");
+        draft.setDescription("Description");
+        draft.setCopyright("Rights");
+        draft.setCategoryId(1L);
+        draft.setResourceType("photo");
+        draft.setMediaUrl("resource-100/photo.jpg");
+        return draft;
+    }
+
+    private ResourceType invokeResolveActiveResourceType(String resourceType) {
+        return (ResourceType) invokePrivateMethod(
+                "resolveActiveResourceType",
+                new Class<?>[]{String.class},
+                resourceType
+        );
+    }
+
+    private boolean invokeIsCurrentResourceFile(String filePath, Resource resource) {
+        return (Boolean) invokePrivateMethod(
+                "isCurrentResourceFile",
+                new Class<?>[]{String.class, Resource.class},
+                filePath,
+                resource
+        );
+    }
+
+    private Object invokePrivateMethod(String methodName, Class<?>[] parameterTypes, Object... args) {
+        try {
+            Method method = ContributorResourceServiceImpl.class.getDeclaredMethod(methodName, parameterTypes);
+            method.setAccessible(true);
+            return method.invoke(service, args);
+        } catch (InvocationTargetException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new AssertionError("Private method invocation failed: " + methodName, cause);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Failed to invoke private method: " + methodName, exception);
+        }
     }
 }

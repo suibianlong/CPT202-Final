@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -154,6 +155,22 @@ class ReviewWorkflowServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should treat null pending rows as empty list")
+        void getPendingReviews_NullRows_ReturnEmptyListWithMessage() {
+            when(reviewWorkflowMapper.selectPendingReviews(anyInt(), anyInt()))
+                    .thenReturn(null);
+            when(reviewWorkflowMapper.countPendingReviews()).thenReturn(0L);
+
+            PageResponse<ReviewListItemResponse> response = reviewWorkflowService.getPendingReviews(1, 10);
+
+            assertAll(
+                    () -> assertNotNull(response.items()),
+                    () -> assertTrue(response.items().isEmpty()),
+                    () -> assertEquals("No submissions are currently waiting for review.", response.emptyMessage())
+            );
+        }
+
+        @Test
         @DisplayName("Should return valid pagination response when data exists")
         void getPendingReviews_HasData_ReturnValidResponse() {
             ReviewSubmissionRow row = mockSubmissionRow();
@@ -209,6 +226,29 @@ class ReviewWorkflowServiceImplTest {
             assertEquals(TEST_VERSION, response.versionNo());
             assertEquals(ResourceReviewStatus.PENDING_REVIEW, response.resourceStatus());
         }
+
+        @Test
+        @DisplayName("Should mark as resubmission when history contains other submission ids")
+        void getReviewDetail_HistoryHasOtherSubmission_MarkResubmission() {
+            ReviewSubmissionRow submission = mockSubmissionRow();
+            submission.setVersionNo(1);
+            ReviewHistoryRow oldRow = new ReviewHistoryRow();
+            oldRow.setSubmissionId(999L);
+            oldRow.setResourceId(TEST_RESOURCE_ID);
+            oldRow.setVersionNo(0);
+            oldRow.setStatus(ResourceReviewStatus.REJECTED.toDatabaseValue());
+            oldRow.setReviewRecordId(3L);
+
+            when(reviewWorkflowMapper.selectSubmissionDetail(TEST_SUBMISSION_ID)).thenReturn(submission);
+            when(reviewWorkflowMapper.selectReviewHistoryRows(TEST_RESOURCE_ID)).thenReturn(List.of(oldRow));
+            when(resourceFileMapper.selectByResourceId(TEST_RESOURCE_ID)).thenReturn(Collections.emptyList());
+            when(resourceTagMapper.selectTagNamesByResourceId(TEST_RESOURCE_ID)).thenReturn(Collections.emptyList());
+
+            ReviewDetailResponse response = reviewWorkflowService.getReviewDetail(TEST_SUBMISSION_ID);
+
+            assertTrue(response.submission().resubmission());
+            assertTrue(response.submission().currentContextLabel().contains("Current Resubmission"));
+        }
     }
 
     @Nested
@@ -229,6 +269,38 @@ class ReviewWorkflowServiceImplTest {
             assertEquals(TEST_SUBMISSION_ID, response.submissionId());
             assertFalse(response.resubmission());
             assertEquals(1, response.sections().size());
+        }
+
+        @Test
+        @DisplayName("Should return previous and current sections for resubmission history")
+        void getReviewHistory_Resubmission_ReturnTwoSections() {
+            ReviewSubmissionRow submission = mockSubmissionRow();
+            submission.setVersionNo(2);
+            submission.setLatestVersionNo(2);
+            ReviewHistoryRow previousRow = new ReviewHistoryRow();
+            previousRow.setSubmissionId(1L);
+            previousRow.setResourceId(TEST_RESOURCE_ID);
+            previousRow.setVersionNo(1);
+            previousRow.setStatus(ResourceReviewStatus.REJECTED.toDatabaseValue());
+            previousRow.setReviewRecordId(10L);
+            ReviewHistoryRow currentRow = new ReviewHistoryRow();
+            currentRow.setSubmissionId(TEST_SUBMISSION_ID);
+            currentRow.setResourceId(TEST_RESOURCE_ID);
+            currentRow.setVersionNo(2);
+            currentRow.setStatus(ResourceReviewStatus.PENDING_REVIEW.toDatabaseValue());
+            currentRow.setReviewRecordId(11L);
+
+            when(reviewWorkflowMapper.selectSubmissionDetail(TEST_SUBMISSION_ID)).thenReturn(submission);
+            when(reviewWorkflowMapper.selectReviewHistoryRows(TEST_RESOURCE_ID)).thenReturn(List.of(previousRow, currentRow));
+
+            ReviewHistoryResponse response = reviewWorkflowService.getReviewHistory(TEST_SUBMISSION_ID);
+
+            assertAll(
+                    () -> assertTrue(response.resubmission()),
+                    () -> assertEquals(2, response.sections().size()),
+                    () -> assertEquals("Previous Reviews", response.sections().get(0).label()),
+                    () -> assertEquals("Current Resubmission", response.sections().get(1).label())
+            );
         }
     }
 
@@ -334,6 +406,29 @@ class ReviewWorkflowServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should throw exception when request misses required fields")
+        void submitDecision_MissingRequiredFields_ThrowException() {
+            ReviewDecisionRequest request = new ReviewDecisionRequest(
+                    TEST_SUBMISSION_ID,
+                    null,
+                    null,
+                    TEST_REVIEWER_ID,
+                    null,
+                    TEST_COMMENT
+            );
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> reviewWorkflowService.submitDecision(TEST_SUBMISSION_ID, TEST_REVIEWER_ID, request));
+
+            assertAll(
+                    () -> assertEquals("Review decision request is invalid.", exception.getMessage()),
+                    () -> assertTrue(exception.getDetails().contains("resourceId is required.")),
+                    () -> assertTrue(exception.getDetails().contains("versionNo is required.")),
+                    () -> assertTrue(exception.getDetails().contains("action is required."))
+            );
+        }
+
+        @Test
         @DisplayName("Should throw conflict when reviewing non-latest submission")
         void submitDecision_NotLatestSubmission_ThrowConflict() {
             ReviewSubmissionRow submission = mockSubmissionRow();
@@ -384,6 +479,22 @@ class ReviewWorkflowServiceImplTest {
             assertEquals("Looks good", response.feedbackComment());
             assertTrue(response.removedFromPendingQueue());
             assertNotNull(response.reviewedAt());
+        }
+
+        @Test
+        @DisplayName("Should throw conflict when update row count is zero")
+        void submitDecision_UpdateRowsZero_ThrowConflict() {
+            ReviewSubmissionRow submission = mockSubmissionRow();
+            ReviewDecisionRequest request = new ReviewDecisionRequest(
+                    TEST_SUBMISSION_ID, TEST_RESOURCE_ID, TEST_VERSION, TEST_REVIEWER_ID, ReviewAction.APPROVE, TEST_COMMENT);
+            when(reviewWorkflowMapper.selectSubmissionDetail(TEST_SUBMISSION_ID)).thenReturn(submission);
+            when(reviewWorkflowMapper.updateResourceAfterDecision(anyLong(), anyString(), any(LocalDateTime.class), anyString()))
+                    .thenReturn(0);
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> reviewWorkflowService.submitDecision(TEST_SUBMISSION_ID, TEST_REVIEWER_ID, request));
+
+            assertEquals("This submission is no longer pending review.", exception.getMessage());
         }
     }
 }

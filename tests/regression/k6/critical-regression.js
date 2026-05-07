@@ -10,6 +10,7 @@ const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin@heritage.local';
 const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'Admin123!';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+const EXPECT_401 = http.expectedStatuses(401);
 
 export const options = {
   vus: 1,
@@ -17,13 +18,16 @@ export const options = {
   insecureSkipTLSVerify: envBool('INSECURE_TLS', false),
   thresholds: {
     http_req_failed: ['rate<0.001'],
-    checks: ['rate=1'],
+    checks: ['rate==1'],
   },
 };
 
 export default function () {
   group('auth + viewer critical flow', function () {
-    const anonMeRes = http.get(`${BASE_URL}/api/auth/me`, requestParams('auth_me_anon'));
+    const anonMeRes = http.get(
+      `${BASE_URL}/api/auth/me`,
+      requestParams('auth_me_anon', { responseCallback: EXPECT_401 })
+    );
     assertCheck(anonMeRes, {
       'anon /auth/me should be 401': (r) => r.status === 401,
     }, 'anonymous me check failed');
@@ -327,6 +331,13 @@ function login(email, password, endpointTag) {
       tags: { endpoint: endpointTag },
     }
   );
+}
+
+function requestParams(endpointTag, overrides = {}) {
+  return {
+    tags: { endpoint: endpointTag },
+    ...overrides,
+  };
 }
 
 function assertCheck(response, conditions, failMessage) {

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -24,9 +25,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import com.cpt202.HerLink.dto.auth.AccountUpdateRequest;
@@ -235,6 +239,23 @@ class UserAccessServiceImplTest {
                     () -> userAccessService.sendRegisterVerificationCode(request));
 
             assertTrue(exception.getMessage().contains("Please wait 60 seconds"));
+        }
+
+        @Test
+        @DisplayName("Exception case: mail sender throws exception while sending")
+        void sendCode_SendMailFailure_ThrowException() {
+            RegisterVerificationCodeRequest request = new RegisterVerificationCodeRequest();
+            request.setEmail(TEST_EMAIL);
+            JavaMailSender sender = mock(JavaMailSender.class);
+            when(javaMailSenderProvider.getIfAvailable()).thenReturn(sender);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            doThrow(new MailException("send failed") {
+            }).when(sender).send(any(SimpleMailMessage.class));
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> userAccessService.sendRegisterVerificationCode(request));
+
+            assertEquals("Unable to send the verification email right now. Please try again later.", exception.getMessage());
         }
     }
 
@@ -722,6 +743,31 @@ class UserAccessServiceImplTest {
     }
 
     @Test
+    @DisplayName("Exception case: review decision must be approved or rejected")
+    void reviewRequest_InvalidDecision_ThrowBadRequest() {
+        ContributorReviewDecisionRequest request = new ContributorReviewDecisionRequest();
+        request.setDecision("PENDING");
+
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.reviewContributorRequest(ADMIN_USER_ID, REQUEST_ID, request));
+
+        assertEquals("Decision must be APPROVED or REJECTED.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Exception case: review request does not exist")
+    void reviewRequest_NotFound_ThrowNotFound() {
+        ContributorReviewDecisionRequest request = new ContributorReviewDecisionRequest();
+        request.setDecision(ContributorApplicationStatusEnum.APPROVED.getValue());
+        when(contributorRequestMapper.selectByIdForUpdate(REQUEST_ID)).thenReturn(null);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.reviewContributorRequest(ADMIN_USER_ID, REQUEST_ID, request));
+
+        assertEquals("Contributor request does not exist.", exception.getMessage());
+    }
+
+    @Test
     @DisplayName("Normal case: admin revoke contributor role from normal user")
     void revokeContributor_ValidAdmin_Success() {
         testUser.setContributor(true);
@@ -731,6 +777,108 @@ class UserAccessServiceImplTest {
 
         assertNotNull(vo);
         assertEquals("REVOKED", vo.getStatus());
+    }
+
+    @Test
+    @DisplayName("Exception case: revoke contributor requires admin login")
+    void revokeContributor_NullAdmin_ThrowUnauthorized() {
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.revokeContributor(null, TEST_USER_ID, "admin"));
+
+        assertEquals("Please log in first.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Exception case: revoke contributor requires target user id")
+    void revokeContributor_NullTarget_ThrowBadRequest() {
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.revokeContributor(ADMIN_USER_ID, null, "admin"));
+
+        assertEquals("Contributor user id is required.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Exception case: revoke target user not found")
+    void revokeContributor_TargetUserNotFound_ThrowNotFound() {
+        when(appUserMapper.selectByIdForUpdate(TEST_USER_ID)).thenReturn(null);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.revokeContributor(ADMIN_USER_ID, TEST_USER_ID, "admin"));
+
+        assertEquals("User does not exist.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Exception case: administrator account cannot be demoted")
+    void revokeContributor_TargetIsAdmin_ThrowConflict() {
+        AppUser adminTarget = new AppUser();
+        adminTarget.setUserId(TEST_USER_ID);
+        adminTarget.setRole(UserRoleEnum.ADMINISTRATOR.getValue());
+        adminTarget.setContributor(true);
+        when(appUserMapper.selectByIdForUpdate(TEST_USER_ID)).thenReturn(adminTarget);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.revokeContributor(ADMIN_USER_ID, TEST_USER_ID, "admin"));
+
+        assertEquals("Administrator or reviewer accounts cannot be demoted by contributor revoke.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Exception case: target is not approved contributor")
+    void revokeContributor_TargetNotContributor_ThrowConflict() {
+        testUser.setContributor(false);
+        when(appUserMapper.selectByIdForUpdate(TEST_USER_ID)).thenReturn(testUser);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> userAccessService.revokeContributor(ADMIN_USER_ID, TEST_USER_ID, "admin"));
+
+        assertEquals("This user is not currently an approved contributor.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Revoke contributor returns mapped latest request view when present")
+    void revokeContributor_LatestRequestViewExists_ReturnRequestView() {
+        testUser.setContributor(true);
+        when(appUserMapper.selectByIdForUpdate(TEST_USER_ID)).thenReturn(testUser);
+        ContributorRequest latest = new ContributorRequest();
+        latest.setRequestId(500L);
+        latest.setUserId(TEST_USER_ID);
+        when(contributorRequestMapper.selectLatestByUserId(TEST_USER_ID)).thenReturn(latest);
+
+        ContributorRequestVO requestView = new ContributorRequestVO();
+        requestView.setRequestId(500L);
+        requestView.setStatus("APPROVED");
+        when(contributorRequestMapper.selectRequestViewById(500L)).thenReturn(requestView);
+
+        ContributorRequestVO result = userAccessService.revokeContributor(ADMIN_USER_ID, TEST_USER_ID, "admin");
+
+        assertAll(
+                () -> assertEquals(500L, result.getRequestId()),
+                () -> assertEquals("APPROVED", result.getStatus())
+        );
+    }
+
+    @Test
+    @DisplayName("Revoke contributor falls back to built VO when request view missing")
+    void revokeContributor_RequestViewMissing_ReturnBuiltVo() {
+        testUser.setContributor(true);
+        when(appUserMapper.selectByIdForUpdate(TEST_USER_ID)).thenReturn(testUser);
+        ContributorRequest latest = new ContributorRequest();
+        latest.setRequestId(600L);
+        latest.setUserId(TEST_USER_ID);
+        latest.setStatus("APPROVED");
+        latest.setUpdatedAt(LocalDateTime.now());
+        when(contributorRequestMapper.selectLatestByUserId(TEST_USER_ID)).thenReturn(latest);
+        when(contributorRequestMapper.selectRequestViewById(600L)).thenReturn(null);
+
+        ContributorRequestVO result = userAccessService.revokeContributor(ADMIN_USER_ID, TEST_USER_ID, "");
+
+        assertAll(
+                () -> assertEquals(TEST_USER_ID, result.getUserId()),
+                () -> assertEquals(TEST_NAME, result.getUserName()),
+                () -> assertEquals(TEST_EMAIL, result.getUserEmail()),
+                () -> assertEquals("APPROVED", result.getStatus())
+        );
     }
 
     @Test

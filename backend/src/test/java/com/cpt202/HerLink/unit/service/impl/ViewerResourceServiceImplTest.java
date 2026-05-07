@@ -13,6 +13,8 @@ import com.cpt202.HerLink.service.impl.ViewerResourceServiceImpl;
 import com.cpt202.HerLink.vo.CategoryTagOptionVO;
 import com.cpt202.HerLink.vo.ResourceDetailVO;
 import com.cpt202.HerLink.vo.ResourceListItemVO;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -25,7 +27,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,6 +74,24 @@ class ViewerResourceServiceImplTest {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("List approved resources resolves direct custom type match")
+    void listApprovedResources_customTypeDirectMatch_returnsMappedRows() {
+        LocalDateTime updatedAt = LocalDateTime.now().minusHours(2);
+        when(resourceTypeMapper.selectActiveByTypeName("custom type")).thenReturn(type(5L, "custom type"));
+        when(resourceMapper.selectApprovedResources(eq("wall"), eq(5L), eq(null), eq("time")))
+                .thenReturn(List.of(resource(5L, "Wall", "Approved", "custom type", "History", updatedAt)));
+
+        List<ResourceListItemVO> result = service.listApprovedResources(" wall ", " custom type ", null, " time ");
+
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals(5L, result.get(0).getId()),
+                () -> assertEquals("custom type", result.get(0).getResourceType()),
+                () -> assertEquals("history", result.get(0).getCategoryName())
+        );
     }
 
     @Test
@@ -221,6 +243,33 @@ class ViewerResourceServiceImplTest {
         assertSame("custom type", detail.getResourceType());
     }
 
+    @Test
+    @DisplayName("Private category matching supports educational materials alias")
+    void privateMatchesCategoryName_supportsEducationalAlias() {
+        assertTrue(invokeMatchesCategoryName("educational materials", "Education"));
+        assertFalse(invokeMatchesCategoryName("educational materials", "Museum"));
+    }
+
+    @Test
+    @DisplayName("Private findMatchingCategory returns matching row or null")
+    void privateFindMatchingCategory_returnsExpectedResult() {
+        List<Category> categories = Arrays.asList(
+                null,
+                category(null, "Invalid"),
+                category(1L, "Education"),
+                category(2L, "History")
+        );
+
+        Category hit = invokeFindMatchingCategory(categories, "educational materials");
+        Category miss = invokeFindMatchingCategory(categories, "unknown");
+
+        assertAll(
+                () -> assertNotNull(hit),
+                () -> assertEquals(1L, hit.getCategoryId()),
+                () -> assertNull(miss)
+        );
+    }
+
     private Resource resource(Long id, String title, String status, String resourceType, String categoryName, LocalDateTime updatedAt) {
         Resource resource = new Resource();
         resource.setId(id);
@@ -245,5 +294,40 @@ class ViewerResourceServiceImplTest {
         type.setResourceTypeId(id);
         type.setTypeName(name);
         return type;
+    }
+
+    private boolean invokeMatchesCategoryName(String expectedCategoryName, String actualCategoryName) {
+        return (Boolean) invokePrivateMethod(
+                "matchesCategoryName",
+                new Class<?>[]{String.class, String.class},
+                expectedCategoryName,
+                actualCategoryName
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private Category invokeFindMatchingCategory(List<Category> categories, String categoryName) {
+        return (Category) invokePrivateMethod(
+                "findMatchingCategory",
+                new Class<?>[]{List.class, String.class},
+                categories,
+                categoryName
+        );
+    }
+
+    private Object invokePrivateMethod(String methodName, Class<?>[] parameterTypes, Object... args) {
+        try {
+            Method method = ViewerResourceServiceImpl.class.getDeclaredMethod(methodName, parameterTypes);
+            method.setAccessible(true);
+            return method.invoke(service, args);
+        } catch (InvocationTargetException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new AssertionError("Private method invocation failed: " + methodName, cause);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Failed to invoke private method: " + methodName, exception);
+        }
     }
 }
