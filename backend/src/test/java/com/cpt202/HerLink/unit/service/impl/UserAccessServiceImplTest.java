@@ -22,9 +22,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import com.cpt202.HerLink.dto.auth.AccountUpdateRequest;
@@ -179,6 +181,61 @@ class UserAccessServiceImplTest {
 
             assertEquals("The email address is already in use.", exception.getMessage());
         }
+
+        @Test
+        @DisplayName("Exception case: mail host is blank")
+        void sendCode_MailHostBlank_ThrowException() {
+            UserAccessServiceImpl serviceWithBlankHost = new UserAccessServiceImpl(
+                    appUserMapper,
+                    contributorRequestMapper,
+                    passwordHashService,
+                    javaMailSenderProvider,
+                    emailNotificationService,
+                    adminOperationHistoryService,
+                    "   ",
+                    "test@example.com",
+                    10,
+                    60
+            );
+            RegisterVerificationCodeRequest request = new RegisterVerificationCodeRequest();
+            request.setEmail(TEST_EMAIL);
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> serviceWithBlankHost.sendRegisterVerificationCode(request));
+
+            assertEquals("Email verification is not configured yet. Please contact the administrator.",
+                    exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Exception case: JavaMailSender unavailable")
+        void sendCode_JavaMailSenderUnavailable_ThrowException() {
+            RegisterVerificationCodeRequest request = new RegisterVerificationCodeRequest();
+            request.setEmail(TEST_EMAIL);
+            when(javaMailSenderProvider.getIfAvailable()).thenReturn(null);
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> userAccessService.sendRegisterVerificationCode(request));
+
+            assertEquals("Email verification is not available right now. Please try again later.",
+                    exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Exception case: resend verification code too soon")
+        void sendCode_RequestAgainTooSoon_ThrowException() {
+            RegisterVerificationCodeRequest request = new RegisterVerificationCodeRequest();
+            request.setEmail(TEST_EMAIL);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            when(javaMailSenderProvider.getIfAvailable()).thenReturn(mock(JavaMailSender.class));
+
+            userAccessService.sendRegisterVerificationCode(request);
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> userAccessService.sendRegisterVerificationCode(request));
+
+            assertTrue(exception.getMessage().contains("Please wait 60 seconds"));
+        }
     }
 
     @Nested
@@ -288,6 +345,96 @@ class UserAccessServiceImplTest {
 
             assertEquals("Please correct the registration form.", exception.getMessage());
             assertTrue(exception.getDetails().contains("Verification code must be a 6-digit number."));
+        }
+
+        @Test
+        @DisplayName("Exception case: verification code was not requested")
+        void register_NoVerificationCodeRequested_ThrowException() {
+            RegisterRequest request = newRegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, TEST_PASSWORD, VALID_CODE);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            when(appUserMapper.selectByUsername(TEST_NAME)).thenReturn(null);
+
+            AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
+
+            assertEquals("Please send a verification code first.", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Exception case: expired verification code is purged before register")
+        void register_ExpiredVerificationCodePurged_ThrowException() {
+            RegisterRequest request = newRegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, TEST_PASSWORD, VALID_CODE);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            when(appUserMapper.selectByUsername(TEST_NAME)).thenReturn(null);
+            putVerificationCodeEntry(
+                    TEST_EMAIL,
+                    VALID_CODE,
+                    LocalDateTime.now().minusSeconds(1),
+                    LocalDateTime.now().minusSeconds(1)
+            );
+
+            AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
+
+            assertEquals("Please send a verification code first.", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Exception case: verification code mismatch")
+        void register_VerificationCodeMismatch_ThrowException() {
+            RegisterRequest request = newRegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, TEST_PASSWORD, "654321");
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            when(appUserMapper.selectByUsername(TEST_NAME)).thenReturn(null);
+            putVerificationCodeEntry(
+                    TEST_EMAIL,
+                    VALID_CODE,
+                    LocalDateTime.now().plusMinutes(10),
+                    LocalDateTime.now().plusSeconds(60)
+            );
+
+            AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
+
+            assertEquals("The verification code is incorrect.", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Exception case: insert username unique violation maps to username conflict message")
+        void register_InsertUsernameConflict_ThrowConflict() {
+            RegisterRequest request = newRegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, TEST_PASSWORD, VALID_CODE);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            when(appUserMapper.selectByUsername(TEST_NAME)).thenReturn(null);
+            when(passwordHashService.hash(TEST_PASSWORD)).thenReturn(TEST_HASH);
+            putVerificationCodeEntry(
+                    TEST_EMAIL,
+                    VALID_CODE,
+                    LocalDateTime.now().plusMinutes(10),
+                    LocalDateTime.now().plusSeconds(60)
+            );
+            when(appUserMapper.insert(any(AppUser.class)))
+                    .thenThrow(new DataIntegrityViolationException("duplicate key for username"));
+
+            AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
+
+            assertEquals("The username is already in use.", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Exception case: insert duplicate unique violation maps to generic conflict message")
+        void register_InsertGenericUniqueConflict_ThrowConflict() {
+            RegisterRequest request = newRegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, TEST_PASSWORD, VALID_CODE);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(null);
+            when(appUserMapper.selectByUsername(TEST_NAME)).thenReturn(null);
+            when(passwordHashService.hash(TEST_PASSWORD)).thenReturn(TEST_HASH);
+            putVerificationCodeEntry(
+                    TEST_EMAIL,
+                    VALID_CODE,
+                    LocalDateTime.now().plusMinutes(10),
+                    LocalDateTime.now().plusSeconds(60)
+            );
+            when(appUserMapper.insert(any(AppUser.class)))
+                    .thenThrow(new DataIntegrityViolationException("UNIQUE index violated"));
+
+            AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
+
+            assertEquals("The account information is already in use.", exception.getMessage());
         }
     }
     @Nested
@@ -454,6 +601,28 @@ class UserAccessServiceImplTest {
 
             assertEquals("The email address is already in use.", exception.getMessage());
         }
+
+        @Test
+        @DisplayName("Exception case: target username occupied by other user")
+        void updateAccount_UsernameUsedByOthers_ThrowException() {
+            AccountUpdateRequest request = new AccountUpdateRequest();
+            request.setName("other-user-name");
+            request.setEmail(TEST_EMAIL);
+            request.setBio(null);
+
+            AppUser otherUser = new AppUser();
+            otherUser.setUserId(999L);
+            otherUser.setName("other-user-name");
+
+            when(appUserMapper.selectById(TEST_USER_ID)).thenReturn(testUser);
+            when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(testUser);
+            when(appUserMapper.selectByUsername("other-user-name")).thenReturn(otherUser);
+
+            AppException exception = assertThrows(AppException.class,
+                    () -> userAccessService.updateAccount(TEST_USER_ID, request));
+
+            assertEquals("The username is already in use.", exception.getMessage());
+        }
     }
 
     @Nested
@@ -617,5 +786,43 @@ class UserAccessServiceImplTest {
                 () -> userAccessService.getContributorRequestDetail(999L));
 
         assertEquals("Contributor request does not exist.", exception.getMessage());
+    }
+
+    private RegisterRequest newRegisterRequest(String name,
+                                               String email,
+                                               String password,
+                                               String confirmPassword,
+                                               String verificationCode) {
+        RegisterRequest request = new RegisterRequest();
+        request.setName(name);
+        request.setEmail(email);
+        request.setPassword(password);
+        request.setConfirmPassword(confirmPassword);
+        request.setVerificationCode(verificationCode);
+        return request;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void putVerificationCodeEntry(String email,
+                                          String code,
+                                          LocalDateTime expiresAt,
+                                          LocalDateTime availableResendAt) {
+        try {
+            Field codesField = UserAccessServiceImpl.class.getDeclaredField("registerVerificationCodes");
+            codesField.setAccessible(true);
+            Map<String, Object> codesMap = (Map<String, Object>) codesField.get(userAccessService);
+
+            Class<?> entryClass = Class.forName("com.cpt202.HerLink.service.impl.UserAccessServiceImpl$RegisterVerificationCodeEntry");
+            Constructor<?> constructor = entryClass.getDeclaredConstructor(
+                    String.class,
+                    LocalDateTime.class,
+                    LocalDateTime.class
+            );
+            constructor.setAccessible(true);
+            Object entry = constructor.newInstance(code, expiresAt, availableResendAt);
+            codesMap.put(email, entry);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError("Failed to prepare register verification code entry", exception);
+        }
     }
 }

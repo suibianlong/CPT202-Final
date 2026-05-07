@@ -80,6 +80,34 @@ class AdminClassificationManagementServiceImplTest {
     }
 
     @Test
+    @DisplayName("Get all resource types maps null mapper result to empty list")
+    void getAllResourceTypes_mapperReturnsNull_returnsEmptyList() {
+        when(resourceTypeMapper.selectAllResourceTypes()).thenReturn(null);
+
+        List<AdminResourceTypeResponse> result = service.getAllResourceTypes();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Get active resource types maps rows to response rows")
+    void getActiveResourceTypes_rowsExist_returnsMappedResponses() {
+        when(resourceTypeMapper.selectByStatus(ClassificationStatus.ACTIVE.name()))
+                .thenReturn(List.of(resourceType(7L, "photo", ClassificationStatus.ACTIVE.name(), 2)));
+
+        List<AdminResourceTypeResponse> result = service.getActiveResourceTypes();
+
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals(7L, result.get(0).resourceTypeId()),
+                () -> assertEquals("photo", result.get(0).typeName()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, result.get(0).status()),
+                () -> assertEquals(2, result.get(0).usageCount())
+        );
+    }
+
+    @Test
     @DisplayName("Create category trims and collapses whitespace in valid name")
     void createCategory_validName_returnsCreatedCategory() {
         AtomicReference<Category> inserted = new AtomicReference<>();
@@ -254,6 +282,36 @@ class AdminClassificationManagementServiceImplTest {
     }
 
     @Test
+    @DisplayName("Update tag treats mapper update 0 as not found")
+    void updateTag_updateReturnsZero_throwsNotFound() {
+        when(tagMapper.selectById(11L)).thenReturn(tag(11L, "Old", ClassificationStatus.ACTIVE.name(), 0));
+        when(tagMapper.countByNameIgnoreCase("Festival", 11L)).thenReturn(0);
+        when(tagMapper.updateTagName(eq(11L), eq("Festival"), any(LocalDateTime.class))).thenReturn(0);
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.updateTag(11L, new AdminTagRequest("Festival"), "Olivia"));
+
+        assertAll(
+                () -> assertEquals(404, exception.getStatusCode()),
+                () -> assertEquals("Tag does not exist.", exception.getMessage())
+        );
+    }
+
+    @Test
+    @DisplayName("Deactivate tag returns existing response when already inactive")
+    void deactivateTag_alreadyInactive_returnsExistingResponse() {
+        when(tagMapper.selectById(11L)).thenReturn(tag(11L, "Festival", ClassificationStatus.INACTIVE.name(), 0));
+
+        AdminTagResponse response = service.deactivateTag(11L, "Olivia");
+
+        assertAll(
+                () -> assertEquals(11L, response.tagId()),
+                () -> assertEquals("Festival", response.tagName()),
+                () -> assertEquals(ClassificationStatus.INACTIVE, response.status())
+        );
+    }
+
+    @Test
     @DisplayName("Activate tag changes inactive tag to active")
     void activateTag_inactiveTag_returnsActiveResponse() {
         when(tagMapper.selectById(11L)).thenReturn(
@@ -314,6 +372,44 @@ class AdminClassificationManagementServiceImplTest {
         assertEquals(
                 "Resource types already used by resources must keep a name supported by the current resource metadata flow.",
                 exception.getMessage()
+        );
+    }
+
+    @Test
+    @DisplayName("Update used resource type accepts supported workflow name")
+    void updateResourceType_usedTypeSupportedName_returnsUpdatedType() {
+        when(resourceTypeMapper.selectById(12L)).thenReturn(
+                resourceType(12L, "photo", ClassificationStatus.ACTIVE.name(), 4),
+                resourceType(12L, "video", ClassificationStatus.ACTIVE.name(), 4)
+        );
+        when(resourceTypeMapper.countByTypeNameIgnoreCase("video", 12L)).thenReturn(0);
+        when(categoryMapper.countByTopicIgnoreCase("video", null)).thenReturn(0);
+        when(resourceTypeMapper.updateTypeName(eq(12L), eq("video"), any(LocalDateTime.class))).thenReturn(1);
+
+        AdminResourceTypeResponse response = service.updateResourceType(
+                12L,
+                new AdminResourceTypeRequest("video"),
+                "Olivia"
+        );
+
+        assertAll(
+                () -> assertEquals(12L, response.resourceTypeId()),
+                () -> assertEquals("video", response.typeName()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status())
+        );
+    }
+
+    @Test
+    @DisplayName("Activate resource type returns existing response when already active")
+    void activateResourceType_alreadyActive_returnsExistingResponse() {
+        when(resourceTypeMapper.selectById(12L)).thenReturn(resourceType(12L, "photo", ClassificationStatus.ACTIVE.name(), 0));
+
+        AdminResourceTypeResponse response = service.activateResourceType(12L, "Olivia");
+
+        assertAll(
+                () -> assertEquals(12L, response.resourceTypeId()),
+                () -> assertEquals("photo", response.typeName()),
+                () -> assertEquals(ClassificationStatus.ACTIVE, response.status())
         );
     }
 

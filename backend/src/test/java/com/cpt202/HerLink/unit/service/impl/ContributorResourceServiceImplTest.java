@@ -157,6 +157,38 @@ class ContributorResourceServiceImplTest {
     }
 
     @Test
+    @DisplayName("Create draft falls back to first valid active resource type when photo type missing")
+    void createDraft_photoTypeMissing_usesFirstValidFallbackType() {
+        AtomicReference<Resource> inserted = new AtomicReference<>();
+        when(categoryMapper.selectActiveCategories()).thenReturn(List.of(category(1L, "Places", "ACTIVE")));
+        when(resourceTypeMapper.selectActiveByTypeName("photo")).thenReturn(null);
+        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(List.of(
+                type(null, "invalid"),
+                type(8L, "video")
+        ));
+        when(resourceMapper.insert(any(Resource.class))).thenAnswer(invocation -> {
+            Resource resource = invocation.getArgument(0);
+            resource.setId(RESOURCE_ID);
+            inserted.set(resource);
+            return 1;
+        });
+        when(resourceMapper.selectById(RESOURCE_ID)).thenAnswer(invocation -> {
+            Resource resource = inserted.get();
+            resource.setCategoryName("Places");
+            return resource;
+        });
+        stubDetailLookups(RESOURCE_ID, 1);
+
+        ResourceDetailVO result = service.createDraft(USER_ID);
+
+        assertAll(
+                () -> assertEquals(RESOURCE_ID, result.getId()),
+                () -> assertEquals("video", result.getResourceType()),
+                () -> assertEquals(8L, inserted.get().getResourceTypeId())
+        );
+    }
+
+    @Test
     @DisplayName("Get resource detail rejects missing resource")
     void getMyResourceDetail_missingResource_throwsNotFound() {
         when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(null);
@@ -274,6 +306,90 @@ class ContributorResourceServiceImplTest {
     }
 
     @Test
+    @DisplayName("Update resource normalizes comma-split tag names and removes case-insensitive duplicates")
+    void updateResource_tagNamesNormalizedAndDeduplicated_returnsUpdatedDetail() {
+        AtomicReference<Resource> updated = new AtomicReference<>();
+        List<ResourceTag> insertedTags = new ArrayList<>();
+        Resource existing = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        existing.setCategoryId(1L);
+        existing.setResourceTypeId(1L);
+        existing.setResourceType("photo");
+
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(existing);
+        when(resourceTagMapper.selectTagIdsByResourceId(RESOURCE_ID)).thenReturn(List.of(11L), List.of(5L, 6L));
+        when(tagMapper.selectByNameIgnoreCase("Temple")).thenReturn(tag(5L, "Temple", "ACTIVE"));
+        when(tagMapper.selectByNameIgnoreCase("Festival")).thenReturn(null);
+        when(tagMapper.insert(any(Tag.class))).thenAnswer(invocation -> {
+            Tag newTag = invocation.getArgument(0);
+            newTag.setTagId(6L);
+            return 1;
+        });
+        when(tagMapper.selectByIds(List.of(5L, 6L))).thenReturn(List.of(
+                tag(5L, "Temple", "ACTIVE"),
+                tag(6L, "Festival", "ACTIVE")
+        ));
+        when(resourceTagMapper.insert(any(ResourceTag.class))).thenAnswer(invocation -> {
+            insertedTags.add(invocation.getArgument(0));
+            return 1;
+        });
+        when(resourceMapper.updateById(any(Resource.class))).thenAnswer(invocation -> {
+            updated.set(invocation.getArgument(0));
+            return 1;
+        });
+        when(resourceMapper.selectById(RESOURCE_ID)).thenAnswer(invocation -> {
+            Resource latest = updated.get();
+            latest.setCategoryName("Places");
+            return latest;
+        });
+        stubDetailLookups(RESOURCE_ID, 5);
+        when(resourceTagMapper.selectTagIdsByResourceId(RESOURCE_ID)).thenReturn(List.of(11L), List.of(5L, 6L));
+        when(resourceTagMapper.selectTagNamesByResourceId(RESOURCE_ID)).thenReturn(List.of("Temple", "Festival"));
+
+        ResourceUpdateRequest request = new ResourceUpdateRequest();
+        request.setTagNames(Arrays.asList(" Temple , Festival ", "temple", null, "  "));
+
+        ResourceDetailVO result = service.updateResource(USER_ID, RESOURCE_ID, request);
+
+        assertAll(
+                () -> assertEquals(2, insertedTags.size()),
+                () -> assertEquals(5L, insertedTags.get(0).getTagId()),
+                () -> assertEquals(6L, insertedTags.get(1).getTagId()),
+                () -> assertEquals(List.of("Temple", "Festival"), result.getTagNames())
+        );
+    }
+
+    @Test
+    @DisplayName("Update resource rejects tag name exceeding max length")
+    void updateResource_tagNameTooLong_throwsBadRequest() {
+        Resource existing = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(existing);
+
+        ResourceUpdateRequest request = new ResourceUpdateRequest();
+        request.setTagNames(List.of("a".repeat(101)));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.updateResource(USER_ID, RESOURCE_ID, request));
+
+        assertEquals("Tag name cannot exceed 100 characters.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Update resource rejects existing inactive tag when using tag names")
+    void updateResource_inactiveTagName_throwsConflict() {
+        Resource existing = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(existing);
+        when(tagMapper.selectByNameIgnoreCase("Festival")).thenReturn(tag(99L, "Festival", "INACTIVE"));
+
+        ResourceUpdateRequest request = new ResourceUpdateRequest();
+        request.setTagNames(List.of("Festival"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.updateResource(USER_ID, RESOURCE_ID, request));
+
+        assertEquals("Tag \"Festival\" exists but is inactive.", exception.getMessage());
+    }
+
+    @Test
     @DisplayName("Upload files rejects request without files")
     void uploadFiles_noFiles_throwsBadRequest() {
         when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue()));
@@ -326,6 +442,20 @@ class ContributorResourceServiceImplTest {
                 () -> assertEquals("jpg", insertedFile.get().getFileType()),
                 () -> assertEquals(RESOURCE_ID, insertedFile.get().getResourceId())
         );
+    }
+
+    @Test
+    @DisplayName("Upload files rejects media file not matching selected resource type")
+    void uploadFiles_mediaTypeMismatch_throwsBadRequest() {
+        Resource existing = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        existing.setResourceType("photo");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(existing);
+        MockMultipartFile media = new MockMultipartFile("mediaFile", "movie.mp4", "video/mp4", "video".getBytes());
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.uploadFiles(USER_ID, RESOURCE_ID, null, media));
+
+        assertTrue(exception.getMessage().contains("Media file must match the selected resource type."));
     }
 
     @Test
@@ -389,6 +519,27 @@ class ContributorResourceServiceImplTest {
     }
 
     @Test
+    @DisplayName("Submit resource rejects unsupported stored media type for unknown resource type")
+    void submitResource_unknownResourceTypeWithUnsupportedMedia_throwsBadRequest() {
+        Resource draft = resource(RESOURCE_ID, USER_ID, ResourceStatusEnum.DRAFT.getValue());
+        draft.setTitle("Title");
+        draft.setDescription("Description");
+        draft.setCopyright("Rights");
+        draft.setCategoryId(1L);
+        draft.setResourceType("custom-type");
+        draft.setMediaUrl("resource-100/file.exe");
+        when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(draft);
+        when(categoryMapper.selectById(1L)).thenReturn(category(1L, "Places", "ACTIVE"));
+        when(resourceFileMapper.selectByResourceIdAndFilePath(RESOURCE_ID, "resource-100/file.exe"))
+                .thenReturn(resourceFile("exe"));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> service.submitResource(USER_ID, RESOURCE_ID, null));
+
+        assertTrue(exception.getMessage().contains("Media file type is not supported."));
+    }
+
+    @Test
     @DisplayName("List my resources maps status filter and review feedback flag")
     void listMyResources_validFilter_returnsMappedItems() {
         ResourceQueryRequest request = new ResourceQueryRequest();
@@ -437,6 +588,35 @@ class ContributorResourceServiceImplTest {
                 () -> assertEquals(1L, result.get(0).getId()),
                 () -> assertEquals("Places", result.get(0).getName())
         );
+    }
+
+    @Test
+    @DisplayName("List resource type options skips null and invalid rows")
+    void listResourceTypeOptions_mixedRows_returnsValidOptionsOnly() {
+        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(Arrays.asList(
+                null,
+                type(null, "invalid"),
+                type(9L, "photo")
+        ));
+
+        List<CategoryTagOptionVO> result = service.listResourceTypeOptions();
+
+        assertAll(
+                () -> assertEquals(1, result.size()),
+                () -> assertEquals(9L, result.get(0).getId()),
+                () -> assertEquals("photo", result.get(0).getName())
+        );
+    }
+
+    @Test
+    @DisplayName("List resource type options returns empty when mapper returns null")
+    void listResourceTypeOptions_mapperReturnsNull_returnsEmptyList() {
+        when(resourceTypeMapper.selectActiveResourceTypes()).thenReturn(null);
+
+        List<CategoryTagOptionVO> result = service.listResourceTypeOptions();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 
     @Test

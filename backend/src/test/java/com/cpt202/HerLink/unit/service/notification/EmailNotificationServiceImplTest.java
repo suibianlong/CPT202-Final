@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -143,6 +145,13 @@ class EmailNotificationServiceImplTest {
             emailService.notifyResourcePendingReview(null, resource());
             assertEquals(1, getLogs().size());
         }
+
+        @Test
+        @DisplayName("Should send successfully when resource is null")
+        void resourceNull_SendSuccess_NoLogs() {
+            emailService.notifyResourcePendingReview(user(), null);
+            assertTrue(getLogs().isEmpty());
+        }
     }
 
     @Nested
@@ -219,6 +228,28 @@ class EmailNotificationServiceImplTest {
             emailService.notifyContributorApplicationApproved(user());
             assertTrue(getLogs().stream().anyMatch(log -> log.getMessage().contains("JavaMailSender is unavailable")));
         }
+
+        @Test
+        @DisplayName("Should send without from address when configuration is blank")
+        void blankFromAddress_SendWithoutFromField() {
+            EmailNotificationServiceImpl serviceWithoutFrom = new EmailNotificationServiceImpl(
+                    javaMailSenderProvider,
+                    TEST_HOST,
+                    "   "
+            );
+
+            final SimpleMailMessage[] capturedMessage = new SimpleMailMessage[1];
+            doAnswer(invocation -> {
+                capturedMessage[0] = invocation.getArgument(0);
+                return null;
+            }).when(javaMailSender).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+
+            serviceWithoutFrom.notifyContributorApplicationApproved(user());
+
+            assertNotNull(capturedMessage[0]);
+            assertEquals(USER_EMAIL, capturedMessage[0].getTo()[0]);
+            assertEquals(null, capturedMessage[0].getFrom());
+        }
     }
 
     @Nested
@@ -243,6 +274,15 @@ class EmailNotificationServiceImplTest {
         }
 
         @Test
+        @DisplayName("Should return user ID when name is blank")
+        void userWithBlankName_ReturnUserId() {
+            AppUser user = new AppUser();
+            user.setUserId(USER_ID);
+            user.setName("   ");
+            assertEquals("user 1", invokeBuildUserLabel(user));
+        }
+
+        @Test
         @DisplayName("Should return default 'user' when user is null")
         void nullUser_ReturnDefault() {
             assertEquals("user", invokeBuildUserLabel(null));
@@ -263,6 +303,12 @@ class EmailNotificationServiceImplTest {
         @DisplayName("Should return resource ID when title is missing")
         void resourceWithoutTitle_ReturnResourceId() {
             assertEquals("resource 100", invokeBuildResourceLabel(null, RES_ID));
+        }
+
+        @Test
+        @DisplayName("Should return resource ID when title is blank")
+        void resourceWithBlankTitle_ReturnResourceId() {
+            assertEquals("resource 100", invokeBuildResourceLabel("   ", RES_ID));
         }
     }
 
