@@ -152,6 +152,7 @@ jobs:
       - name: Summarize test timing by suite
         if: always()
         run: |
+          cd backend
           python3 - <<'PY'
           from __future__ import annotations
 
@@ -159,7 +160,7 @@ jobs:
           import os
           import xml.etree.ElementTree as ET
 
-          def collect(pattern: str, classifier):
+          def collect(pattern: str):
               total_tests = 0
               total_time = 0.0
               failures = 0
@@ -175,20 +176,12 @@ jobs:
                   failures += int(root.attrib.get("failures", "0") or 0)
                   errors += int(root.attrib.get("errors", "0") or 0)
                   skipped += int(root.attrib.get("skipped", "0") or 0)
-                  suite_name = root.attrib.get("name", "")
-                  suite_class = root.attrib.get("classname", "")
-                  bucket = classifier(path, suite_name, suite_class)
-                  if bucket is None:
-                      continue
                   total_tests += tests
                   total_time += time
               avg_ms = (total_time / total_tests * 1000.0) if total_tests else None
               return total_tests, total_time, avg_ms, failures, errors, skipped
 
-          def classify_unit(path: str, suite_name: str, suite_class: str):
-              return "unit"
-
-          unit_tests, unit_time, unit_avg, unit_failures, unit_errors, unit_skipped = collect("target/surefire-reports/TEST-*.xml", classify_unit)
+          unit_tests, unit_time, unit_avg, unit_failures, unit_errors, unit_skipped = collect("target/surefire-reports/TEST-*.xml")
           def fmt(avg):
               return f"{avg:.2f} ms" if avg is not None else "N/A"
 
@@ -218,6 +211,8 @@ jobs:
   backend-slice-test:
     name: Backend Web Slice and Integration Tests
     runs-on: ubuntu-latest
+    needs:
+      - backend-test
 
     steps:
       - name: Checkout repository
@@ -313,139 +308,6 @@ jobs:
               with open(summary, "a", encoding="utf-8") as fh:
                   fh.write(text)
           PY
-
-  backend-test-summary:
-    name: Backend Overall Test Summary
-    runs-on: ubuntu-latest
-    if: always()
-    needs:
-      - backend-test
-      - backend-slice-test
-
-    steps:
-      - name: Download unit test artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results
-          path: artifacts/unit
-
-      - name: Download slice test artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: slice-test-results
-          path: artifacts/slice
-        continue-on-error: true
-
-      - name: Summarize overall pass rate
-        run: |
-          python3 - <<'PY'
-          from __future__ import annotations
-
-          import glob
-          import os
-          import xml.etree.ElementTree as ET
-
-          def read_stats(pattern: str, classifier=None):
-              tests = failures = errors = skipped = 0
-              files = 0
-              for path in glob.glob(pattern, recursive=True):
-                  try:
-                      root = ET.parse(path).getroot()
-                  except ET.ParseError:
-                      continue
-                  if classifier is not None and not classifier(path, root):
-                      continue
-                  tests += int(root.attrib.get("tests", "0") or 0)
-                  failures += int(root.attrib.get("failures", "0") or 0)
-                  errors += int(root.attrib.get("errors", "0") or 0)
-                  skipped += int(root.attrib.get("skipped", "0") or 0)
-                  files += 1
-              return tests, failures, errors, skipped, files
-
-          def classify_web_slice(path: str, root: ET.Element):
-              text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
-              return "controller" in text
-
-          def classify_integration(path: str, root: ET.Element):
-              text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
-              return "integration" in text and "controller" not in text
-
-          def pass_rate(tests, failures, errors, skipped):
-              if tests <= 0:
-                  return "N/A"
-              passed = tests - failures - errors - skipped
-              if passed < 0:
-                  passed = 0
-              return f"{(passed / tests) * 100:.2f}%"
-
-          unit_tests, unit_failures, unit_errors, unit_skipped, unit_files = read_stats("artifacts/unit/**/surefire-reports/TEST-*.xml")
-          web_tests, web_failures, web_errors, web_skipped, web_files = read_stats(
-              "artifacts/slice/**/failsafe-reports/TEST-*.xml",
-              classify_web_slice,
-          )
-          integration_tests, integration_failures, integration_errors, integration_skipped, integration_files = read_stats(
-              "artifacts/slice/**/failsafe-reports/TEST-*.xml",
-              classify_integration,
-          )
-
-          overall_tests = unit_tests + web_tests + integration_tests
-          overall_failures = unit_failures + web_failures + integration_failures
-          overall_errors = unit_errors + web_errors + integration_errors
-          overall_skipped = unit_skipped + web_skipped + integration_skipped
-
-          summary = os.environ.get("GITHUB_STEP_SUMMARY")
-          lines = [
-              "## Test Pass Rate Summary",
-              "",
-              "| Scope | Test cases | Failures | Errors | Skipped | Pass rate |",
-              "| --- | ---: | ---: | ---: | ---: | ---: |",
-          ]
-          if unit_files:
-              lines.append(f"| Unit tests | {unit_tests} | {unit_failures} | {unit_errors} | {unit_skipped} | {pass_rate(unit_tests, unit_failures, unit_errors, unit_skipped)} |")
-          if web_files:
-              lines.append(f"| Web slice tests | {web_tests} | {web_failures} | {web_errors} | {web_skipped} | {pass_rate(web_tests, web_failures, web_errors, web_skipped)} |")
-          if integration_files:
-              lines.append(f"| Integration tests | {integration_tests} | {integration_failures} | {integration_errors} | {integration_skipped} | {pass_rate(integration_tests, integration_failures, integration_errors, integration_skipped)} |")
-
-          lines.extend([
-              "",
-              "## Overall Test Pass Rate",
-              "",
-              "| Scope | Test cases | Failures | Errors | Skipped | Pass rate |",
-              "| --- | ---: | ---: | ---: | ---: | ---: |",
-              f"| Overall | {overall_tests} | {overall_failures} | {overall_errors} | {overall_skipped} | {pass_rate(overall_tests, overall_failures, overall_errors, overall_skipped)} |",
-          ])
-
-          text = "\n".join(lines) + "\n"
-          print(text)
-          if summary:
-              with open(summary, "a", encoding="utf-8") as fh:
-                  fh.write(text)
-          PY
-
-      - name: Upload slice test results
-        if: always()
-        run: |
-          set -e
-          rm -rf backend/.artifact-slice-results
-          mkdir -p backend/.artifact-slice-results/failsafe-reports
-          printf 'slice test results artifact\n' > backend/.artifact-slice-results/README.txt
-          if [ -d backend/target/failsafe-reports ]; then
-            cp -R backend/target/failsafe-reports/. backend/.artifact-slice-results/failsafe-reports/ 2>/dev/null || true
-          fi
-          if [ -f backend/backend-slice-test.log ]; then
-            cp backend/backend-slice-test.log backend/.artifact-slice-results/
-          fi
-
-      - name: Upload slice test results artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: slice-test-results
-          path: |
-            backend/.artifact-slice-results/
-          retention-days: 30
-          if-no-files-found: warn
 
   backend-build:
     name: Backend Build
