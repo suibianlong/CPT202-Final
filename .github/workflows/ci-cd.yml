@@ -426,13 +426,28 @@ jobs:
 
       - name: Upload slice test results
         if: always()
+        working-directory: backend
+        run: |
+          set -e
+          rm -rf .artifact-slice-results
+          mkdir -p .artifact-slice-results/failsafe-reports
+          printf 'slice test results artifact\n' > .artifact-slice-results/README.txt
+          if [ -d target/failsafe-reports ]; then
+            cp -R target/failsafe-reports/. .artifact-slice-results/failsafe-reports/ 2>/dev/null || true
+          fi
+          if [ -f backend-slice-test.log ]; then
+            cp backend-slice-test.log .artifact-slice-results/
+          fi
+
+      - name: Upload slice test results artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: slice-test-results
           path: |
-            backend/target/failsafe-reports/
-            backend/backend-slice-test.log
+            backend/.artifact-slice-results/
           retention-days: 30
+          if-no-files-found: warn
 
   backend-build:
     name: Backend Build
