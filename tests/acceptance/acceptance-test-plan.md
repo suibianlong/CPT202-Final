@@ -1,209 +1,91 @@
-# Acceptance Test Plan
+# HerLink 平台验收测试计划 V2.0（PBI驱动版）
 
-Project: HerLink Community Heritage Resource Sharing Platform
+## 1. 测试概述
 
-Environment:
-- Production-like deployed site: `http://47.99.122.227`
+| 项目 | 内容 |
+|------|------|
+| 项目名称 | HerLink 社区文化遗产资源共享平台 |
+| 测试环境 | http://47.99.122.227 |
+| 测试类型 | 验收测试（Acceptance Testing） |
+| 测试版本 | [待填写commit id] |
+| 测试人员 | [你的名字] |
+| 测试日期 | [执行日期] |
 
-Purpose:
-- Verify the system satisfies the core business goals expected by users and stakeholders.
-- Confirm the end-to-end workflows are usable after release.
-- Validate role-based access, content lifecycle, and admin management flows.
+## 2. 测试目标
 
-## 1. Acceptance Scope
+验证以下核心业务目标是否达成：
+- ✅ Viewer可以浏览已批准的资源并查看详情
+- ✅ Viewer可以发表评论和提交反馈
+- ✅ Contributor可以创建草稿、上传文件、提交审核
+- ✅ Admin可以审核申请、管理资源、维护分类数据
+- ✅ 角色权限边界正确（Viewer不能做Contributor的事）
+- ✅ 数据在刷新/登出/重新登录后保持一致
 
-This acceptance test focuses on the business flows that matter to real users:
+## 3. 测试账号
 
-1. Viewer can browse approved resources and inspect resource details.
-2. Viewer can submit feedback and comments on approved resources.
-3. Contributor can create and maintain draft resources, upload files, and submit for review.
-4. Admin can review contributor applications, manage resources, and maintain classification data.
-5. Role boundaries are enforced correctly.
-6. Data persists correctly across refresh, logout, and relogin.
+| 角色 | 账号 | 密码 | 用途 |
+|------|------|------|------|
+| Viewer 1 | 1067364488@qq.com | [待填] | 主要测试观众 |
+| Viewer 2 | carol_viewer@example.com | [待填] | 备用观众 |
+| Contributor | bob_contributor@example.com | [待填] | 内容贡献者 |
+| Admin | david_reviewer@example.com | [待填] | 管理员 |
 
-## 2. Roles And Accounts
+## 4. 验收标准（每个PBI的通过标准）
 
-Use the real accounts you already prepared:
+### P1优先级（必须全部通过才能上线）
 
-- Viewer 1: `1067364488@qq.com`
-- Viewer 2: `carol_viewer@example.com`
-- Viewer 3: `alice@example.com`
-- Contributor: `bob_contributor@example.com`
-- Admin: `david_reviewer@example.com`
+| PBI ID | 验收标准 |
+|--------|---------|
+| PBI-01 | 用户能成功注册、登录、注销；注销后无法访问保护页面；重新登录后会话恢复 |
+| PBI-02 | Viewer能提交Contributor申请，系统记录申请状态为“待审核” |
+| PBI-03 | Admin能查看申请列表，能批准或拒绝；批准后用户角色变为Contributor |
+| PBI-04 | Contributor能看到自己的所有提交，能看到每个资源的状态和审核反馈 |
+| PBI-05 | Contributor能创建草稿，填写所有元数据字段，保存后数据不丢失 |
+| PBI-06 | Contributor能上传图片/文件，提交时校验必填字段，提交后状态变为“待审核” |
+| PBI-08 | Admin能查看所有待审核资源列表，能点击进入详情页 |
+| PBI-09 | Admin能审核通过（→已批准）或拒绝（→已拒绝+填写反馈） |
+| PBI-10 | Viewer只能看到状态为“已批准”的资源，看不到草稿/待审核 |
+| PBI-11 | Viewer能按关键词搜索、按类别筛选、按时间排序，结果正确 |
+| PBI-16 | 部署环境可访问，Docker正常运行，日志无严重报错 |
 
-## 3. Entry Criteria
+### P2优先级（建议通过，但有瑕疵可暂缓）
 
-Do not start acceptance testing until:
+| PBI ID | 验收标准 |
+|--------|---------|
+| PBI-07 | Contributor能修改被拒资源并重新提交，系统保留版本历史 |
+| PBI-12 | Viewer能发表评论、删除自己的评论，能提交反馈 |
+| PBI-13 | Admin能删除不当评论，能查看用户反馈列表 |
+| PBI-14 | Admin能新增/编辑/禁用分类、类型、标签，前端立即生效 |
+| PBI-15 | Admin能归档已批准资源，归档后对Viewer不可见，可取消归档 |
 
-1. The latest deployment has completed successfully.
-2. The site opens from the test machine.
-3. All required test accounts can log in.
-4. At least one approved resource exists for viewer verification.
-5. The database is reachable and application errors are not present in logs.
+## 5. 入口条件（满足才能开始测试）
 
-## 4. Exit Criteria
+- [ ] 网站能正常访问（http://47.99.122.227）
+- [ ] 所有测试账号能成功登录
+- [ ] 数据库中至少有一条已批准的资源（用于Viewer测试）
+- [ ] 至少有一个Contributor申请记录（如果没有，先创建一个）
+- [ ] 服务日志无明显报错
 
-Acceptance testing is complete only when:
+## 6. 出口条件（满足才算测试完成）
 
-1. All critical acceptance cases pass.
-2. No blocker or high-severity defect remains unresolved.
-3. The expected role-based permissions are enforced.
-4. The final sign-off decision is recorded.
+- [ ] 所有P1的PBI验收通过
+- [ ] 没有Blocker或High级别的缺陷未修复
+- [ ] 角色权限边界验证通过
+- [ ] 签署记录完整
 
-## 5. Test Strategy
+## 7. 缺陷定级标准
 
-The test should be executed in this order:
+| 级别 | 定义 | 示例 |
+|------|------|------|
+| Blocker | 阻塞核心流程，无法继续测试 | 登录失败、页面白屏 |
+| High | 核心功能无法使用，影响用户体验 | 搜索无结果、提交失败 |
+| Medium | 功能可用但体验不佳 | 提示不准确、页面加载慢 |
+| Low | 轻微视觉或文案问题 | 错别字、样式偏移 |
 
-1. Login and session checks.
-2. Viewer browse and interaction flow.
-3. Contributor content creation and submission flow.
-4. Admin management and moderation flow.
-5. Negative permission checks.
-6. Data persistence and recovery checks.
+## 8. 风险与应对
 
-## 6. Acceptance Test Cases
-
-### A1. Viewer access and browse
-
-1. Open the site.
-2. Log in as a viewer.
-3. Open resource list.
-4. Open one approved resource detail page.
-
-Expected:
-- Login succeeds.
-- Resource list loads.
-- Resource detail loads with title, description, category, type, and media references.
-
-### A2. Viewer interaction
-
-1. On an approved resource, submit a valid comment.
-2. Verify the comment appears in the list.
-3. Delete the comment.
-
-Expected:
-- Comment creation succeeds.
-- Comment deletion succeeds.
-- The comment no longer appears after refresh.
-
-### A3. Viewer feedback submission
-
-1. Submit a feedback message from the viewer account.
-2. Verify the feedback is stored and visible in the viewer's own feedback list.
-
-Expected:
-- Feedback submission succeeds.
-- Feedback is persisted correctly.
-
-### A4. Contributor draft creation
-
-1. Log in as contributor.
-2. Create a new draft resource.
-3. Update title, description, copyright, category, place, and resource type.
-
-Expected:
-- Draft is created.
-- Draft metadata updates correctly.
-- Draft remains owned by the contributor.
-
-### A5. Contributor file upload
-
-1. Upload supported preview/media files to the draft.
-2. Refresh the page.
-3. Verify uploaded files are still linked to the resource.
-
-Expected:
-- File upload succeeds.
-- File metadata persists.
-
-### A6. Contributor submission for review
-
-1. Submit the draft for review.
-2. Check submission status in the resource history or detail view.
-
-Expected:
-- Resource moves to review state.
-- Submission note is stored.
-- History records are created.
-
-### A7. Admin contributor request handling
-
-1. Log in as admin.
-2. Open contributor request pending list.
-3. Review an application or inspect approved contributor list.
-
-Expected:
-- Admin can view contributor requests.
-- Admin actions are restricted to admin users only.
-
-### A8. Admin resource lifecycle
-
-1. Open the admin resource list.
-2. Archive an approved resource.
-3. Unarchive the same resource.
-
-Expected:
-- Archive/unarchive actions succeed.
-- Resource status changes are reflected correctly.
-
-### A9. Admin classification management
-
-1. Open categories, resource types, and tags management pages.
-2. Verify active items are listed.
-3. Perform one safe update if your release scope includes it.
-
-Expected:
-- Classification data loads.
-- Admin can manage classifications.
-
-### A10. Negative authorization checks
-
-1. Try to open admin functions with a viewer account.
-2. Try contributor functions with a viewer account.
-3. Try admin-only data with a contributor account.
-
-Expected:
-- Access is denied.
-- No privileged data is exposed.
-
-### A11. Logout and re-login
-
-1. Logout from each role.
-2. Open a protected page directly.
-3. Login again.
-
-Expected:
-- Logout invalidates the session.
-- Protected pages require authentication again.
-
-## 7. Acceptance Result Rule
-
-Mark each case as:
-
-- `Pass`
-- `Fail`
-- `Blocked`
-- `N/A`
-
-Recommended decision:
-
-- `Accepted` if all critical cases pass and no blocker/high issues remain.
-- `Rejected` if any critical case fails.
-
-## 8. Evidence To Collect
-
-For each case, capture:
-
-1. Screenshot of the key UI state or API response.
-2. Request/response details if the case is API-driven.
-3. Error message if the case fails.
-4. Defect ID if one is created.
-
-## 9. Final Deliverables
-
-At the end of acceptance testing, prepare:
-
-1. Completed acceptance record.
-2. Defect list with severity and owner.
-3. Final sign-off decision.
-4. Short summary of what passed and what blocked release.
+| 风险 | 应对措施 |
+|------|---------|
+| 测试账号密码丢失 | 提前联系开发重置 |
+| 缺少测试数据（如已批准资源） | 让Admin账号先创建一个 |
+| 环境不稳定 | 记录具体时间，反馈运维 |

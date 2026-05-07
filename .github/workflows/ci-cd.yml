@@ -183,37 +183,7 @@ jobs:
           def classify_unit(path: str, suite_name: str, suite_class: str):
               return "unit"
 
-          def classify_failsafe(path: str, suite_name: str, suite_class: str):
-              text = f"{path} {suite_name} {suite_class}".lower()
-              if "controller" in text:
-                  return "web-slice"
-              if "integration" in text:
-                  return "integration"
-              return None
-
           unit_tests, unit_time, unit_avg = collect("target/surefire-reports/TEST-*.xml", classify_unit)
-          web_tests, web_time, web_avg = collect("target/failsafe-reports/TEST-*.xml", classify_failsafe)
-          # Split the failsafe totals a second time so the summary can show both slices explicitly.
-          integration_tests = integration_time = integration_avg = 0
-          web_slice_tests = web_slice_time = web_slice_avg = 0
-          for path in glob.glob("target/failsafe-reports/TEST-*.xml"):
-              try:
-                  root = ET.parse(path).getroot()
-              except ET.ParseError:
-                  continue
-              tests = int(root.attrib.get("tests", "0") or 0)
-              time = float(root.attrib.get("time", "0") or 0)
-              text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
-              if "controller" in text:
-                  web_slice_tests += tests
-                  web_slice_time += time
-              elif "integration" in text:
-                  integration_tests += tests
-                  integration_time += time
-
-          web_slice_avg = (web_slice_time / web_slice_tests * 1000.0) if web_slice_tests else None
-          integration_avg = (integration_time / integration_tests * 1000.0) if integration_tests else None
-
           def fmt(avg):
               return f"{avg:.2f} ms" if avg is not None else "N/A"
 
@@ -224,8 +194,6 @@ jobs:
               "| Suite | Test cases | Total time | Average per case |",
               "| --- | ---: | ---: | ---: |",
               f"| Unit tests | {unit_tests} | {unit_time:.2f}s | {fmt(unit_avg)} |",
-              f"| Web slice tests | {web_slice_tests} | {web_slice_time:.2f}s | {fmt(web_slice_avg)} |",
-              f"| Integration tests | {integration_tests} | {integration_time:.2f}s | {fmt(integration_avg)} |",
           ]
           text = "\n".join(lines) + "\n"
           print(text)
@@ -273,6 +241,7 @@ jobs:
           def collect(pattern: str, kind: str):
               total_tests = 0
               total_time = 0.0
+              matched = 0
               for path in glob.glob(pattern):
                   try:
                       root = ET.parse(path).getroot()
@@ -280,23 +249,35 @@ jobs:
                       continue
                   tests = int(root.attrib.get("tests", "0") or 0)
                   time = float(root.attrib.get("time", "0") or 0)
+                  text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
+                  if kind == "web-slice":
+                      if "controller" not in text:
+                          continue
+                  elif kind == "integration":
+                      if "integration" not in text or "controller" in text:
+                          continue
                   total_tests += tests
                   total_time += time
+                  matched += 1
               avg_ms = (total_time / total_tests * 1000.0) if total_tests else None
-              return total_tests, total_time, avg_ms
+              return total_tests, total_time, avg_ms, matched
 
           def fmt(avg):
               return f"{avg:.2f} ms" if avg is not None else "N/A"
 
-          web_tests, web_time, web_avg = collect("target/failsafe-reports/TEST-*.xml", "web-slice")
+          web_tests, web_time, web_avg, web_files = collect("target/failsafe-reports/TEST-*.xml", "web-slice")
+          integration_tests, integration_time, integration_avg, integration_files = collect("target/failsafe-reports/TEST-*.xml", "integration")
           summary = os.environ.get("GITHUB_STEP_SUMMARY")
           lines = [
               "## Web Slice and Integration Timing Summary",
               "",
               "| Suite | Test cases | Total time | Average per case |",
               "| --- | ---: | ---: | ---: |",
-              f"| Web slice/integration tests | {web_tests} | {web_time:.2f}s | {fmt(web_avg)} |",
           ]
+          if web_files:
+              lines.append(f"| Web slice tests | {web_tests} | {web_time:.2f}s | {fmt(web_avg)} |")
+          if integration_files:
+              lines.append(f"| Integration tests | {integration_tests} | {integration_time:.2f}s | {fmt(integration_avg)} |")
           text = "\n".join(lines) + "\n"
           print(text)
           if summary:

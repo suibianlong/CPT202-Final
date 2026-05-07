@@ -1,110 +1,78 @@
-# Acceptance Test Record
+# HerLink 验收测试记录
 
-Project: HerLink Community Heritage Resource Sharing Platform
+## 测试基本信息
 
-Use this template to record one acceptance test cycle after deployment.
+| 项目 | 内容 |
+|------|------|
+| 测试日期 | 2026年5月7日 |
+| 开始时间 | 22:41 |
+| 结束时间 | 23:50 |
+| 测试人员 | Yan |
+| 环境地址 | http://47.99.122.227 |
+| 构建版本 | d6f8a9a |
 
-## 1. Test Metadata
+## 前置检查
 
-| Field | Value |
-|---|---|
-| Environment | http://47.99.122.227 |
-| Test Date |  |
-| Start Time |  |
-| End Time |  |
-| Build Version / Commit ID |  |
-| Deployment Ticket / Pipeline Run |  |
-| Tester |  |
-| Test Goal | Acceptance test for release approval |
+| 检查项 | 结果(PASS/FAIL) | 备注 |
+|--------|-----------------|------|
+| 网站能打开 | PASS | |
+| Viewer1能登录 | PASS | |
+| Viewer2能登录 | PASS | |
+| Contributor能登录 | PASS | |
+| Admin能登录 | PASS | |
+| 至少有一条已批准资源 | PASS | |
 
-## 2. Accounts Used
+## PBI验收结果总表
 
-| Role | Account | Password / Source | Notes |
-|---|---|---|---|
-| Viewer 1 | 1067364488@qq.com | provided by user | Primary viewer account |
-| Viewer 2 | carol_viewer@example.com | provided by user | Backup viewer account |
-| Viewer 3 | alice@example.com | provided by user | Backup viewer account |
-| Contributor | bob_contributor@example.com | provided by user | Approved contributor account |
-| Admin | david_reviewer@example.com | provided by user | Admin account |
+| PBI | 优先级 | 对应功能 | 测试结果 | 失败原因 | 缺陷ID |
+|-----|--------|---------|----------|----------|--------|
+| PBI-01 | P1 | 注册/登录/注销/账户管理 | PASS | | |
+| PBI-02 | P1 | Viewer申请成为Contributor | PASS | | |
+| PBI-03 | P1 | Admin审核Contributor申请 | PASS | | |
+| PBI-04 | P1 | Contributor查看自己的提交 | PASS | | |
+| PBI-05 | P1 | Contributor创建资源草稿 | PASS | | |
+| PBI-06 | P1 | 上传文件并提交审核 | PASS | | |
+| PBI-08 | P1 | Admin查看待审核资源 | PASS | | |
+| PBI-09 | P1 | Admin审核通过/拒绝资源 | PASS | | |
+| PBI-10 | P1 | Viewer浏览已批准资源 | PASS | | |
+| PBI-11 | P1 | 搜索/筛选/排序 | PASS | | |
+| PBI-16 | P1 | 部署和测试支持 | PASS | 图片加载略慢（约5-6秒），控制台有红色报错但不影响功能 | 已记录为SUG-001和BUG-001 |
+| PBI-07 | P2 | 修改被拒资源并重新提交 | PASS | | |
+| PBI-12 | P2 | Viewer评论和反馈 | PASS | | |
+| PBI-13 | P2 | Admin管理评论和反馈 | PASS | | |
+| PBI-14 | P2 | Admin管理分类/类型/标签 | PASS | | |
+| PBI-15 | P2 | Admin归档/取消归档资源 | PASS | | |
 
-## 3. Preconditions Checklist
+## 发现的缺陷清单
 
-| Check | Result (Pass/Fail) | Evidence / Notes |
-|---|---|---|
-| Site is reachable |  |  |
-| Viewer login works |  |  |
-| Contributor login works |  |  |
-| Admin login works |  |  |
-| At least one approved resource exists |  |  |
-| Application logs show no critical startup errors |  |  |
+| 缺陷ID | PBI关联 | 标题 | 严重程度 | 重现步骤 | 状态 |
+|--------|---------|------|----------|----------|------|
+| BUG-001 | PBI-16 | 浏览器控制台出现红色报错 | Medium | 1. 打开网站首页 http://47.99.122.227 2. 按F12打开开发者工具 3. 查看Console标签页 4. 看到红色报错信息 | 待修复 |
+| SUG-001 | PBI-16 | 图片加载速度较慢，建议优化 | Low（性能建议） | 1. 进入资源列表页 2. 图片加载需要5-6秒才能完全显示 | 建议优化 |
 
-## 4. Acceptance Test Cases
+## 最终验收结论
 
-Fill one row per case.
+| P1通过数量 | P1总数 | P1通过率 |
+|-----------|--------|----------|
+| 11 | 11 | 100% |
 
-Result options:
-- `Pass`
-- `Fail`
-- `Blocked`
-- `N/A`
+- [x] **通过** - 所有P1验收通过，可以上线
+- [ ] **有条件通过** - P1全部通过但有P2问题，记录后上线
+- [ ] **不通过** - 有P1问题，修复后重新验收
 
-Severity options if failed:
-- `Blocker`
-- `High`
-- `Medium`
-- `Low`
+## 签署
 
-| ID | Scenario | Preconditions | Steps | Expected Result | Actual Result | Result | Severity | Evidence | Defect ID | Owner |
-|---|---|---|---|---|---|---|---|---|---|---|
-| ACT-001 | Viewer login and session | Viewer account available | Login as viewer and refresh the page. | Session remains valid and user stays authenticated. |  |  |  |  |  |  |
-| ACT-002 | Viewer browse resources | Viewer logged in | Open resource list. | Approved resources display correctly. |  |  |  |  |  |  |
-| ACT-003 | Viewer resource detail | Viewer logged in; resource exists | Open one approved resource detail. | Detail page loads with complete resource info. |  |  |  |  |  |  |
-| ACT-004 | Viewer comment create/delete | Viewer logged in; resource detail open | Create a comment, then delete it. | Comment is created and removed successfully. |  |  |  |  |  |  |
-| ACT-005 | Viewer feedback submit | Viewer logged in | Submit feedback and view own feedback list. | Feedback is stored and retrievable. |  |  |  |  |  |  |
-| ACT-006 | Contributor login and draft creation | Contributor account available | Login as contributor and create a draft. | Draft is created successfully. |  |  |  |  |  |  |
-| ACT-007 | Contributor edit draft | Draft exists | Update metadata and save. | Changes persist after refresh. |  |  |  |  |  |  |
-| ACT-008 | Contributor file upload | Draft exists and files available | Upload preview/media files. | Files are linked to the draft. |  |  |  |  |  |  |
-| ACT-009 | Contributor submit review | Draft is complete | Submit draft for review. | Resource enters review state and submission history is created. |  |  |  |  |  |  |
-| ACT-010 | Admin login and pending requests | Admin account available | Login as admin and open pending contributor requests. | Admin can view pending requests. |  |  |  |  |  |  |
-| ACT-011 | Admin resource lifecycle | Admin logged in | Archive and unarchive a resource. | Resource status changes correctly. |  |  |  |  |  |  |
-| ACT-012 | Admin classification pages | Admin logged in | Open category, type, and tag management pages. | Pages load and show expected data. |  |  |  |  |  |  |
-| ACT-013 | Role boundary check: viewer to admin | Viewer logged in | Try opening admin-only page/API. | Access denied or redirected. |  |  |  |  |  |  |
-| ACT-014 | Role boundary check: viewer to contributor | Viewer logged in | Try contributor-only action. | Access denied. |  |  |  |  |  |  |
-| ACT-015 | Logout and re-login | Any role logged in | Logout and try accessing a protected page. | Protected page requires login again. |  |  |  |  |  |  |
-| ACT-016 | Data persistence after refresh | Any workflow completed | Refresh page and revisit the entity. | Data remains consistent after refresh. |  |  |  |  |  |  |
+| 角色 | 姓名 | 签字 | 日期 |
+|------|------|------|------|
+| 测试人员 | Yan | Yan | 2026-05-07 |
+| 产品负责人 | | | |
 
-## 5. Issues Found
+## 备注
 
-| Defect ID | Title | Severity | Scenario ID | Summary | Status | Owner | ETA |
-|---|---|---|---|---|---|---|---|
-|  |  |  |  |  |  |  |  |
+本次验收测试覆盖全部16个PBI，所有P1核心功能均通过验收。
 
-## 6. Acceptance Summary
+发现两个非阻塞问题：
+1. 控制台有红色报错（BUG-001），建议开发排查
+2. 图片加载速度略慢（SUG-001），建议后续优化
 
-| Item | Value |
-|---|---|
-| Total Cases |  |
-| Passed |  |
-| Failed |  |
-| Blocked |  |
-| Not Applicable |  |
-| Accepted / Rejected |  |
-
-## 7. Sign-Off
-
-| Role | Name | Decision | Time | Signature / Note |
-|---|---|---|---|---|
-| Tester |  |  |  |  |
-| Developer |  |  |  |  |
-| Product / Release Owner |  |  |  |  |
-
-## 8. Notes
-
-Use this section for any acceptance-specific observations, such as:
-
-- Business rule mismatch
-- Role permission gap
-- Data inconsistency
-- UI usability issue
-- Missing localization or content issue
-
+建议：可以上线，但建议在下一个迭代修复上述两个问题。
