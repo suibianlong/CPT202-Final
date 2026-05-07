@@ -163,6 +163,9 @@ jobs:
           def collect(pattern: str, classifier):
               total_tests = 0
               total_time = 0.0
+              failures = 0
+              errors = 0
+              skipped = 0
               for path in glob.glob(pattern):
                   try:
                       root = ET.parse(path).getroot()
@@ -170,6 +173,9 @@ jobs:
                       continue
                   tests = int(root.attrib.get("tests", "0") or 0)
                   time = float(root.attrib.get("time", "0") or 0)
+                  failures += int(root.attrib.get("failures", "0") or 0)
+                  errors += int(root.attrib.get("errors", "0") or 0)
+                  skipped += int(root.attrib.get("skipped", "0") or 0)
                   suite_name = root.attrib.get("name", "")
                   suite_class = root.attrib.get("classname", "")
                   bucket = classifier(path, suite_name, suite_class)
@@ -178,22 +184,30 @@ jobs:
                   total_tests += tests
                   total_time += time
               avg_ms = (total_time / total_tests * 1000.0) if total_tests else None
-              return total_tests, total_time, avg_ms
+              return total_tests, total_time, avg_ms, failures, errors, skipped
 
           def classify_unit(path: str, suite_name: str, suite_class: str):
               return "unit"
 
-          unit_tests, unit_time, unit_avg = collect("target/surefire-reports/TEST-*.xml", classify_unit)
+          unit_tests, unit_time, unit_avg, unit_failures, unit_errors, unit_skipped = collect("target/surefire-reports/TEST-*.xml", classify_unit)
           def fmt(avg):
               return f"{avg:.2f} ms" if avg is not None else "N/A"
+
+          def pass_rate(tests, failures, errors, skipped):
+              if tests <= 0:
+                  return "N/A"
+              passed = tests - failures - errors - skipped
+              if passed < 0:
+                  passed = 0
+              return f"{(passed / tests) * 100:.2f}%"
 
           summary = os.environ.get("GITHUB_STEP_SUMMARY")
           lines = [
               "## Test Timing Summary",
               "",
-              "| Suite | Test cases | Total time | Average per case |",
-              "| --- | ---: | ---: | ---: |",
-              f"| Unit tests | {unit_tests} | {unit_time:.2f}s | {fmt(unit_avg)} |",
+              "| Suite | Test cases | Total time | Average per case | Pass rate |",
+              "| --- | ---: | ---: | ---: | ---: |",
+              f"| Unit tests | {unit_tests} | {unit_time:.2f}s | {fmt(unit_avg)} | {pass_rate(unit_tests, unit_failures, unit_errors, unit_skipped)} |",
           ]
           text = "\n".join(lines) + "\n"
           print(text)
@@ -242,6 +256,9 @@ jobs:
               total_tests = 0
               total_time = 0.0
               matched = 0
+              failures = 0
+              errors = 0
+              skipped = 0
               for path in glob.glob(pattern):
                   try:
                       root = ET.parse(path).getroot()
@@ -256,28 +273,150 @@ jobs:
                   elif kind == "integration":
                       if "integration" not in text or "controller" in text:
                           continue
+                  file_failures = int(root.attrib.get("failures", "0") or 0)
+                  file_errors = int(root.attrib.get("errors", "0") or 0)
+                  file_skipped = int(root.attrib.get("skipped", "0") or 0)
                   total_tests += tests
                   total_time += time
+                  failures += file_failures
+                  errors += file_errors
+                  skipped += file_skipped
                   matched += 1
               avg_ms = (total_time / total_tests * 1000.0) if total_tests else None
-              return total_tests, total_time, avg_ms, matched
+              return total_tests, total_time, avg_ms, matched, failures, errors, skipped
 
           def fmt(avg):
               return f"{avg:.2f} ms" if avg is not None else "N/A"
 
-          web_tests, web_time, web_avg, web_files = collect("target/failsafe-reports/TEST-*.xml", "web-slice")
-          integration_tests, integration_time, integration_avg, integration_files = collect("target/failsafe-reports/TEST-*.xml", "integration")
+          def pass_rate(tests, failures, errors, skipped):
+              if tests <= 0:
+                  return "N/A"
+              passed = tests - failures - errors - skipped
+              if passed < 0:
+                  passed = 0
+              return f"{(passed / tests) * 100:.2f}%"
+
+          web_tests, web_time, web_avg, web_files, web_failures, web_errors, web_skipped = collect("target/failsafe-reports/TEST-*.xml", "web-slice")
+          integration_tests, integration_time, integration_avg, integration_files, integration_failures, integration_errors, integration_skipped = collect("target/failsafe-reports/TEST-*.xml", "integration")
           summary = os.environ.get("GITHUB_STEP_SUMMARY")
           lines = [
               "## Web Slice and Integration Timing Summary",
               "",
-              "| Suite | Test cases | Total time | Average per case |",
-              "| --- | ---: | ---: | ---: |",
+              "| Suite | Test cases | Total time | Average per case | Pass rate |",
+              "| --- | ---: | ---: | ---: | ---: |",
           ]
           if web_files:
-              lines.append(f"| Web slice tests | {web_tests} | {web_time:.2f}s | {fmt(web_avg)} |")
+              lines.append(f"| Web slice tests | {web_tests} | {web_time:.2f}s | {fmt(web_avg)} | {pass_rate(web_tests, web_failures, web_errors, web_skipped)} |")
           if integration_files:
-              lines.append(f"| Integration tests | {integration_tests} | {integration_time:.2f}s | {fmt(integration_avg)} |")
+              lines.append(f"| Integration tests | {integration_tests} | {integration_time:.2f}s | {fmt(integration_avg)} | {pass_rate(integration_tests, integration_failures, integration_errors, integration_skipped)} |")
+          text = "\n".join(lines) + "\n"
+          print(text)
+          if summary:
+              with open(summary, "a", encoding="utf-8") as fh:
+                  fh.write(text)
+          PY
+
+  backend-test-summary:
+    name: Backend Overall Test Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - backend-test
+      - backend-slice-test
+
+    steps:
+      - name: Download unit test artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/unit
+
+      - name: Download slice test artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: slice-test-results
+          path: artifacts/slice
+
+      - name: Summarize overall pass rate
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          def read_stats(pattern: str, classifier=None):
+              tests = failures = errors = skipped = 0
+              files = 0
+              for path in glob.glob(pattern, recursive=True):
+                  try:
+                      root = ET.parse(path).getroot()
+                  except ET.ParseError:
+                      continue
+                  if classifier is not None and not classifier(path, root):
+                      continue
+                  tests += int(root.attrib.get("tests", "0") or 0)
+                  failures += int(root.attrib.get("failures", "0") or 0)
+                  errors += int(root.attrib.get("errors", "0") or 0)
+                  skipped += int(root.attrib.get("skipped", "0") or 0)
+                  files += 1
+              return tests, failures, errors, skipped, files
+
+          def classify_web_slice(path: str, root: ET.Element):
+              text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
+              return "controller" in text
+
+          def classify_integration(path: str, root: ET.Element):
+              text = f"{path} {root.attrib.get('name', '')} {root.attrib.get('classname', '')}".lower()
+              return "integration" in text and "controller" not in text
+
+          def pass_rate(tests, failures, errors, skipped):
+              if tests <= 0:
+                  return "N/A"
+              passed = tests - failures - errors - skipped
+              if passed < 0:
+                  passed = 0
+              return f"{(passed / tests) * 100:.2f}%"
+
+          unit_tests, unit_failures, unit_errors, unit_skipped, unit_files = read_stats("artifacts/unit/**/surefire-reports/TEST-*.xml")
+          web_tests, web_failures, web_errors, web_skipped, web_files = read_stats(
+              "artifacts/slice/**/failsafe-reports/TEST-*.xml",
+              classify_web_slice,
+          )
+          integration_tests, integration_failures, integration_errors, integration_skipped, integration_files = read_stats(
+              "artifacts/slice/**/failsafe-reports/TEST-*.xml",
+              classify_integration,
+          )
+
+          overall_tests = unit_tests + web_tests + integration_tests
+          overall_failures = unit_failures + web_failures + integration_failures
+          overall_errors = unit_errors + web_errors + integration_errors
+          overall_skipped = unit_skipped + web_skipped + integration_skipped
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          lines = [
+              "## Test Pass Rate Summary",
+              "",
+              "| Scope | Test cases | Failures | Errors | Skipped | Pass rate |",
+              "| --- | ---: | ---: | ---: | ---: | ---: |",
+          ]
+          if unit_files:
+              lines.append(f"| Unit tests | {unit_tests} | {unit_failures} | {unit_errors} | {unit_skipped} | {pass_rate(unit_tests, unit_failures, unit_errors, unit_skipped)} |")
+          if web_files:
+              lines.append(f"| Web slice tests | {web_tests} | {web_failures} | {web_errors} | {web_skipped} | {pass_rate(web_tests, web_failures, web_errors, web_skipped)} |")
+          if integration_files:
+              lines.append(f"| Integration tests | {integration_tests} | {integration_failures} | {integration_errors} | {integration_skipped} | {pass_rate(integration_tests, integration_failures, integration_errors, integration_skipped)} |")
+
+          lines.extend([
+              "",
+              "## Overall Test Pass Rate",
+              "",
+              "| Scope | Test cases | Failures | Errors | Skipped | Pass rate |",
+              "| --- | ---: | ---: | ---: | ---: | ---: |",
+              f"| Overall | {overall_tests} | {overall_failures} | {overall_errors} | {overall_skipped} | {pass_rate(overall_tests, overall_failures, overall_errors, overall_skipped)} |",
+          ])
+
           text = "\n".join(lines) + "\n"
           print(text)
           if summary:
