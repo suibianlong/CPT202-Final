@@ -1,6 +1,24 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
   backend-test:
-    name: Backend Automated Tests
+    name: Backend Tests and Coverage
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+        shell: bash
 
     steps:
       - name: Checkout repository
@@ -15,114 +33,33 @@
           cache-dependency-path: backend/pom.xml
 
       - name: Make Maven wrapper executable
-        run: chmod +x backend/mvnw
+        run: chmod +x mvnw
 
-      # ========== 1. 单元测试 (unit/) ==========
-      - name: Run Unit Tests
-        working-directory: backend
+      - name: Run backend tests
         run: |
-          echo "==========================================="
-          echo "📊 1/3 单元测试 (unit/)"
-          echo "==========================================="
-          ./mvnw clean test -Dskip.integration.tests=true -Dskip.controller.tests=true | tee unit-test.log
-          
-          echo ""
-          echo "📈 单元测试统计："
-          grep -E "Tests run:.*Time elapsed" unit-test.log || echo "未找到测试统计"
-          echo "==========================================="
+          set -o pipefail
+          ./mvnw -B clean verify | tee backend-test.log
 
-      # ========== 2. Web 切片测试 (integration/) ==========
-      - name: Run Web Slice Tests
-        working-directory: backend
+      - name: Generate JaCoCo report
         run: |
-          echo "==========================================="
-          echo "📊 2/3 Web 切片测试 (integration/)"
-          echo "==========================================="
-          ./mvnw verify -Dskip.unit.tests=true -Dskip.controller.tests=true -Dtest="**/integration/**/*Test.java" | tee integration-test.log
-          
-          echo ""
-          echo "📈 Web 切片测试统计："
-          grep -E "Tests run:.*Time elapsed" integration-test.log || echo "未找到测试统计"
-          echo "==========================================="
+          ./mvnw -B jacoco:report -Dskip.unit.tests=true -Dskip.integration.tests=true -Dskip.controller.tests=true
 
-      # ========== 3. 整体集成测试 (controller/) ==========
-      - name: Run Controller Integration Tests
-        working-directory: backend
-        run: |
-          echo "==========================================="
-          echo "📊 3/3 整体集成测试 (controller/)"
-          echo "==========================================="
-          ./mvnw verify -Dskip.unit.tests=true -Dskip.integration.tests=true -Dtest="**/controller/**/*Test.java" | tee controller-test.log
-          
-          echo ""
-          echo "📈 整体集成测试统计："
-          grep -E "Tests run:.*Time elapsed" controller-test.log || echo "未找到测试统计"
-          echo "==========================================="
-
-      # ========== 4. 生成单元测试覆盖率报告（只针对 unit 测试） ==========
-      - name: Generate Unit Test Coverage Report
-        working-directory: backend
-        run: |
-          echo "==========================================="
-          echo "📊 单元测试覆盖率报告 (JaCoCo)"
-          echo "==========================================="
-          # 只运行单元测试并生成覆盖率报告
-          ./mvnw clean test jacoco:report -Dskip.integration.tests=true -Dskip.controller.tests=true
-          
-          echo ""
-          echo "📈 覆盖率统计："
-          CSV_FILE="target/site/jacoco/jacoco.csv"
-          if [ -f "$CSV_FILE" ]; then
-            tail -n +2 "$CSV_FILE" | awk -F',' '
-            {
-              INSTRUCTION_COVERED += $4
-              INSTRUCTION_MISSED += $5
-              BRANCH_COVERED += $6
-              BRANCH_MISSED += $7
-            }
-            END {
-              INSTRUCTION_TOTAL = INSTRUCTION_COVERED + INSTRUCTION_MISSED
-              BRANCH_TOTAL = BRANCH_COVERED + BRANCH_MISSED
-              
-              if (INSTRUCTION_TOTAL > 0) {
-                printf "📈 指令覆盖率: %.2f%% (%d/%d)\n", 
-                  (INSTRUCTION_COVERED / INSTRUCTION_TOTAL) * 100, INSTRUCTION_COVERED, INSTRUCTION_TOTAL
-              }
-              if (BRANCH_TOTAL > 0) {
-                printf "🎯 分支覆盖率: %.2f%% (%d/%d)\n", 
-                  (BRANCH_COVERED / BRANCH_TOTAL) * 100, BRANCH_COVERED, BRANCH_TOTAL
-              }
-            }'
-          else
-            echo "⚠️ 未找到 jacoco.csv 文件"
-          fi
-          echo "==========================================="
-
-      # ========== 5. 上传所有报告 ==========
       - name: Upload test reports
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: |
             backend/target/surefire-reports/
+            backend/target/failsafe-reports/
             backend/target/site/jacoco/
-            backend/unit-test.log
-            backend/integration-test.log
-            backend/controller-test.log
+            backend/backend-test.log
           retention-days: 30
 
       - name: Upload JaCoCo HTML report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
           path: backend/target/site/jacoco/
-          retention-days: 30
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results
-          path: backend/target/surefire-reports/
           retention-days: 30
