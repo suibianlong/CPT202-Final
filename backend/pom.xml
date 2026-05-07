@@ -126,8 +126,9 @@
                                 <exclude>com/cpt202/HerLink/entity/**</exclude>
                                 <exclude>com/cpt202/HerLink/enums/**</exclude>
                                 <exclude>com/cpt202/HerLink/exception/**</exclude>
-                                <exclude>com/cpt202/HerLink/mapper/**</exclude>
                                 <exclude>com/cpt202/HerLink/vo/**</exclude>
+                                <exclude>com/cpt202/HerLink/service/*Service.class</exclude>
+                                <exclude>com/cpt202/HerLink/service/**/*Service.class</exclude>
                                 <exclude>com/cpt202/HerLink/HerLinkApplication*</exclude>
                             </excludes>
                             <!-- 指定覆盖率数据文件位置 -->
@@ -153,8 +154,9 @@
                                 <exclude>com/cpt202/HerLink/entity/**</exclude>
                                 <exclude>com/cpt202/HerLink/enums/**</exclude>
                                 <exclude>com/cpt202/HerLink/exception/**</exclude>
-                                <exclude>com/cpt202/HerLink/mapper/**</exclude>
                                 <exclude>com/cpt202/HerLink/vo/**</exclude>
+                                <exclude>com/cpt202/HerLink/service/*Service.class</exclude>
+                                <exclude>com/cpt202/HerLink/service/**/*Service.class</exclude>
                                 <exclude>com/cpt202/HerLink/HerLinkApplication*</exclude>
                             </excludes>
                             <dataFile>${project.build.directory}/jacoco.exec</dataFile>
@@ -175,8 +177,9 @@
                                 <exclude>com/cpt202/HerLink/entity/**</exclude>
                                 <exclude>com/cpt202/HerLink/enums/**</exclude>
                                 <exclude>com/cpt202/HerLink/exception/**</exclude>
-                                <exclude>com/cpt202/HerLink/mapper/**</exclude>
                                 <exclude>com/cpt202/HerLink/vo/**</exclude>
+                                <exclude>com/cpt202/HerLink/service/*Service.class</exclude>
+                                <exclude>com/cpt202/HerLink/service/**/*Service.class</exclude>
                                 <exclude>com/cpt202/HerLink/HerLinkApplication*</exclude>
                             </excludes>
                             <rules>
