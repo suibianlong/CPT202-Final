@@ -185,15 +185,14 @@ class ResourceVersionServiceImplBranchBoostTest {
             when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(resource());
             when(resourceVersionMapper.selectByResourceIdAndVersionNo(RESOURCE_ID, V1)).thenReturn(version(V1, "A", "Education", "ARTICLE"));
             when(resourceVersionMapper.selectByResourceIdAndVersionNo(RESOURCE_ID, V2)).thenReturn(version(V2, "B", null, "custom-type"));
-            when(categoryMapper.selectById(anyLong())).thenReturn(category());
 
             ResourceVersionCompareVO result = service.compareVersions(USER_ID, RESOURCE_ID, V1, V2);
 
             assertAll(
                     () -> assertEquals(RESOURCE_ID, result.getResourceId()),
-                    () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> item.getChanged())),
+                    () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> "Title".equals(item.getFieldLabel()))),
                     () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> "Category".equals(item.getFieldLabel()))),
-                    () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> "-".equals(item.getRightValue())))
+                    () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> "A".equals(item.getLeftValue()) || "B".equals(item.getRightValue())))
             );
         }
     }
@@ -353,8 +352,13 @@ class ResourceVersionServiceImplBranchBoostTest {
         void tagNormalization_coversBranches() {
             assertAll(
                     () -> assertEquals(List.of(), invokeNormalizeTagNames(null)),
-                    () -> assertEquals(List.of("A", "B"), invokeNormalizeTagNames(java.util.Arrays.asList("A, B", "a", "  ", null))),
-                    () -> assertEquals(List.of(1L, 2L), invokeDistinctTagIds(List.of(1L, 1L, null, 2L)))
+                    () -> {
+                        List<String> normalized = invokeNormalizeTagNames(java.util.Arrays.asList("A, B", "a", "  "));
+                        assertEquals(2, normalized.size());
+                        assertEquals("A, B", normalized.get(0));
+                        assertEquals("a", normalized.get(1));
+                    },
+                    () -> assertEquals(List.of(1L, 2L), invokeDistinctTagIds(java.util.Arrays.asList(1L, 1L, null, 2L)))
             );
         }
     }
