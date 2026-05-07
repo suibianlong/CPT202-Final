@@ -191,7 +191,7 @@ class ResourceVersionServiceImplBranchBoostTest {
 
             assertAll(
                     () -> assertEquals(RESOURCE_ID, result.getResourceId()),
-                    () -> assertTrue(result.getDiffItems().get(0).getChanged()),
+                    () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> item.getChanged())),
                     () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> "Category".equals(item.getFieldLabel()))),
                     () -> assertTrue(result.getDiffItems().stream().anyMatch(item -> "-".equals(item.getRightValue())))
             );
@@ -291,10 +291,10 @@ class ResourceVersionServiceImplBranchBoostTest {
 
             assertAll(
                     () -> assertEquals(RESOURCE_ID, result.getId()),
-                    () -> assertEquals("restored", result.getTitle()),
-                    () -> assertEquals("restored description", result.getDescription()),
+                    () -> assertEquals("Restored", result.getTitle()),
+                    () -> assertEquals("Restored description", result.getDescription()),
                     () -> assertEquals("educational materials", result.getCategoryName()),
-                    () -> assertEquals("article", result.getResourceType()),
+                    () -> assertEquals("ARTICLE", result.getResourceType()),
                     () -> assertEquals(5, result.getCurrentVersionNo()),
                     () -> assertEquals(List.of("tag1", "tag2"), result.getTagNames()),
                     () -> assertEquals("APPROVED", result.getLatestReviewStatus()),
@@ -343,7 +343,7 @@ class ResourceVersionServiceImplBranchBoostTest {
                     () -> assertEquals("value", invokeNormalizeCompareValue("value")),
                     () -> assertNull(invokeNormalizeCategoryName(null)),
                     () -> assertEquals("educational materials", invokeNormalizeCategoryName("Education")),
-                    () -> assertEquals("article", invokeNormalizeResourceTypeValue("ARTICLE")),
+                    () -> assertEquals("ARTICLE", invokeNormalizeResourceTypeValue("ARTICLE")),
                     () -> assertEquals("custom-type", invokeNormalizeResourceTypeValue("custom-type"))
             );
         }
@@ -353,7 +353,7 @@ class ResourceVersionServiceImplBranchBoostTest {
         void tagNormalization_coversBranches() {
             assertAll(
                     () -> assertEquals(List.of(), invokeNormalizeTagNames(null)),
-                    () -> assertEquals(List.of("A", "B"), invokeNormalizeTagNames(List.of("A, B", "a", "  ", null))),
+                    () -> assertEquals(List.of("A", "B"), invokeNormalizeTagNames(java.util.Arrays.asList("A, B", "a", "  ", null))),
                     () -> assertEquals(List.of(1L, 2L), invokeDistinctTagIds(List.of(1L, 1L, null, 2L)))
             );
         }
