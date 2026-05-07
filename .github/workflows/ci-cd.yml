@@ -69,9 +69,9 @@ jobs:
         run: chmod +x backend/mvnw
 
       - name: Run backend unit tests with coverage
-        working-directory: backend
         run: |
           set -o pipefail
+          cd backend
           ./mvnw -B clean test jacoco:report | tee backend-test.log
 
       - name: Generate JaCoCo coverage badge
@@ -82,8 +82,8 @@ jobs:
           badges-directory: backend/.github/badges
 
       - name: Print coverage summary to console
-        working-directory: backend
         run: |
+          cd backend
           echo "==========================================="
           echo " JaCoCo Coverage Report Summary"
           echo "==========================================="
@@ -151,7 +151,6 @@ jobs:
 
       - name: Summarize test timing by suite
         if: always()
-        working-directory: backend
         run: |
           python3 - <<'PY'
           from __future__ import annotations
@@ -236,14 +235,13 @@ jobs:
         run: chmod +x backend/mvnw
 
       - name: Run web slice and integration tests
-        working-directory: backend
         run: |
           set -o pipefail
+          cd backend
           ./mvnw -B verify -Dskip.unit.tests=true | tee backend-slice-test.log
 
       - name: Summarize web slice and integration timing
         if: always()
-        working-directory: backend
         run: |
           python3 - <<'PY'
           from __future__ import annotations
@@ -296,8 +294,8 @@ jobs:
                   passed = 0
               return f"{(passed / tests) * 100:.2f}%"
 
-          web_tests, web_time, web_avg, web_files, web_failures, web_errors, web_skipped = collect("target/failsafe-reports/TEST-*.xml", "web-slice")
-          integration_tests, integration_time, integration_avg, integration_files, integration_failures, integration_errors, integration_skipped = collect("target/failsafe-reports/TEST-*.xml", "integration")
+          web_tests, web_time, web_avg, web_files, web_failures, web_errors, web_skipped = collect("backend/target/failsafe-reports/TEST-*.xml", "web-slice")
+          integration_tests, integration_time, integration_avg, integration_files, integration_failures, integration_errors, integration_skipped = collect("backend/target/failsafe-reports/TEST-*.xml", "integration")
           summary = os.environ.get("GITHUB_STEP_SUMMARY")
           lines = [
               "## Web Slice and Integration Timing Summary",
@@ -336,6 +334,7 @@ jobs:
         with:
           name: slice-test-results
           path: artifacts/slice
+        continue-on-error: true
 
       - name: Summarize overall pass rate
         run: |
@@ -426,17 +425,16 @@ jobs:
 
       - name: Upload slice test results
         if: always()
-        working-directory: backend
         run: |
           set -e
-          rm -rf .artifact-slice-results
-          mkdir -p .artifact-slice-results/failsafe-reports
-          printf 'slice test results artifact\n' > .artifact-slice-results/README.txt
-          if [ -d target/failsafe-reports ]; then
-            cp -R target/failsafe-reports/. .artifact-slice-results/failsafe-reports/ 2>/dev/null || true
+          rm -rf backend/.artifact-slice-results
+          mkdir -p backend/.artifact-slice-results/failsafe-reports
+          printf 'slice test results artifact\n' > backend/.artifact-slice-results/README.txt
+          if [ -d backend/target/failsafe-reports ]; then
+            cp -R backend/target/failsafe-reports/. backend/.artifact-slice-results/failsafe-reports/ 2>/dev/null || true
           fi
-          if [ -f backend-slice-test.log ]; then
-            cp backend-slice-test.log .artifact-slice-results/
+          if [ -f backend/backend-slice-test.log ]; then
+            cp backend/backend-slice-test.log backend/.artifact-slice-results/
           fi
 
       - name: Upload slice test results artifact
@@ -473,8 +471,9 @@ jobs:
         run: chmod +x backend/mvnw
 
       - name: Build backend package
-        working-directory: backend
-        run: ./mvnw -B -DskipTests package
+        run: |
+          cd backend
+          ./mvnw -B -DskipTests package
 
       - name: Upload jar artifact
         uses: actions/upload-artifact@v4
