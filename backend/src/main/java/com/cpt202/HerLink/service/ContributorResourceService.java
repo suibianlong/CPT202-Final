@@ -16,7 +16,9 @@ public interface ContributorResourceService {
 
     ResourceDetailVO updateResource(Long currentUserId, Long resourceId, ResourceUpdateRequest request);
 
-    ResourceDetailVO uploadFiles(Long currentUserId, Long resourceId, MultipartFile previewImage, MultipartFile mediaFile);
+    ResourceDetailVO uploadFiles(Long currentUserId, Long resourceId, MultipartFile previewImage, MultipartFile[] mediaFiles);
+
+    ResourceDetailVO deleteMediaFile(Long currentUserId, Long resourceId, String filePath);
 
     ResourceDetailVO getMyResourceDetail(Long currentUserId, Long resourceId);
 

@@ -46,10 +46,19 @@ public class ContributorResourceController {
     @PostMapping("/{resourceId}/files")
     public ResourceDetailVO uploadFiles(@PathVariable Long resourceId,
                                         @RequestPart(value = "previewImage", required = false) MultipartFile previewImage,
-                                        @RequestPart(value = "mediaFile", required = false) MultipartFile mediaFile,
+                                        @RequestPart(value = "mediaFile", required = false) MultipartFile[] mediaFiles,
                                         HttpServletRequest request) {
         Long currentUserId = getCurrentUserId(request);
-        return contributorResourceService.uploadFiles(currentUserId, resourceId, previewImage, mediaFile);
+        return contributorResourceService.uploadFiles(currentUserId, resourceId, previewImage, mediaFiles);
+    }
+
+    // delete media file
+    @DeleteMapping("/{resourceId}/files")
+    public ResourceDetailVO deleteMediaFile(@PathVariable Long resourceId,
+                                            @RequestParam String filePath,
+                                            HttpServletRequest request) {
+        Long currentUserId = getCurrentUserId(request);
+        return contributorResourceService.deleteMediaFile(currentUserId, resourceId, filePath);
     }
 
     // get my resource list

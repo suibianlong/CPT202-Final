@@ -2437,9 +2437,9 @@ body[data-page="resource-edit"] #tagInput:focus {
 
 body[data-page="resource-edit"] .file-grid {
     display: grid;
-    grid-template-columns: 20% 18% 20% 18% 16%;
+    grid-template-columns: minmax(360px, 1.35fr) minmax(300px, 1fr) minmax(260px, 1fr);
     gap: 22px;
-    align-items: end;
+    align-items: start;
 }
 
 body[data-page="resource-edit"] .upload-picker-field {
@@ -2448,8 +2448,9 @@ body[data-page="resource-edit"] .upload-picker-field {
 
 body[data-page="resource-edit"] .file-picker-shell {
     position: relative;
-    min-height: 102px;
+    min-height: 150px;
     display: grid;
+    grid-template-columns: minmax(0, auto) auto;
     place-items: center;
     gap: 4px;
     padding: 12px;
@@ -2460,12 +2461,16 @@ body[data-page="resource-edit"] .file-picker-shell {
 }
 
 body[data-page="resource-edit"] .file-picker-icon {
+    grid-column: 1 / -1;
     color: #85591f;
     font-size: 1.6rem;
     line-height: 1;
 }
 
 body[data-page="resource-edit"] .file-picker-name {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
     color: #4f3a27;
     font-size: 0.86rem;
     line-height: 1.25;
@@ -2473,6 +2478,7 @@ body[data-page="resource-edit"] .file-picker-name {
 }
 
 body[data-page="resource-edit"] .file-picker-button {
+    grid-column: 1 / -1;
     min-width: 106px;
     padding: 7px 16px;
     border: 1px solid rgba(74, 44, 13, 0.7);
@@ -2497,6 +2503,121 @@ body[data-page="resource-edit"] .file-picker-button:disabled {
     opacity: 0.58;
 }
 
+body[data-page="resource-edit"] .upload-picker-field:first-child .file-picker-shell {
+    grid-template-columns: minmax(170px, 0.72fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 18px;
+    align-content: center;
+}
+
+body[data-page="resource-edit"] .upload-picker-field:first-child .file-picker-icon {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+body[data-page="resource-edit"] .upload-picker-field:first-child .file-picker-name {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: center;
+}
+
+body[data-page="resource-edit"] .upload-picker-field:first-child .file-picker-button {
+    grid-column: 1;
+    grid-row: 3;
+}
+
+body[data-page="resource-edit"] .upload-picker-field:first-child .file-picker-list {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: stretch;
+    align-content: center;
+    max-height: 126px;
+    padding: 4px 2px;
+}
+
+body[data-page="resource-edit"] .file-picker-clear-button {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid rgba(107, 20, 17, 0.58);
+    border-radius: 50%;
+    background: #b3322b;
+    color: #fff7ee;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+body[data-page="resource-edit"] .file-picker-clear-button:hover {
+    filter: brightness(1.06);
+}
+
+body[data-page="resource-edit"] .file-picker-clear-button:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.25);
+    opacity: 0.58;
+}
+
+body[data-page="resource-edit"] .file-picker-clear-button[hidden] {
+    display: none;
+}
+
+body[data-page="resource-edit"] .file-picker-list {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-height: 74px;
+    display: grid;
+    gap: 5px;
+    overflow-y: auto;
+}
+
+body[data-page="resource-edit"] .file-picker-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    min-height: 22px;
+}
+
+body[data-page="resource-edit"] .file-picker-link {
+    min-width: 0;
+    overflow: hidden;
+    color: #6e491d;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body[data-page="resource-edit"] .file-picker-link:hover {
+    color: #8c5717;
+}
+
+body[data-page="resource-edit"] .file-picker-item-remove {
+    width: 17px;
+    height: 17px;
+    padding: 0;
+    border: 1px solid rgba(107, 20, 17, 0.58);
+    border-radius: 50%;
+    background: #b3322b;
+    color: #fff7ee;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+body[data-page="resource-edit"] .file-picker-item-remove:hover {
+    filter: brightness(1.06);
+}
+
 body[data-page="resource-edit"] .file-picker-shell input[type="file"] {
     position: absolute;
     width: 0.1px;
@@ -2506,10 +2627,11 @@ body[data-page="resource-edit"] .file-picker-shell input[type="file"] {
 }
 
 body[data-page="resource-edit"] .preview-frame {
-    min-height: 132px;
+    min-height: 150px;
     display: grid;
     place-items: center;
-    align-self: center;
+    align-self: start;
+    margin-top: 24px;
     border: 1px solid rgba(117, 75, 31, 0.42);
     border-radius: 6px;
     background: rgba(255, 248, 235, 0.18);

@@ -413,6 +413,10 @@ body[data-page="heritage-viewer"] .viewer-control-row select:focus {
     min-height: 120px;
 }
 
+.viewer-media-item + .viewer-media-item {
+    margin-top: 16px;
+}
+
 .viewer-media-slot img,
 .viewer-media-slot video {
     width: 100%;

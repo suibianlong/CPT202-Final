@@ -184,14 +184,11 @@
                             <div class="file-picker-shell">
                                 <div class="file-picker-icon" aria-hidden="true">⇧</div>
                                 <span id="mediaFileNameText" class="file-picker-name">Drag &amp; drop file here or</span>
+                                <button id="mediaFileClearButton" type="button" class="file-picker-clear-button" data-file-clear-target="mediaFile" aria-label="Remove selected media file" hidden>×</button>
                                 <button id="mediaFilePickerButton" type="button" class="file-picker-button" data-file-target="mediaFile">Choose File</button>
-                                <input id="mediaFile" type="file" />
+                                <input id="mediaFile" type="file" multiple />
+                                <div id="mediaFileList" class="file-picker-list"></div>
                             </div>
-                        </div>
-
-                        <div class="field">
-                            <label>Media URL / Path</label>
-                            <div id="mediaFilePathText" class="heritage-inline-value">Will appear after upload</div>
                         </div>
 
                         <div class="field upload-picker-field">
@@ -199,14 +196,10 @@
                             <div class="file-picker-shell">
                                 <div class="file-picker-icon" aria-hidden="true">⇧</div>
                                 <span id="previewImageNameText" class="file-picker-name">Drag &amp; drop image here or</span>
+                                <button id="previewImageClearButton" type="button" class="file-picker-clear-button" data-file-clear-target="previewImage" aria-label="Remove selected preview image" hidden>×</button>
                                 <button id="previewImagePickerButton" type="button" class="file-picker-button" data-file-target="previewImage">Choose File</button>
                                 <input id="previewImage" type="file" accept="image/*" />
                             </div>
-                        </div>
-
-                        <div class="field">
-                            <label>Preview Path</label>
-                            <div id="previewImagePathText" class="heritage-inline-value">Will appear after upload</div>
                         </div>
 
                         <div id="previewImageFrame" class="preview-frame" aria-live="polite">

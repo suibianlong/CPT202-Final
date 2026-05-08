@@ -608,7 +608,7 @@ describe("module3.js", () => {
                 "/api/contributor/resources/42/files",
                 expect.objectContaining({ method: "POST" })
             );
-            expect(document.getElementById("mediaFileNameText").textContent).toBe("Uploaded: temple.jpg");
+            expect(document.getElementById("mediaFileNameText").textContent).toBe("Drag & drop file here or");
         });
 
         test("flushes autosave before submitting for review", async () => {
