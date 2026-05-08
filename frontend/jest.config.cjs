@@ -17,11 +17,5 @@ module.exports = {
         "shared/**/*.js"
     ],
     coverageDirectory: "coverage",
-    coverageReporters: [
-        "text",
-        "html",
-        "lcov",
-        "clover",
-        "json-summary"
-    ]
+    coverageReporters: ["text", "html", "lcov", "clover", "json-summary"]
 };
