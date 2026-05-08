@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const CLASSIFICATION_MANAGEMENT_SCRIPT_PATH = path.resolve(__dirname, "../../module7/classification-management.js");
 
@@ -91,7 +92,7 @@ function loadClassificationManagementHooks() {
     );
 
     delete window.__classificationManagementTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, CLASSIFICATION_MANAGEMENT_SCRIPT_PATH);
     return window.__classificationManagementTestHooks;
 }
 

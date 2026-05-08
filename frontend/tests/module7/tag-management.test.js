@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const TAG_MANAGEMENT_SCRIPT_PATH = path.resolve(__dirname, "../../module7/tag-management.js");
 
@@ -94,7 +95,7 @@ function loadTagManagementHooks() {
     );
 
     delete window.__tagManagementTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, TAG_MANAGEMENT_SCRIPT_PATH);
     return window.__tagManagementTestHooks;
 }
 

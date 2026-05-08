@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const ADMIN_APPROVAL_SCRIPT_PATH = path.resolve(__dirname, "../../module2/admin-approval.js");
 
@@ -89,7 +90,7 @@ function loadAdminApprovalHooks() {
     );
 
     delete window.__adminApprovalTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, ADMIN_APPROVAL_SCRIPT_PATH);
     return window.__adminApprovalTestHooks;
 }
 

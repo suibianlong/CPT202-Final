@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const ADMIN_RESOURCES_SCRIPT_PATH = path.resolve(__dirname, "../../module7/admin-resources.js");
 
@@ -74,7 +75,7 @@ function loadAdminResourcesHooks() {
     );
 
     delete window.__adminResourcesTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, ADMIN_RESOURCES_SCRIPT_PATH);
     return window.__adminResourcesTestHooks;
 }
 

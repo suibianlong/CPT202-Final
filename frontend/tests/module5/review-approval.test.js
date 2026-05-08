@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const REVIEW_APPROVAL_SCRIPT_PATH = path.resolve(__dirname, "../../module5/review-approval.js");
 
@@ -94,7 +95,7 @@ function loadReviewApprovalHooks() {
     );
 
     delete window.__reviewApprovalTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, REVIEW_APPROVAL_SCRIPT_PATH);
     return window.__reviewApprovalTestHooks;
 }
 

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const MODULE3_SCRIPT_PATH = path.resolve(__dirname, "../../module3/module3.js");
 
@@ -61,7 +62,7 @@ function loadModule3TestHooks() {
     `;
 
     delete window.__module3TestHooks;
-    window.eval(wrappedSource);
+    evalWithCoverage(wrappedSource, MODULE3_SCRIPT_PATH);
     return window.__module3TestHooks;
 }
 

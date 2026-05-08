@@ -42,6 +42,127 @@ jobs:
       - name: Check frontend formatting
         working-directory: frontend
         run: npm run format:check
+      - name: Run frontend unit tests with coverage
+        working-directory: frontend
+        run: |
+          set -o pipefail
+          npm run test:coverage -- --runInBand --json --outputFile=jest-results.json | tee frontend-test.log
+
+      - name: Summarize frontend coverage and timing
+        if: always()
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+
+          const coverageSummaryPath = "frontend/coverage/coverage-summary.json";
+          const jestResultsPath = "frontend/jest-results.json";
+
+          function formatMetric(metric) {
+            if (!metric || !metric.total) {
+              return "N/A";
+            }
+            return `${Number(metric.pct || 0).toFixed(2)}% (${metric.covered}/${metric.total})`;
+          }
+
+          function formatPassRate(passed, total) {
+            if (!total) {
+              return "N/A";
+            }
+            return `${((passed / total) * 100).toFixed(2)}%`;
+          }
+
+          function formatAveragePerCase(totalDurationMs, totalTests) {
+            if (!totalTests) {
+              return "N/A";
+            }
+            return `${(totalDurationMs / totalTests).toFixed(2)} ms`;
+          }
+
+          function readJson(path) {
+            if (!fs.existsSync(path)) {
+              return null;
+            }
+            try {
+              return JSON.parse(fs.readFileSync(path, "utf8"));
+            } catch (error) {
+              console.log(`Warning: failed to parse ${path}: ${error.message}`);
+              return null;
+            }
+          }
+
+          function computeTotalDurationMs(jestResults) {
+            const suites = Array.isArray(jestResults?.testResults) ? jestResults.testResults : [];
+            let totalDurationMs = 0;
+
+            for (const suite of suites) {
+              if (suite?.perfStats && Number.isFinite(suite.perfStats.runtime)) {
+                totalDurationMs += Number(suite.perfStats.runtime);
+                continue;
+              }
+
+              if (Number.isFinite(suite?.startTime) && Number.isFinite(suite?.endTime) && suite.endTime >= suite.startTime) {
+                totalDurationMs += Number(suite.endTime) - Number(suite.startTime);
+              }
+            }
+            return totalDurationMs;
+          }
+
+          console.log("===========================================");
+          console.log(" Frontend Test and Coverage Summary");
+          console.log("===========================================");
+
+          const coverageSummary = readJson(coverageSummaryPath);
+          const coverageTotal = coverageSummary?.total || null;
+          const instructionCoverage = formatMetric(coverageTotal?.statements);
+          const branchCoverage = formatMetric(coverageTotal?.branches);
+
+          const jestResults = readJson(jestResultsPath);
+          const totalTests = Number(jestResults?.numTotalTests || 0);
+          const passedTests = Number(jestResults?.numPassedTests || 0);
+          const totalDurationMs = computeTotalDurationMs(jestResults);
+          const totalDurationSec = totalDurationMs / 1000;
+          const averagePerCase = formatAveragePerCase(totalDurationMs, totalTests);
+          const passRate = formatPassRate(passedTests, totalTests);
+
+          console.log(` Instruction Coverage (Statements): ${instructionCoverage}`);
+          console.log(` Branch Coverage: ${branchCoverage}`);
+          console.log(` Test cases: ${totalTests}`);
+          console.log(` Total time: ${totalDurationSec.toFixed(2)}s`);
+          console.log(` Average per case: ${averagePerCase}`);
+          console.log(` Pass rate: ${passRate}`);
+          console.log("===========================================");
+
+          const stepSummaryPath = process.env.GITHUB_STEP_SUMMARY;
+          if (stepSummaryPath) {
+            const markdown = [
+              "## Frontend Test and Coverage Summary",
+              "",
+              "| Suite | Test cases | Total time | Average per case | Pass rate | Instruction Coverage | Branch Coverage |",
+              "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+              `| Frontend unit tests | ${totalTests} | ${totalDurationSec.toFixed(2)}s | ${averagePerCase} | ${passRate} | ${instructionCoverage} | ${branchCoverage} |`,
+              ""
+            ].join("\n");
+            fs.appendFileSync(stepSummaryPath, markdown, "utf8");
+          }
+          NODE
+
+      - name: Upload frontend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 30
+
+      - name: Upload frontend test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-results
+          path: |
+            frontend/frontend-test.log
+            frontend/jest-results.json
+          retention-days: 30
 
       - name: Package static frontend resources
         run: |
