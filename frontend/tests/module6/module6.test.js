@@ -29,17 +29,28 @@ function loadModule6TestHooks() {
         (() => {
             ${source}
             window.__module6TestHooks = {
+                initHeritageViewerPage,
+                initViewerDetailPage,
+                initViewerFeedbackPage,
+                bindViewerNavigationButton,
+                bindViewerAccountButton,
+                bindViewerBackButton,
+                bindViewerSearchControls,
+                bindViewerDetailForms,
                 ensureViewerAuthenticated,
                 loadViewerCategoryOptions,
                 loadViewerResourceTypeOptions,
                 loadApprovedResources,
+                loadApprovedResourceDetail,
                 renderApprovedResources,
                 renderApprovedResourceDetail,
+                loadViewerComments,
                 submitViewerComment,
                 renderViewerComments,
                 renderViewerCommentError,
                 deleteViewerComment,
                 loadViewerFeedbackHistory,
+                submitViewerFeedback,
                 renderViewerFeedbackHistory,
                 renderViewerFeedbackError,
                 updateViewerFeedbackFileText,
@@ -50,6 +61,7 @@ function loadModule6TestHooks() {
                 canViewerDeleteComment,
                 isViewerAdmin,
                 resolveCategoryName,
+                getViewerCategoryImageUrl,
                 capitalizeViewerLabel,
                 normalizeViewerCategoryKey,
                 normalizeViewerResourceTypeOptions,
@@ -60,6 +72,7 @@ function loadModule6TestHooks() {
                 resetViewerFilters,
                 getViewerResourceIdFromQuery,
                 toPublicMediaUrl,
+                redirectViewerToLogin,
                 __setViewerState(nextState = {}) {
                     if (Object.prototype.hasOwnProperty.call(nextState, "currentUser")) {
                         viewerCurrentUser = nextState.currentUser;
@@ -612,6 +625,159 @@ describe("module6.js", () => {
         });
     });
 
+    describe("page initialization and interaction bindings", () => {
+        test("initializes heritage viewer page and binds search interactions", async () => {
+            const { hooks, sharedApp } = setupModule6("/module6/heritage-viewer.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <button id="backBtn" type="button"></button>
+                <button id="accountBtn" type="button"></button>
+                <button id="feedbackBtn" type="button"></button>
+                <button id="searchBtn" type="button"></button>
+                <button id="loadAllBtn" type="button"></button>
+                <input id="keyword" value=" pottery ">
+                <select id="type"><option value="photo" selected>Photo</option></select>
+                <select id="categoryId"><option value="2" selected>Category</option></select>
+                <select id="sortBy"><option value="updatedAtDesc" selected>Latest</option></select>
+                <div id="resourceList"></div>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ userId: 8, role: "REGISTERED_VIEWER" })
+                .mockResolvedValueOnce([{ id: 2, name: "education" }])
+                .mockResolvedValueOnce(["photo"])
+                .mockResolvedValueOnce([
+                    {
+                        id: 9,
+                        title: "Pottery",
+                        description: "desc",
+                        categoryName: "education",
+                        resourceType: "photo",
+                        previewImage: "/p.png",
+                        updatedAt: "2026-05-08T00:00:00Z"
+                    }
+                ])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+
+            await hooks.initHeritageViewerPage();
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(4,
+                "/api/viewer/resources?keyword=pottery&type=photo&categoryId=2&sortBy=updatedAtDesc",
+                { method: "GET" }
+            );
+            expect(document.getElementById("resourceList").textContent).toContain("Pottery");
+
+            document.getElementById("searchBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.getElementById("loadAllBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(document.getElementById("keyword").value).toBe("");
+
+            document.getElementById("keyword")
+                .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+            await flushPromises();
+
+            document.getElementById("resourceList").innerHTML =
+                '<button type="button" data-resource-id="55">Detail</button>';
+            document.getElementById("resourceList").querySelector("button")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+        });
+
+        test("handles heritage viewer initialization failure via shared error handling", async () => {
+            const { hooks, sharedApp } = setupModule6("/module6/heritage-viewer.html");
+            document.body.innerHTML = `
+                <button id="backBtn" type="button"></button>
+                <button id="accountBtn" type="button"></button>
+                <button id="feedbackBtn" type="button"></button>
+                <div id="resourceList"></div>
+            `;
+            sharedApp.requestJson.mockRejectedValueOnce(new Error("viewer down"));
+
+            await hooks.initHeritageViewerPage();
+
+            expect(document.getElementById("resourceList").innerHTML).toContain("viewer-error");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("viewer down");
+        });
+
+        test("initializes viewer detail page while tolerating category option loading failure", async () => {
+            const { hooks, sharedApp } = setupModule6("/module6/viewer-detail.html?id=7");
+            const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+            buildDetailDom();
+            document.body.innerHTML += `
+                <form id="commentForm"></form>
+                <textarea id="commentContent"></textarea>
+                <button id="commentSubmitBtn" type="button"></button>
+                <form id="feedbackForm"></form>
+                <select id="feedbackType"><option value="BUG" selected>BUG</option></select>
+                <textarea id="feedbackDescription"></textarea>
+                <input id="feedbackFiles" type="file">
+                <button id="feedbackSubmitBtn" type="button"></button>
+                <div id="feedbackFilesText"></div>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ userId: 7, role: "REGISTERED_VIEWER" })
+                .mockRejectedValueOnce(new Error("category unavailable"))
+                .mockResolvedValueOnce({
+                    id: 7,
+                    title: "Detail Title",
+                    resourceType: "photo",
+                    categoryName: "education",
+                    reviewedAt: null,
+                    mediaUrl: "/media.png"
+                })
+                .mockResolvedValueOnce([]);
+
+            await hooks.initViewerDetailPage();
+
+            expect(warnSpy).toHaveBeenCalled();
+            expect(document.getElementById("detailTitle").textContent).toBe("Detail Title");
+            expect(document.getElementById("commentList").textContent)
+                .toContain("No comments yet. Be the first to share your thoughts.");
+        });
+
+        test("initializes viewer feedback page and submits feedback successfully", async () => {
+            const { hooks, sharedApp } = setupModule6("/module6/viewer-feedback.html");
+            document.body.innerHTML = `
+                <form id="feedbackForm"></form>
+                <select id="feedbackType"><option value="BUG" selected>BUG</option></select>
+                <textarea id="feedbackDescription">Needs a fix</textarea>
+                <input id="feedbackFiles" type="file">
+                <button id="feedbackSubmitBtn" type="button">Submit</button>
+                <div id="feedbackFilesText"></div>
+                <div id="feedbackList"></div>
+            `;
+            const feedbackInput = document.getElementById("feedbackFiles");
+            Object.defineProperty(feedbackInput, "files", {
+                configurable: true,
+                value: [new File(["abc"], "bug.txt", { type: "text/plain" })]
+            });
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ userId: 8, role: "REGISTERED_VIEWER" })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce([]);
+
+            await hooks.initViewerFeedbackPage();
+            document.getElementById("feedbackForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/viewer/feedback",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(document.getElementById("feedbackSubmitBtn").disabled).toBe(false);
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Feedback submitted successfully.");
+        });
+    });
+
     describe("authentication and error handling", () => {
         test("returns the authenticated viewer in a normal case and uses the cached viewer at the boundary", async () => {
             const { hooks, sharedApp } = setupModule6("/module6/heritage-viewer.html");
@@ -646,6 +812,60 @@ describe("module6.js", () => {
             expect(document.getElementById("commentList").innerHTML).toContain("&lt;load failure&gt;");
             expect(document.getElementById("feedbackList").innerHTML).toContain("&lt;load failure&gt;");
             expect(sharedApp.showToast).toHaveBeenCalledWith("<load failure>");
+        });
+
+        test("handles 401 branches for comment/feedback actions and redirects", async () => {
+            const { hooks, sharedApp } = setupModule6("/module6/viewer-detail.html?id=7");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <textarea id="commentContent">Needs auth</textarea>
+                <button id="commentSubmitBtn" type="button">Post</button>
+                <div id="commentList"></div>
+                <form id="feedbackForm"></form>
+                <select id="feedbackType"><option value="BUG" selected>BUG</option></select>
+                <textarea id="feedbackDescription">desc</textarea>
+                <input id="feedbackFiles" type="file">
+                <button id="feedbackSubmitBtn" type="button">Submit</button>
+                <div id="feedbackFilesText"></div>
+                <div id="feedbackList"></div>
+            `;
+
+            sharedApp.requestJson.mockRejectedValueOnce({ status: 401 });
+            await hooks.submitViewerComment();
+
+            sharedApp.requestJson.mockRejectedValueOnce({ status: 401 });
+            await hooks.deleteViewerComment(3);
+
+            sharedApp.requestJson.mockRejectedValueOnce({ status: 401 });
+            await hooks.submitViewerFeedback();
+
+            hooks.handleViewerError({ status: 401 }, "fallback");
+            expect(sharedApp.showToast).not.toHaveBeenCalledWith("fallback");
+        });
+
+        test("throws when detail/comment loaders run without resource id", async () => {
+            const { hooks } = setupModule6("/module6/viewer-detail.html");
+            await expect(hooks.loadApprovedResourceDetail()).rejects.toThrow("Resource id is required.");
+            await expect(hooks.loadViewerComments()).rejects.toThrow("Resource id is required.");
+        });
+
+        test("renders video and audio media branches", () => {
+            const { hooks } = setupModule6("/module6/viewer-detail.html?id=7");
+            document.body.innerHTML = '<div id="mediaContainer"></div>';
+
+            hooks.renderPrimaryMedia({
+                title: "Video resource",
+                mediaUrl: "/video.mp4",
+                resourceType: "video"
+            });
+            expect(document.getElementById("mediaContainer").innerHTML).toContain("<video");
+
+            hooks.renderPrimaryMedia({
+                title: "Audio resource",
+                mediaUrl: "/audio.mp3",
+                resourceType: "audio"
+            });
+            expect(document.getElementById("mediaContainer").innerHTML).toContain("<audio");
         });
     });
 });

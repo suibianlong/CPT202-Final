@@ -112,11 +112,98 @@ function setupReviewApproval() {
     return { hooks, adminModule };
 }
 
+async function flushPromises(times = 4) {
+    for (let i = 0; i < times; i += 1) {
+        await Promise.resolve();
+    }
+}
+
 describe("review-approval.js", () => {
     afterEach(() => {
         jest.clearAllMocks();
         jest.clearAllTimers();
         jest.useRealTimers();
+    });
+
+    describe("DOMContentLoaded bootstrap", () => {
+        test("initializes review approval page and binds list/detail/pagination actions", async () => {
+            const { adminModule } = setupReviewApproval();
+            document.body.innerHTML = `
+                <button id="approvalRefreshBtn" type="button"></button>
+                <button data-resource-decision="approve" type="button"></button>
+                <div id="resourcePendingPanel"></div>
+                <div id="resourceDetailPanel"></div>
+            `;
+            adminModule.requireAdmin
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({ role: "ADMINISTRATOR" });
+            adminModule.requestJson
+                .mockResolvedValueOnce({
+                    items: [
+                        {
+                            submissionId: 12,
+                            resourceId: 8,
+                            versionNo: 3,
+                            title: "Pending resource",
+                            contributorName: "Reviewer",
+                            categoryTopic: "history",
+                            submittedAt: "2026-05-08T00:00:00Z",
+                            resourceStatus: "PENDING_REVIEW"
+                        }
+                    ],
+                    total: 10
+                })
+                .mockResolvedValueOnce({
+                    submissionId: 12,
+                    resourceId: 8,
+                    versionNo: 3,
+                    resourceStatus: "PENDING_REVIEW",
+                    resource: {},
+                    contributor: {},
+                    category: {},
+                    submission: {},
+                    reviewHistory: []
+                })
+                .mockResolvedValueOnce({ items: [], total: 0, emptyMessage: "No items." })
+                .mockResolvedValueOnce({ items: [], total: 0, emptyMessage: "No items." });
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            expect(adminModule.bindAdminBasics).toHaveBeenCalledTimes(1);
+            expect(adminModule.requestJson).not.toHaveBeenCalled();
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            await flushPromises();
+
+            expect(adminModule.bindAdminBasics).toHaveBeenCalledTimes(2);
+            expect(adminModule.requireAdmin).toHaveBeenCalledTimes(2);
+            expect(adminModule.requestJson).toHaveBeenCalledWith(
+                "/api/reviewer/reviews/pending?page=1&pageSize=10",
+                { method: "GET" }
+            );
+
+            document.querySelector("[data-resource-decision=\"approve\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(adminModule.showToast).toHaveBeenCalledWith("Select a resource submission first.");
+
+            document.querySelector("[data-resource-detail=\"12\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.querySelector("[data-review-page=\"2\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.getElementById("approvalRefreshBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(adminModule.requestJson).toHaveBeenLastCalledWith(
+                "/api/reviewer/reviews/pending?page=2&pageSize=10",
+                { method: "GET" }
+            );
+        });
     });
 
     describe("helper functions", () => {
@@ -142,6 +229,17 @@ describe("review-approval.js", () => {
     });
 
     describe("pending review list", () => {
+        test("returns early when rendering pending resources without a panel", () => {
+            const { hooks } = setupReviewApproval();
+            hooks.__setState({
+                pendingSubmissions: [
+                    { submissionId: 1, title: "X" }
+                ]
+            });
+
+            expect(() => hooks.renderPendingResources({ total: 1 })).not.toThrow();
+        });
+
         test("loads pending submissions successfully and renders cards with pagination", async () => {
             const { hooks, adminModule } = setupReviewApproval();
             document.body.innerHTML = '<div id="resourcePendingPanel"></div>';
@@ -227,6 +325,14 @@ describe("review-approval.js", () => {
     });
 
     describe("resource detail rendering", () => {
+        test("returns early when submission id is missing", async () => {
+            const { hooks, adminModule } = setupReviewApproval();
+
+            await hooks.loadResourceDetail(0);
+
+            expect(adminModule.requestJson).not.toHaveBeenCalled();
+        });
+
         test("loads and renders resource detail successfully in a normal case", async () => {
             const { hooks, adminModule } = setupReviewApproval();
             document.body.innerHTML = '<div id="resourceDetailPanel"></div>';

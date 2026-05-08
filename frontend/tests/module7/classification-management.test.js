@@ -110,6 +110,12 @@ function setupClassificationManagement() {
     return { hooks, adminModule };
 }
 
+async function flushPromises(times = 4) {
+    for (let i = 0; i < times; i += 1) {
+        await Promise.resolve();
+    }
+}
+
 function buildClassificationPanelsDom() {
     document.body.innerHTML = `
         <div id="resourceTypePanel"></div>
@@ -125,6 +131,82 @@ describe("classification-management.js", () => {
         jest.clearAllMocks();
         jest.clearAllTimers();
         jest.useRealTimers();
+    });
+
+    describe("DOMContentLoaded bootstrap", () => {
+        test("initializes classification page, binds tabs/forms/actions, and refreshes data", async () => {
+            const { hooks, adminModule } = setupClassificationManagement();
+            document.body.innerHTML = `
+                <button data-classification-tab="type" class="active"></button>
+                <button data-classification-tab="category"></button>
+                <section id="classificationTypeSection" class="admin-section active"></section>
+                <section id="classificationCategorySection" class="admin-section"></section>
+                <button id="classificationRefreshBtn" type="button"></button>
+                <form id="resourceTypeCreateForm"><input id="resourceTypeName" value=""></form>
+                <form id="categoryCreateForm"><input id="categoryTopic" value=""></form>
+                <button data-classification-action="edit" data-kind="type" data-id="5" type="button"></button>
+                <div id="resourceTypePanel"></div>
+                <div id="categoryPanel"></div>
+                <div id="classificationUsageOverviewPanel"></div>
+                <div id="classificationUsageHistoryPanel"></div>
+                <div id="classificationOperationPanel"></div>
+            `;
+            hooks.__setState({
+                resourceTypes: [{ resourceTypeId: 5, typeName: "Photo", status: "ACTIVE" }]
+            });
+            adminModule.requireAdmin.mockResolvedValue({ role: "ADMINISTRATOR" });
+            adminModule.requestJson
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            window.prompt.mockReturnValueOnce(null);
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            await flushPromises();
+
+            expect(adminModule.bindAdminBasics).toHaveBeenCalled();
+            expect(adminModule.requireAdmin).toHaveBeenCalled();
+            expect(adminModule.requestJson).toHaveBeenCalledWith(
+                "/api/admin/resource-types",
+                { method: "GET" }
+            );
+
+            document.querySelector("[data-classification-tab=\"category\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(document.getElementById("classificationCategorySection").classList.contains("active")).toBe(true);
+
+            document.getElementById("resourceTypeCreateForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+            expect(adminModule.showToast).toHaveBeenCalledWith("Resource type name is required.");
+
+            document.getElementById("categoryCreateForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+            expect(adminModule.showToast).toHaveBeenCalledWith("Category topic is required.");
+
+            document.querySelector("[data-classification-action=\"edit\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.getElementById("classificationRefreshBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(adminModule.requestJson).toHaveBeenLastCalledWith(
+                "/api/admin/operation-history?module=classification",
+                { method: "GET" }
+            );
+        });
     });
 
     describe("helper functions", () => {

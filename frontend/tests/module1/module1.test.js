@@ -44,15 +44,23 @@ function loadModule1TestHooks() {
         (() => {
             ${source}
             window.__module1TestHooks = {
+                initHomePage,
                 initLoginPage,
                 initRegisterPage,
+                initAccountPage,
+                initAdminApprovalPage,
                 startRegisterCodeCooldown,
                 loadPendingRequestList,
+                requireAuthenticatedUser,
+                bindAccountBackButton,
+                canUseAccountHistoryBack,
+                renderAccountPage,
                 renderHomeSession,
                 populateLatestRequestCard,
                 populateContributorPanel,
                 resolvePostLoginRedirect,
                 resolveAccountBackFallback,
+                setAuthLinkHref,
                 buildAuthPageUrl,
                 sanitizeNextPath,
                 isAllowedNextPath,
@@ -397,6 +405,79 @@ describe("module1.js", () => {
     });
 
     describe("page initialization flows", () => {
+        test("loads home session for authenticated and guest users", async () => {
+            const { hooks, sharedApp } = setupModule1("/index.html");
+            document.body.innerHTML = '<div id="homeSessionCard"></div>';
+
+            sharedApp.requestJson.mockResolvedValueOnce({
+                name: "Home User",
+                role: "REGISTERED_VIEWER",
+                contributorStatus: "NONE",
+                contributor: false
+            });
+            await hooks.initHomePage();
+            expect(document.getElementById("homeSessionCard").innerHTML).toContain("Home User");
+
+            sharedApp.requestJson.mockRejectedValueOnce(new Error("no session"));
+            await hooks.initHomePage();
+            expect(document.getElementById("homeSessionCard").textContent).toContain("Not logged in yet");
+        });
+
+        test("redirects early when login page finds an active session", async () => {
+            const { hooks, sharedApp } = setupModule1("/login.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <form id="loginForm"></form>
+                <a id="loginCreateAccountLink"></a>
+                <input id="loginEmail" value="x@example.com">
+                <input id="loginPassword" value="pw">
+            `;
+            sharedApp.requestJson.mockResolvedValueOnce({
+                role: "ADMINISTRATOR",
+                contributor: false
+            });
+
+            await hooks.initLoginPage();
+            document.getElementById("loginForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledTimes(1);
+            expect(sharedApp.requestJson).toHaveBeenCalledWith("/api/auth/me", { method: "GET" });
+        });
+
+        test("submits login successfully when credentials are valid", async () => {
+            const { hooks, sharedApp } = setupModule1("/login.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <form id="loginForm"></form>
+                <a id="loginCreateAccountLink"></a>
+                <input id="loginEmail" value=" user@example.com ">
+                <input id="loginPassword" value="CorrectPassword!">
+            `;
+            sharedApp.requestJson
+                .mockRejectedValueOnce(createUnauthorizedError())
+                .mockResolvedValueOnce({
+                    role: "REGISTERED_VIEWER",
+                    contributor: true
+                });
+
+            await hooks.initLoginPage();
+            document.getElementById("loginForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(2,
+                "/api/auth/login",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Login successful.");
+        });
+
         test("shows a validation error when register verification code is requested with an empty email", async () => {
             const { hooks, sharedApp } = setupModule1("/register.html");
             document.body.innerHTML = `
@@ -508,6 +589,64 @@ describe("module1.js", () => {
             expect(sharedApp.requestJson).toHaveBeenCalledTimes(1);
         });
 
+        test("shows an error when register verification code request fails", async () => {
+            const { hooks, sharedApp } = setupModule1("/register.html");
+            document.body.innerHTML = `
+                <form id="registerForm"></form>
+                <a id="registerLoginLink"></a>
+                <button id="sendRegisterCodeBtn" type="button">Send Code</button>
+                <input id="registerEmail" value="user@example.com">
+                <input id="registerVerificationCode" value="">
+                <input id="registerPassword" value="">
+                <input id="registerConfirmPassword" value="">
+                <input id="registerName" value="">
+            `;
+            sharedApp.requestJson
+                .mockRejectedValueOnce(createUnauthorizedError())
+                .mockRejectedValueOnce(new Error("Email service unavailable."));
+
+            await hooks.initRegisterPage();
+            document.getElementById("sendRegisterCodeBtn").click();
+            await flushPromises();
+
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Email service unavailable.");
+            expect(document.getElementById("sendRegisterCodeBtn").disabled).toBe(false);
+        });
+
+        test("submits registration successfully and handles register failure", async () => {
+            const { hooks, sharedApp } = setupModule1("/register.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <form id="registerForm"></form>
+                <a id="registerLoginLink"></a>
+                <button id="sendRegisterCodeBtn" type="button">Send Code</button>
+                <input id="registerEmail" value="new@example.com">
+                <input id="registerVerificationCode" value="112233">
+                <input id="registerPassword" value="StrongP@ss1">
+                <input id="registerConfirmPassword" value="StrongP@ss1">
+                <input id="registerName" value="New User">
+            `;
+            sharedApp.requestJson
+                .mockRejectedValueOnce(createUnauthorizedError())
+                .mockResolvedValueOnce(null)
+                .mockRejectedValueOnce(new Error("Duplicate email."));
+
+            await hooks.initRegisterPage();
+            document.getElementById("registerForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Registration successful. Please log in.");
+
+            document.getElementById("registerForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Duplicate email.");
+        });
+
         test("submits login and shows the server error message when login fails", async () => {
             const { hooks, sharedApp } = setupModule1("/login.html?next=/account.html");
             document.body.innerHTML = `
@@ -539,6 +678,160 @@ describe("module1.js", () => {
                     })
                 });
             expect(sharedApp.showToast).toHaveBeenCalledWith("Invalid email or password.");
+        });
+    });
+
+    describe("account and admin initialization flows", () => {
+        function buildAccountPageDom() {
+            document.body.innerHTML = `
+                <form id="accountForm"></form>
+                <input id="accountName" value="Original Name">
+                <input id="accountEmail" value="original@example.com">
+                <textarea id="accountBio">bio</textarea>
+                <div id="accountHeroTitle"></div>
+                <div id="accountHeroSubtitle"></div>
+                <div id="accountStatusHeading"></div>
+                <div id="accountRoleChip"></div>
+                <div id="accountContributorChip"></div>
+                <div id="accountStatusText"></div>
+                <img id="accountStatusImage">
+                <a id="accountBackBtn"></a>
+                <div id="contributorActionText"></div>
+                <button id="submitContributorRequestBtn" type="button"></button>
+                <a id="accountStatusWorkspaceLink"></a>
+                <div id="contributorReasonField"></div>
+                <textarea id="contributorApplicationReason"></textarea>
+                <div id="latestContributorRequest"></div>
+            `;
+        }
+
+        test("initializes account page, updates profile, validates contributor reason, and submits request", async () => {
+            const { hooks, sharedApp } = setupModule1("/account.html");
+            buildAccountPageDom();
+            const currentUser = {
+                role: "REGISTERED_VIEWER",
+                contributor: false,
+                contributorStatus: "NONE",
+                name: "Ava",
+                email: "ava@example.com",
+                bio: "hello"
+            };
+            const refreshedUser = {
+                ...currentUser,
+                name: "Ava Updated"
+            };
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce(currentUser)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce(refreshedUser)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce(refreshedUser)
+                .mockResolvedValueOnce(null);
+
+            await hooks.initAccountPage();
+
+            document.getElementById("accountName").value = "Ava Updated";
+            document.getElementById("accountForm").dispatchEvent(new Event("submit", {
+                bubbles: true,
+                cancelable: true
+            }));
+            await flushPromises();
+            await flushPromises();
+
+            document.getElementById("submitContributorRequestBtn").click();
+            await flushPromises();
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Please enter an application reason before submitting.");
+
+            document.getElementById("contributorApplicationReason").value = "I maintain archives.";
+            document.getElementById("submitContributorRequestBtn").click();
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/auth/account",
+                expect.objectContaining({ method: "PUT" })
+            );
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor-requests",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Account details updated.");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Contributor request submitted.");
+        });
+
+        test("redirects for non-admin and handles admin approval decisions", async () => {
+            const { hooks, sharedApp } = setupModule1("/admin-approval.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <button id="refreshPendingRequestsBtn" type="button">Refresh</button>
+                <div id="pendingRequestList"></div>
+            `;
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    role: "REGISTERED_VIEWER",
+                    contributor: false
+                });
+            await hooks.initAdminApprovalPage();
+
+            sharedApp.requestJson.mockReset();
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    role: "ADMINISTRATOR",
+                    contributor: false
+                })
+                .mockResolvedValueOnce([
+                    {
+                        requestId: 5,
+                        userName: "User",
+                        userEmail: "user@example.com",
+                        requestedAt: "2026-05-08T00:00:00Z",
+                        applicationReason: "Reason",
+                        status: "PENDING"
+                    }
+                ])
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+
+            await hooks.initAdminApprovalPage();
+            document.getElementById("reviewComment-5").value = "approved";
+            const approveButton = document.querySelector("[data-request-id=\"5\"][data-decision=\"APPROVED\"]");
+            approveButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            await flushPromises();
+
+            document.getElementById("refreshPendingRequestsBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/admin/contributor-requests/5/decision",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Request approved successfully.");
+        });
+
+        test("handles requireAuthenticatedUser failures and account back button fallback", async () => {
+            const { hooks, sharedApp } = setupModule1("/account.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = '<a id="accountBackBtn"></a>';
+
+            sharedApp.requestJson.mockRejectedValueOnce(createUnauthorizedError());
+            await expect(hooks.requireAuthenticatedUser()).rejects.toMatchObject({ status: 401 });
+
+            sharedApp.requestJson.mockRejectedValueOnce(new Error("Auth service down"));
+            await expect(hooks.requireAuthenticatedUser()).rejects.toThrow("Auth service down");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Auth service down");
+
+            const historyBackSpy = jest.spyOn(window.history, "back").mockImplementation(() => {});
+            hooks.bindAccountBackButton({ role: "REGISTERED_VIEWER", contributor: false });
+            document.getElementById("accountBackBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(historyBackSpy).not.toHaveBeenCalled();
         });
     });
 });

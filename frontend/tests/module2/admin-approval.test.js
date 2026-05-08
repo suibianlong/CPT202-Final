@@ -107,11 +107,61 @@ function setupAdminApproval() {
     return { hooks, adminModule };
 }
 
+async function flushPromises(times = 4) {
+    for (let i = 0; i < times; i += 1) {
+        await Promise.resolve();
+    }
+}
+
 describe("admin-approval.js", () => {
     afterEach(() => {
         jest.clearAllMocks();
         jest.clearAllTimers();
         jest.useRealTimers();
+    });
+
+    describe("DOMContentLoaded bootstrap", () => {
+        test("initializes admin approval page, binds tabs, and refreshes data", async () => {
+            const { adminModule } = setupAdminApproval();
+            document.body.innerHTML = `
+                <button data-approval-tab="pending" class="active"></button>
+                <button data-approval-tab="approved"></button>
+                <section id="approvalPendingSection" class="admin-section active"></section>
+                <section id="approvalApprovedSection" class="admin-section"></section>
+                <button id="approvalRefreshBtn" type="button"></button>
+                <div id="contributorPendingPanel"></div>
+                <div id="approvedContributorPanel"></div>
+            `;
+            adminModule.requireAdmin.mockResolvedValue({ role: "ADMINISTRATOR" });
+            adminModule.requestJson
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            await flushPromises();
+
+            expect(adminModule.bindAdminBasics).toHaveBeenCalled();
+            expect(adminModule.requireAdmin).toHaveBeenCalled();
+            expect(adminModule.requestJson).toHaveBeenCalledWith(
+                "/api/admin/contributor-requests/pending",
+                { method: "GET" }
+            );
+
+            document.querySelector("[data-approval-tab=\"approved\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(document.getElementById("approvalApprovedSection").classList.contains("active")).toBe(true);
+
+            document.getElementById("approvalRefreshBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(adminModule.requestJson).toHaveBeenLastCalledWith(
+                "/api/admin/contributor-requests/approved-contributors",
+                { method: "GET" }
+            );
+        });
     });
 
     describe("helper functions", () => {
