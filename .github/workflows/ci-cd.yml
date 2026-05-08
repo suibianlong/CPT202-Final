@@ -35,6 +35,14 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Run frontend ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Check frontend formatting
+        working-directory: frontend
+        run: npm run format:check
+
       - name: Package static frontend resources
         run: |
           mkdir -p dist/frontend
