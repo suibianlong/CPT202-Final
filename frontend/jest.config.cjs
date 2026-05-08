@@ -7,7 +7,5 @@ module.exports = {
     testMatch: ["**/*.test.js"],
     clearMocks: true,
     restoreMocks: true,
-    collectCoverageFrom: [
-        "shared/**/*.js"
-    ]
+    collectCoverageFrom: ["shared/**/*.js"]
 };
