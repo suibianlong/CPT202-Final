@@ -7,9 +7,6 @@ module.exports = {
     testMatch: ["**/*.test.js"],
     clearMocks: true,
     restoreMocks: true,
-<<<<<<< Updated upstream
-    collectCoverageFrom: ["shared/**/*.js"]
-=======
     collectCoverageFrom: [
         "module1/**/*.js",
         "module2/**/*.js",
@@ -27,5 +24,4 @@ module.exports = {
         "clover",
         "json-summary"
     ]
->>>>>>> Stashed changes
 };
