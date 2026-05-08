@@ -337,7 +337,9 @@ describe("SharedApp", () => {
         test("formats a valid date value using the current locale", () => {
             const value = "2026-05-05T10:15:00.000Z";
 
-            expect(sharedApp.formatDateTime(value)).toBe(new Date(value).toLocaleString());
+            expect(sharedApp.formatDateTime(value)).toBe(
+                new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })
+            );
         });
 
         test("returns the configured empty text when the value is empty", () => {
