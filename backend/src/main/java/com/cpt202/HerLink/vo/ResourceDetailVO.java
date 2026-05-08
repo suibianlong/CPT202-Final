@@ -19,6 +19,7 @@ public class ResourceDetailVO implements Serializable {
     private String place;
     private String previewImage;
     private String mediaUrl;
+    private List<String> mediaUrls;
     private String status;
     private LocalDateTime reviewedAt;
     private LocalDateTime createdAt;
@@ -113,6 +114,14 @@ public class ResourceDetailVO implements Serializable {
 
     public void setMediaUrl(String mediaUrl) {
         this.mediaUrl = mediaUrl;
+    }
+
+    public List<String> getMediaUrls() {
+        return mediaUrls;
+    }
+
+    public void setMediaUrls(List<String> mediaUrls) {
+        this.mediaUrls = mediaUrls;
     }
 
     public String getStatus() {
@@ -224,6 +233,7 @@ public class ResourceDetailVO implements Serializable {
                 ", place='" + place + '\'' +
                 ", previewImage='" + previewImage + '\'' +
                 ", mediaUrl='" + mediaUrl + '\'' +
+                ", mediaUrls=" + mediaUrls +
                 ", status='" + status + '\'' +
                 ", reviewedAt=" + reviewedAt +
                 ", createdAt=" + createdAt +

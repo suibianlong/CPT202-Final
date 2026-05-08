@@ -455,7 +455,7 @@ class ContributorResourceServiceImplTest {
         MockMultipartFile media = new MockMultipartFile("mediaFile", "movie.mp4", "video/mp4", "video".getBytes());
 
         AppException exception = assertThrows(AppException.class,
-                () -> service.uploadFiles(USER_ID, RESOURCE_ID, null, media));
+                () -> service.uploadFiles(USER_ID, RESOURCE_ID, null, new MockMultipartFile[]{media}));
 
         assertTrue(exception.getMessage().contains("Media file must match the selected resource type."));
     }

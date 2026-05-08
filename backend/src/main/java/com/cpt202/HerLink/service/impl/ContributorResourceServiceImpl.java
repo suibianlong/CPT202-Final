@@ -200,12 +200,13 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
 
     @Override
     @Transactional
-    public ResourceDetailVO uploadFiles(Long currentUserId, Long resourceId, MultipartFile previewImage, MultipartFile mediaFile) {
+    public ResourceDetailVO uploadFiles(Long currentUserId, Long resourceId, MultipartFile previewImage, MultipartFile[] mediaFiles) {
         Resource resource = loadOwnedResource(currentUserId, resourceId, true);
         validateEditableStatus(resource);
 
         boolean hasPreviewImage = previewImage != null && !previewImage.isEmpty();
-        boolean hasMediaFile = mediaFile != null && !mediaFile.isEmpty();
+        List<MultipartFile> mediaFileList = normalizeMultipartFiles(mediaFiles);
+        boolean hasMediaFile = !mediaFileList.isEmpty();
 
         if (!hasPreviewImage && !hasMediaFile) {
             throw AppException.badRequest("At least one file must be uploaded.");
@@ -215,13 +216,14 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
             validatePreviewImageFile(previewImage);
         }
         if (hasMediaFile) {
-            validateMediaFile(resource, mediaFile);
+            for (MultipartFile mediaFile : mediaFileList) {
+                validateMediaFile(resource, mediaFile);
+            }
         }
 
         String folderName = "resource-" + resourceId;
         List<String> newlyStoredPaths = new ArrayList<>();
         String oldPreviewImage = resource.getPreviewImage();
-        String oldMediaUrl = resource.getMediaUrl();
         Resource latestResource;
 
         try {
@@ -235,11 +237,13 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
             }
 
             if (hasMediaFile) {
-                FileStorageManager.StoredFile storedMediaFile = fileStorageManager.storeFile(mediaFile, folderName);
-                if (storedMediaFile != null) {
-                    newlyStoredPaths.add(storedMediaFile.getFilePath());
-                    resource.setMediaUrl(storedMediaFile.getFilePath());
-                    insertResourceFile(resourceId, storedMediaFile);
+                for (MultipartFile mediaFile : mediaFileList) {
+                    FileStorageManager.StoredFile storedMediaFile = fileStorageManager.storeFile(mediaFile, folderName);
+                    if (storedMediaFile != null) {
+                        newlyStoredPaths.add(storedMediaFile.getFilePath());
+                        resource.setMediaUrl(storedMediaFile.getFilePath());
+                        insertResourceFile(resourceId, storedMediaFile);
+                    }
                 }
             }
 
@@ -263,15 +267,57 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
             if (hasPreviewImage) {
                 cleanupReplacedFile(resourceId, oldPreviewImage, latestResource);
             }
-            if (hasMediaFile) {
-                cleanupReplacedFile(resourceId, oldMediaUrl, latestResource);
-            }
         } catch (RuntimeException exception) {
             for (String storedPath : newlyStoredPaths) {
                 fileStorageManager.deleteQuietly(storedPath);
             }
             throw exception;
         }
+
+        return buildResourceDetailVO(latestResource);
+    }
+
+    @Override
+    @Transactional
+    public ResourceDetailVO deleteMediaFile(Long currentUserId, Long resourceId, String filePath) {
+        Resource resource = loadOwnedResource(currentUserId, resourceId, true);
+        validateEditableStatus(resource);
+
+        if (filePath == null || filePath.isBlank()) {
+            throw AppException.badRequest("File path is required.");
+        }
+        if (Objects.equals(filePath, resource.getPreviewImage())) {
+            throw AppException.badRequest("Preview image cannot be deleted here.");
+        }
+
+        ResourceFile resourceFile = resourceFileMapper.selectByResourceIdAndFilePath(resourceId, filePath);
+        if (resourceFile == null && !Objects.equals(filePath, resource.getMediaUrl())) {
+            throw AppException.notFound("Media file does not exist.");
+        }
+
+        resourceFileMapper.deleteByResourceIdAndFilePath(resourceId, filePath);
+        fileStorageManager.delete(filePath);
+
+        if (Objects.equals(filePath, resource.getMediaUrl())) {
+            resource.setMediaUrl(findNextMediaUrl(resourceId, resource.getPreviewImage(), filePath));
+        }
+
+        resource.setUpdatedAt(LocalDateTime.now());
+        resourceMapper.updateById(resource);
+
+        Resource latestResource = resourceMapper.selectById(resourceId);
+        if (latestResource == null) {
+            throw AppException.notFound("Resource file was deleted but the resource cannot be reloaded.");
+        }
+
+        resourceVersionService.saveVersionSnapshot(
+                resourceId,
+                currentUserId,
+                ResourceStatusEnum.REJECTED.getValue().equals(resource.getStatus()) ? "revision" : "edit",
+                ResourceStatusEnum.REJECTED.getValue().equals(resource.getStatus())
+                        ? "Files revised after rejection"
+                        : "Files updated"
+        );
 
         return buildResourceDetailVO(latestResource);
     }
@@ -562,6 +608,20 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
             return false;
         }
         return filePath.equals(resource.getPreviewImage()) || filePath.equals(resource.getMediaUrl());
+    }
+
+    private List<MultipartFile> normalizeMultipartFiles(MultipartFile[] files) {
+        if (files == null || files.length == 0) {
+            return Collections.emptyList();
+        }
+
+        List<MultipartFile> normalizedFiles = new ArrayList<>();
+        for (MultipartFile file : files) {
+            if (file != null && !file.isEmpty()) {
+                normalizedFiles.add(file);
+            }
+        }
+        return normalizedFiles;
     }
 
     private void validateEditableStatus(Resource resource) {
@@ -877,6 +937,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         resourceDetailVO.setPlace(resource.getPlace());
         resourceDetailVO.setPreviewImage(resource.getPreviewImage());
         resourceDetailVO.setMediaUrl(resource.getMediaUrl());
+        resourceDetailVO.setMediaUrls(resolveMediaUrls(resource));
         resourceDetailVO.setStatus(ResourceStatusEnum.fromValue(resource.getStatus()).getValue());
         resourceDetailVO.setReviewedAt(resource.getReviewedAt());
         resourceDetailVO.setCreatedAt(resource.getCreatedAt());
@@ -901,6 +962,55 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         }
 
         return resourceDetailVO;
+    }
+
+    private List<String> resolveMediaUrls(Resource resource) {
+        if (resource == null || resource.getId() == null) {
+            return Collections.emptyList();
+        }
+
+        LinkedHashSet<String> mediaUrls = new LinkedHashSet<>();
+        List<ResourceFile> resourceFiles = resourceFileMapper.selectByResourceId(resource.getId());
+        if (resourceFiles != null) {
+            for (ResourceFile resourceFile : resourceFiles) {
+                if (resourceFile == null) {
+                    continue;
+                }
+                addMediaUrl(mediaUrls, resourceFile.getFilePath(), resource.getPreviewImage());
+            }
+        }
+
+        addMediaUrl(mediaUrls, resource.getMediaUrl(), resource.getPreviewImage());
+        return new ArrayList<>(mediaUrls);
+    }
+
+    private void addMediaUrl(LinkedHashSet<String> mediaUrls, String mediaUrl, String previewImage) {
+        if (mediaUrl == null || mediaUrl.isBlank() || Objects.equals(mediaUrl, previewImage)) {
+            return;
+        }
+        mediaUrls.add(mediaUrl);
+    }
+
+    private String findNextMediaUrl(Long resourceId, String previewImage, String deletedFilePath) {
+        List<ResourceFile> resourceFiles = resourceFileMapper.selectByResourceId(resourceId);
+        if (resourceFiles == null) {
+            return null;
+        }
+
+        for (ResourceFile resourceFile : resourceFiles) {
+            if (resourceFile == null) {
+                continue;
+            }
+
+            String filePath = resourceFile.getFilePath();
+            if (filePath == null || filePath.isBlank()
+                    || Objects.equals(filePath, previewImage)
+                    || Objects.equals(filePath, deletedFilePath)) {
+                continue;
+            }
+            return filePath;
+        }
+        return null;
     }
 
     private String normalizeCategoryName(String categoryName) {

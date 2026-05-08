@@ -602,37 +602,62 @@ function renderPrimaryMedia(detail) {
     const container = document.getElementById("mediaContainer");
     if (!container) return;
 
-    if (!detail.mediaUrl) {
+    const mediaUrls = normalizePrimaryMediaUrls(detail);
+    if (!mediaUrls.length) {
         container.innerHTML = '<div class="viewer-empty-message">No primary media uploaded.</div>';
         return;
     }
 
-    const mediaUrl = escapeViewerHtml(toPublicMediaUrl(detail.mediaUrl));
     const type = normalizeViewerResourceType(detail.resourceType);
+    container.innerHTML = `
+        <div class="viewer-media-list">
+            ${mediaUrls.map(mediaUrl => renderPrimaryMediaItem(detail, mediaUrl, type)).join("")}
+        </div>
+    `;
+}
+
+function normalizePrimaryMediaUrls(detail) {
+    const mediaUrls = [];
+    if (Array.isArray(detail.mediaUrls)) {
+        detail.mediaUrls.forEach(mediaUrl => {
+            if (mediaUrl && !mediaUrls.includes(mediaUrl)) {
+                mediaUrls.push(mediaUrl);
+            }
+        });
+    }
+    if (!mediaUrls.length && detail.mediaUrl) {
+        mediaUrls.push(detail.mediaUrl);
+    }
+    return mediaUrls;
+}
+
+function renderPrimaryMediaItem(detail, mediaUrl, type) {
+    const escapedMediaUrl = escapeViewerHtml(toPublicMediaUrl(mediaUrl));
 
     if (type === "photo") {
-        container.innerHTML = `<img src="${mediaUrl}" alt="${escapeViewerHtml(detail.title || "Resource image")}" />`;
-        return;
+        return `<div class="viewer-media-item"><img src="${escapedMediaUrl}" alt="${escapeViewerHtml(detail.title || "Resource image")}" /></div>`;
     }
 
     if (type === "video") {
-        container.innerHTML = `
-            <video controls preload="metadata">
-                <source src="${mediaUrl}" />
-                Your browser does not support the video tag.
-            </video>
+        return `
+            <div class="viewer-media-item">
+                <video controls preload="metadata">
+                    <source src="${escapedMediaUrl}" />
+                    Your browser does not support the video tag.
+                </video>
+            </div>
         `;
-        return;
     }
 
     if (type === "audio") {
-        container.innerHTML = `
-            <audio controls preload="metadata">
-                <source src="${mediaUrl}" />
-                Your browser does not support the audio element.
-            </audio>
+        return `
+            <div class="viewer-media-item">
+                <audio controls preload="metadata">
+                    <source src="${escapedMediaUrl}" />
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
         `;
-        return;
     }
 
     const linkLabel = type === "extra link"
@@ -641,9 +666,7 @@ function renderPrimaryMedia(detail) {
             ? "Open attached document"
             : "Open attached media";
 
-    container.innerHTML = `
-        <a class="viewer-document-link" href="${mediaUrl}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>
-    `;
+    return `<div class="viewer-media-item"><a class="viewer-document-link" href="${escapedMediaUrl}" target="_blank" rel="noopener noreferrer">${linkLabel}</a></div>`;
 }
 
 function handleViewerError(error, fallbackMessage) {

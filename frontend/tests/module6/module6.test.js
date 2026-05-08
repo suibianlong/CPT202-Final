@@ -357,7 +357,8 @@ describe("module6.js", () => {
                 description: "Important historical photograph",
                 tagNames: ["local", "memory"],
                 previewImage: "/preview.png",
-                mediaUrl: "/main-photo.png"
+                mediaUrl: "/main-photo.png",
+                mediaUrls: ["/main-photo.png", "/main-photo-2.png"]
             });
 
             expect(document.getElementById("detailTitle").textContent).toBe("Archive Image");
@@ -368,6 +369,8 @@ describe("module6.js", () => {
             expect(document.getElementById("detailTags").innerHTML).toContain("viewer-tag");
             expect(document.getElementById("previewContainer").innerHTML).toContain("/uploads/preview.png");
             expect(document.getElementById("mediaContainer").innerHTML).toContain("<img");
+            expect(document.querySelectorAll("#mediaContainer img")).toHaveLength(2);
+            expect(document.getElementById("mediaContainer").innerHTML).toContain("/uploads/main-photo-2.png");
             expect(document.getElementById("detailContent").classList.contains("hidden")).toBe(false);
         });
 

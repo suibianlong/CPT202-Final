@@ -57,6 +57,9 @@ let historyModalState = createEmptyHistoryState();
 let fileUploadBusy = false;
 let metadataAutoSaveTimer = null;
 let lastSavedMetadataPayload = "";
+let currentMediaUrls = [];
+let mediaFileObjectUrls = [];
+let pendingMediaFiles = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     const page = document.body.dataset.page;
@@ -131,6 +134,7 @@ async function initResourceEditPage() {
 function bindFilePickerUI() {
     bindSingleFilePicker("mediaFile", "mediaFileNameText");
     bindSingleFilePicker("previewImage", "previewImageNameText");
+    bindMediaFileList();
     updateMediaFileAccept(document.getElementById("resourceType")?.value || "");
 }
 
@@ -138,6 +142,8 @@ function bindSingleFilePicker(inputId, textId, options = {}) {
     const input = document.getElementById(inputId);
     const text = document.getElementById(textId);
     const button = document.querySelector(`[data-file-target="${inputId}"]`);
+    const clearButton = document.querySelector(`[data-file-clear-target="${inputId}"]`);
+    const defaultText = text?.textContent || "No file selected";
     if (!input || !text) return;
 
     if (button) {
@@ -155,11 +161,26 @@ function bindSingleFilePicker(inputId, textId, options = {}) {
         });
     }
 
+    if (clearButton) {
+        clearButton.addEventListener("click", () => {
+            clearSelectedFile(inputId, textId, defaultText);
+        });
+    }
+
     input.addEventListener("change", () => {
         const file = input.files?.[0];
-        text.textContent = file ? file.name : "No file selected";
+        const files = Array.from(input.files || []);
+        text.textContent = inputId === "mediaFile"
+            ? defaultText
+            : files.length ? formatSelectedFileText(files) : "No file selected";
+        setFileClearButtonVisible(inputId, inputId !== "mediaFile" && files.length > 0);
         if (inputId === "previewImage") {
             renderLocalPreviewImage(file);
+        }
+        if (inputId === "mediaFile") {
+            addPendingMediaFiles(files);
+            syncPendingMediaInput(input);
+            renderMediaFileList();
         }
         if (file) {
             scheduleMetadataAutoSave({ delay: 0, includeFiles: true });
@@ -171,6 +192,186 @@ function bindSingleFilePicker(inputId, textId, options = {}) {
             includePreviewImage: inputId === "previewImage"
         });
     });
+}
+
+function clearSelectedFile(inputId, textId, defaultText = "No file selected") {
+    const input = document.getElementById(inputId);
+    const text = document.getElementById(textId);
+    if (!input) return;
+
+    input.value = "";
+    if (text) text.textContent = defaultText;
+    setFileClearButtonVisible(inputId, false);
+
+    if (inputId === "previewImage") {
+        const previewPath = document.getElementById("previewImageFrame")?.dataset.previewImage || "";
+        renderPreviewFrame(previewPath && previewPath !== "Will appear after upload" && previewPath !== "—" ? previewPath : "");
+    }
+    if (inputId === "mediaFile") {
+        clearMediaFileObjectUrls();
+        pendingMediaFiles = [];
+        syncPendingMediaInput(input);
+        renderMediaFileList();
+    }
+}
+
+function setFileClearButtonVisible(inputId, visible) {
+    const clearButton = document.querySelector(`[data-file-clear-target="${inputId}"]`);
+    if (clearButton) clearButton.hidden = !visible;
+}
+
+function formatSelectedFileText(files) {
+    if (!files || files.length === 0) {
+        return "No file selected";
+    }
+    if (files.length === 1) {
+        return files[0].name;
+    }
+    return `${files.length} files selected`;
+}
+
+function bindMediaFileList() {
+    const list = document.getElementById("mediaFileList");
+    if (!list) return;
+
+    list.addEventListener("click", async (event) => {
+        const selectedRemoveButton = event.target.closest("[data-selected-media-index]");
+        if (selectedRemoveButton) {
+            removeSelectedMediaFile(Number(selectedRemoveButton.dataset.selectedMediaIndex));
+            return;
+        }
+
+        const uploadedRemoveButton = event.target.closest("[data-uploaded-media-url]");
+        if (uploadedRemoveButton) {
+            await deleteUploadedMediaFile(uploadedRemoveButton.dataset.uploadedMediaUrl);
+        }
+    });
+}
+
+function renderMediaFileList() {
+    clearMediaFileObjectUrls();
+    const uploadedItems = currentMediaUrls.map(mediaUrl => `
+        <div class="file-picker-item">
+            <a class="file-picker-link" href="${escapeHtml(toPublicMediaUrl(mediaUrl))}" target="_blank" rel="noopener noreferrer">${escapeHtml(getMediaFileDisplayName(mediaUrl))}</a>
+            <button type="button" class="file-picker-item-remove" data-uploaded-media-url="${escapeHtml(mediaUrl)}" aria-label="Remove uploaded media file">×</button>
+        </div>
+    `).join("");
+    const pendingItems = pendingMediaFiles.map((file, index) => {
+        const objectUrl = createMediaFileObjectUrl(file);
+        return `
+            <div class="file-picker-item">
+                <a class="file-picker-link" href="${escapeHtml(objectUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(file.name || `File ${index + 1}`)}</a>
+                <button type="button" class="file-picker-item-remove" data-selected-media-index="${index}" aria-label="Remove selected media file">×</button>
+            </div>
+        `;
+    }).join("");
+
+    setMediaFileListHtml(uploadedItems + pendingItems);
+}
+
+function addPendingMediaFiles(files) {
+    files.forEach(file => {
+        if (file && !hasPendingMediaFile(file)) {
+            pendingMediaFiles.push(file);
+        }
+    });
+}
+
+function hasPendingMediaFile(file) {
+    return pendingMediaFiles.some(existingFile =>
+        existingFile.name === file.name
+        && existingFile.size === file.size
+        && existingFile.lastModified === file.lastModified
+    );
+}
+
+function resetMediaFilePrompt() {
+    const mediaText = document.getElementById("mediaFileNameText");
+    if (mediaText) mediaText.textContent = "Drag & drop file here or";
+    setFileClearButtonVisible("mediaFile", false);
+}
+
+function setMediaFileListHtml(html) {
+    const list = document.getElementById("mediaFileList");
+    if (list) list.innerHTML = html;
+}
+
+function removeSelectedMediaFile(indexToRemove) {
+    const input = document.getElementById("mediaFile");
+    if (!input || Number.isNaN(indexToRemove)) return;
+
+    pendingMediaFiles = pendingMediaFiles.filter((file, index) => index !== indexToRemove);
+    syncPendingMediaInput(input);
+    resetMediaFilePrompt();
+    renderMediaFileList();
+}
+
+function syncPendingMediaInput(input) {
+    if (!input) return;
+
+    if (typeof DataTransfer === "function") {
+        const dataTransfer = new DataTransfer();
+        pendingMediaFiles.forEach(file => dataTransfer.items.add(file));
+        input.files = dataTransfer.files;
+        return;
+    }
+
+    if (!pendingMediaFiles.length) {
+        input.value = "";
+    }
+}
+
+async function deleteUploadedMediaFile(mediaUrl) {
+    const resourceId = getResourceIdFromQuery();
+    if (!resourceId || !mediaUrl) return;
+
+    try {
+        const detail = await requestJson(`${API_BASE}/${resourceId}/files?filePath=${encodeURIComponent(mediaUrl)}`, {
+            method: "DELETE"
+        });
+        fillEditor(detail);
+        showToast("Media file deleted successfully.");
+    } catch (error) {
+        showToast(error.message || "Failed to delete media file.");
+    }
+}
+
+function normalizeMediaUrls(mediaUrls) {
+    const normalizedMediaUrls = [];
+    if (!Array.isArray(mediaUrls)) {
+        return normalizedMediaUrls;
+    }
+
+    mediaUrls.forEach(mediaUrl => {
+        if (mediaUrl && !normalizedMediaUrls.includes(mediaUrl)) {
+            normalizedMediaUrls.push(mediaUrl);
+        }
+    });
+    return normalizedMediaUrls;
+}
+
+function getMediaFileDisplayName(mediaUrl) {
+    if (!mediaUrl) {
+        return "Media file";
+    }
+    const segments = String(mediaUrl).split("/");
+    return segments[segments.length - 1] || mediaUrl;
+}
+
+function clearMediaFileObjectUrls() {
+    if (typeof URL.revokeObjectURL === "function") {
+        mediaFileObjectUrls.forEach(objectUrl => URL.revokeObjectURL(objectUrl));
+    }
+    mediaFileObjectUrls = [];
+}
+
+function createMediaFileObjectUrl(file) {
+    if (typeof URL.createObjectURL !== "function") {
+        return "#";
+    }
+    const objectUrl = URL.createObjectURL(file);
+    mediaFileObjectUrls.push(objectUrl);
+    return objectUrl;
 }
 
 function applyEditorScenery() {
@@ -1129,9 +1330,11 @@ async function uploadSelectedFiles({
     const previewInput = document.getElementById("previewImage");
     const mediaInput = document.getElementById("mediaFile");
     const previewImage = includePreviewImage ? previewInput?.files?.[0] : null;
-    const mediaFile = includeMediaFile ? mediaInput?.files?.[0] : null;
+    const mediaFiles = includeMediaFile
+        ? pendingMediaFiles.length ? pendingMediaFiles : Array.from(mediaInput?.files || [])
+        : [];
 
-    if (!previewImage && !mediaFile) {
+    if (!previewImage && mediaFiles.length === 0) {
         if (showEmptyToast) {
             showToast("Select at least one file.");
         }
@@ -1140,7 +1343,7 @@ async function uploadSelectedFiles({
 
     const formData = new FormData();
     if (previewImage) formData.append("previewImage", previewImage);
-    if (mediaFile) formData.append("mediaFile", mediaFile);
+    mediaFiles.forEach(mediaFile => formData.append("mediaFile", mediaFile));
 
     setFileUploadBusy(true);
 
@@ -1158,8 +1361,8 @@ async function uploadSelectedFiles({
             body: formData
         });
 
+        clearUploadedFileInputs({ mediaFiles, mediaInput, previewImage, previewInput });
         fillEditor(detail);
-        clearUploadedFileInputs({ mediaFile, mediaInput, previewImage, previewInput });
         if (successMessage) {
             showToast(successMessage);
         }
@@ -1177,17 +1380,18 @@ async function uploadSelectedFiles({
     }
 }
 
-function clearUploadedFileInputs({ mediaFile, mediaInput, previewImage, previewInput }) {
-    if (mediaFile && mediaInput) {
+function clearUploadedFileInputs({ mediaFiles, mediaInput, previewImage, previewInput }) {
+    if (mediaFiles?.length && mediaInput) {
+        pendingMediaFiles = [];
         mediaInput.value = "";
-        const mediaText = document.getElementById("mediaFileNameText");
-        if (mediaText) mediaText.textContent = `Uploaded: ${mediaFile.name}`;
+        resetMediaFilePrompt();
     }
 
     if (previewImage && previewInput) {
         previewInput.value = "";
         const previewText = document.getElementById("previewImageNameText");
         if (previewText) previewText.textContent = `Uploaded: ${previewImage.name}`;
+        setFileClearButtonVisible("previewImage", true);
     }
 }
 
@@ -1264,17 +1468,9 @@ function fillEditor(detail) {
     setValue("submissionNote", "");
     setTagValues(detail.tagNames || []);
 
-    const previewText = document.getElementById("previewImagePathText");
-    const mediaText = document.getElementById("mediaFilePathText");
-
-    if (previewText) {
-        previewText.textContent = detail.previewImage || "—";
-    }
-
-    if (mediaText) {
-        mediaText.textContent = detail.mediaUrl || "—";
-    }
-
+    currentMediaUrls = normalizeMediaUrls(detail.mediaUrls || (detail.mediaUrl ? [detail.mediaUrl] : []));
+    resetMediaFilePrompt();
+    renderMediaFileList();
     renderPreviewFrame(detail.previewImage);
     syncResourceTypeMirror();
     updateMediaFileAccept(detail.resourceType);
@@ -1302,10 +1498,12 @@ function renderPreviewFrame(previewImage) {
     if (!frame) return;
 
     if (!previewImage) {
+        frame.dataset.previewImage = "";
         frame.innerHTML = "<span>No preview available</span>";
         return;
     }
 
+    frame.dataset.previewImage = previewImage;
     const previewUrl = escapeHtml(toPublicMediaUrl(previewImage));
     frame.innerHTML = `<img src="${previewUrl}" alt="Uploaded preview image" />`;
 }
@@ -1998,7 +2196,7 @@ function setFilePickerDisabled(disabled) {
         if (input) input.disabled = disabled;
     });
 
-    document.querySelectorAll("[data-file-target]").forEach(button => {
+    document.querySelectorAll("[data-file-target], [data-file-clear-target]").forEach(button => {
         button.disabled = disabled;
     });
 }

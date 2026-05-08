@@ -2,11 +2,13 @@ package com.cpt202.HerLink.service.impl;
 
 import com.cpt202.HerLink.entity.Category;
 import com.cpt202.HerLink.entity.Resource;
+import com.cpt202.HerLink.entity.ResourceFile;
 import com.cpt202.HerLink.entity.ResourceType;
 import com.cpt202.HerLink.enums.ResourceStatusEnum;
 import com.cpt202.HerLink.enums.ResourceTypeEnum;
 import com.cpt202.HerLink.exception.AppException;
 import com.cpt202.HerLink.mapper.CategoryMapper;
+import com.cpt202.HerLink.mapper.ResourceFileMapper;
 import com.cpt202.HerLink.mapper.ResourceMapper;
 import com.cpt202.HerLink.mapper.ResourceTagMapper;
 import com.cpt202.HerLink.mapper.ResourceTypeMapper;
@@ -16,6 +18,7 @@ import com.cpt202.HerLink.vo.ResourceDetailVO;
 import com.cpt202.HerLink.vo.ResourceListItemVO;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -25,15 +28,18 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
 
     private final ResourceMapper resourceMapper;
     private final CategoryMapper categoryMapper;
+    private final ResourceFileMapper resourceFileMapper;
     private final ResourceTagMapper resourceTagMapper;
     private final ResourceTypeMapper resourceTypeMapper;
 
     public ViewerResourceServiceImpl(ResourceMapper resourceMapper,
                                      CategoryMapper categoryMapper,
+                                     ResourceFileMapper resourceFileMapper,
                                      ResourceTagMapper resourceTagMapper,
                                      ResourceTypeMapper resourceTypeMapper) {
         this.resourceMapper = resourceMapper;
         this.categoryMapper = categoryMapper;
+        this.resourceFileMapper = resourceFileMapper;
         this.resourceTagMapper = resourceTagMapper;
         this.resourceTypeMapper = resourceTypeMapper;
     }
@@ -144,6 +150,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         resourceDetailVO.setPlace(resource.getPlace());
         resourceDetailVO.setPreviewImage(resource.getPreviewImage());
         resourceDetailVO.setMediaUrl(resource.getMediaUrl());
+        resourceDetailVO.setMediaUrls(resolveMediaUrls(resource));
         resourceDetailVO.setStatus(ResourceStatusEnum.fromValue(resource.getStatus()).getValue());
         resourceDetailVO.setReviewedAt(resource.getReviewedAt());
         resourceDetailVO.setCreatedAt(resource.getCreatedAt());
@@ -153,6 +160,33 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         resourceDetailVO.setTagIds(resourceTagMapper.selectTagIdsByResourceId(resource.getId()));
         resourceDetailVO.setTagNames(resourceTagMapper.selectTagNamesByResourceId(resource.getId()));
         return resourceDetailVO;
+    }
+
+    private List<String> resolveMediaUrls(Resource resource) {
+        if (resource == null || resource.getId() == null) {
+            return Collections.emptyList();
+        }
+
+        LinkedHashSet<String> mediaUrls = new LinkedHashSet<>();
+        List<ResourceFile> resourceFiles = resourceFileMapper.selectByResourceId(resource.getId());
+        if (resourceFiles != null) {
+            for (ResourceFile resourceFile : resourceFiles) {
+                if (resourceFile == null) {
+                    continue;
+                }
+                addMediaUrl(mediaUrls, resourceFile.getFilePath(), resource.getPreviewImage());
+            }
+        }
+
+        addMediaUrl(mediaUrls, resource.getMediaUrl(), resource.getPreviewImage());
+        return new ArrayList<>(mediaUrls);
+    }
+
+    private void addMediaUrl(LinkedHashSet<String> mediaUrls, String mediaUrl, String previewImage) {
+        if (mediaUrl == null || mediaUrl.isBlank() || Objects.equals(mediaUrl, previewImage)) {
+            return;
+        }
+        mediaUrls.add(mediaUrl);
     }
 
     private Long normalizeResourceTypeId(String resourceType) {

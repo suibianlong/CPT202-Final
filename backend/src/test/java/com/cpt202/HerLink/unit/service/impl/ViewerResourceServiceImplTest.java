@@ -6,6 +6,7 @@ import com.cpt202.HerLink.entity.ResourceType;
 import com.cpt202.HerLink.enums.ResourceStatusEnum;
 import com.cpt202.HerLink.exception.AppException;
 import com.cpt202.HerLink.mapper.CategoryMapper;
+import com.cpt202.HerLink.mapper.ResourceFileMapper;
 import com.cpt202.HerLink.mapper.ResourceMapper;
 import com.cpt202.HerLink.mapper.ResourceTagMapper;
 import com.cpt202.HerLink.mapper.ResourceTypeMapper;
@@ -45,6 +46,8 @@ class ViewerResourceServiceImplTest {
     private ResourceMapper resourceMapper;
     @Mock
     private CategoryMapper categoryMapper;
+    @Mock
+    private ResourceFileMapper resourceFileMapper;
     @Mock
     private ResourceTagMapper resourceTagMapper;
     @Mock
