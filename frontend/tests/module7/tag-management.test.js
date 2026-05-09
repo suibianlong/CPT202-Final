@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const TAG_MANAGEMENT_SCRIPT_PATH = path.resolve(__dirname, "../../module7/tag-management.js");
 
@@ -94,7 +95,7 @@ function loadTagManagementHooks() {
     );
 
     delete window.__tagManagementTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, TAG_MANAGEMENT_SCRIPT_PATH);
     return window.__tagManagementTestHooks;
 }
 
@@ -112,11 +113,71 @@ function setupTagManagement() {
     return { hooks, adminModule };
 }
 
+async function flushPromises(times = 4) {
+    for (let i = 0; i < times; i += 1) {
+        await Promise.resolve();
+    }
+}
+
 describe("tag-management.js", () => {
     afterEach(() => {
         jest.clearAllMocks();
         jest.clearAllTimers();
         jest.useRealTimers();
+    });
+
+    describe("DOMContentLoaded bootstrap", () => {
+        test("initializes tag page, binds tabs/actions, and refreshes data", async () => {
+            const { hooks, adminModule } = setupTagManagement();
+            document.body.innerHTML = `
+                <button data-tag-tab="list" class="active"></button>
+                <button data-tag-tab="usage"></button>
+                <section id="tagListSection" class="admin-section active"></section>
+                <section id="tagUsageSection" class="admin-section"></section>
+                <button id="tagRefreshBtn" type="button"></button>
+                <button data-tag-action="edit" data-id="1" type="button"></button>
+                <div id="tagListPanel"></div>
+                <div id="tagUsageOverviewPanel"></div>
+                <div id="tagUsageHistoryPanel"></div>
+                <div id="tagOperationPanel"></div>
+            `;
+            hooks.__setState({
+                tags: [{ tagId: 1, tagName: "Story Tag", status: "ACTIVE" }]
+            });
+            adminModule.requireAdmin.mockResolvedValue({ role: "ADMINISTRATOR" });
+            adminModule.requestJson
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            window.prompt.mockReturnValueOnce(null);
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            await flushPromises();
+
+            expect(adminModule.bindAdminBasics).toHaveBeenCalled();
+            expect(adminModule.requireAdmin).toHaveBeenCalled();
+            expect(adminModule.requestJson).toHaveBeenCalledWith("/api/admin/tags", { method: "GET" });
+
+            document.querySelector("[data-tag-tab=\"usage\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(document.getElementById("tagUsageSection").classList.contains("active")).toBe(true);
+
+            document.querySelector("[data-tag-action=\"edit\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.getElementById("tagRefreshBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(adminModule.requestJson).toHaveBeenLastCalledWith(
+                "/api/admin/operation-history?module=tag",
+                { method: "GET" }
+            );
+        });
     });
 
     describe("helper functions", () => {

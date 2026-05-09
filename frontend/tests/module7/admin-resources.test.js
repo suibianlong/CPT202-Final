@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const ADMIN_RESOURCES_SCRIPT_PATH = path.resolve(__dirname, "../../module7/admin-resources.js");
 
@@ -74,7 +75,7 @@ function loadAdminResourcesHooks() {
     );
 
     delete window.__adminResourcesTestHooks;
-    window.eval(injectedSource);
+    evalWithCoverage(injectedSource, ADMIN_RESOURCES_SCRIPT_PATH);
     return window.__adminResourcesTestHooks;
 }
 
@@ -91,11 +92,106 @@ function setupAdminResources() {
     return { hooks, adminModule };
 }
 
+async function flushPromises(times = 4) {
+    for (let i = 0; i < times; i += 1) {
+        await Promise.resolve();
+    }
+}
+
 describe("admin-resources.js", () => {
     afterEach(() => {
         jest.clearAllMocks();
         jest.clearAllTimers();
         jest.useRealTimers();
+    });
+
+    describe("DOMContentLoaded bootstrap and action binding", () => {
+        test("handles unauthenticated and authenticated bootstrap flows", async () => {
+            const { adminModule } = setupAdminResources();
+            document.body.innerHTML = `
+                <button id="resourceRefreshBtn" type="button"></button>
+                <form id="resourceFilterForm"></form>
+                <select id="resourceStatusFilter">
+                    <option value="Approved" selected>Approved</option>
+                </select>
+                <input id="resourceSearchInput" value="">
+                <div id="resourceListPanel"></div>
+            `;
+            adminModule.requireAdmin
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({ role: "ADMINISTRATOR" });
+            adminModule.requestJson.mockResolvedValue([]);
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            expect(adminModule.bindAdminBasics).toHaveBeenCalledTimes(1);
+            expect(adminModule.requestJson).not.toHaveBeenCalled();
+
+            document.dispatchEvent(new Event("DOMContentLoaded"));
+            await flushPromises();
+            expect(adminModule.bindAdminBasics).toHaveBeenCalledTimes(2);
+            expect(adminModule.requestJson).toHaveBeenCalledWith(
+                "/api/admin/resources?status=Approved",
+                { method: "GET" }
+            );
+        });
+
+        test("binds refresh and filter events and routes archive or unarchive clicks", async () => {
+            const { hooks, adminModule } = setupAdminResources();
+            document.body.innerHTML = `
+                <button id="resourceRefreshBtn" type="button"></button>
+                <form id="resourceFilterForm"></form>
+                <select id="resourceStatusFilter">
+                    <option value="" selected>All</option>
+                </select>
+                <input id="resourceSearchInput" value="">
+                <div id="resourceListPanel"></div>
+            `;
+            adminModule.requestJson.mockResolvedValue([]);
+            adminModule.jsonRequest
+                .mockResolvedValueOnce({ message: "Archived." })
+                .mockResolvedValueOnce({ message: "Unarchived." });
+
+            hooks.bindResourceActions();
+
+            document.getElementById("resourceRefreshBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.getElementById("resourceFilterForm")
+                .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            await flushPromises();
+
+            const archiveButton = document.createElement("button");
+            archiveButton.dataset.adminResourceArchive = "11";
+            document.body.appendChild(archiveButton);
+            archiveButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            const unarchiveButton = document.createElement("button");
+            unarchiveButton.dataset.adminResourceUnarchive = "12";
+            document.body.appendChild(unarchiveButton);
+            unarchiveButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            expect(adminModule.requestJson).toHaveBeenCalledWith("/api/admin/resources", { method: "GET" });
+            const jsonRequestUrls = adminModule.jsonRequest.mock.calls.map(call => call[0]);
+            expect(jsonRequestUrls).toContain("/api/admin/resources/11/archive");
+            expect(jsonRequestUrls).toContain("/api/admin/resources/12/unarchive");
+        });
+
+        test("ignores unrelated click targets after binding actions", async () => {
+            const { hooks, adminModule } = setupAdminResources();
+            hooks.bindResourceActions();
+
+            const neutralNode = document.createElement("div");
+            document.body.appendChild(neutralNode);
+            neutralNode.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            expect(adminModule.requestJson).not.toHaveBeenCalled();
+            expect(adminModule.jsonRequest).not.toHaveBeenCalled();
+        });
     });
 
     describe("helper functions", () => {

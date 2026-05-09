@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { evalWithCoverage } = require("../test-utils/eval-with-coverage");
 
 const MODULE3_SCRIPT_PATH = path.resolve(__dirname, "../../module3/module3.js");
 
@@ -33,7 +34,11 @@ function loadModule3TestHooks() {
         (() => {
             ${source}
             window.__module3TestHooks = {
+                initMyResourcesPage,
+                initResourceEditPage,
                 normalizeTagNames,
+                normalizeMediaUrls,
+                getMediaFileDisplayName,
                 normalizeCategoryOptions,
                 normalizeCategoryOption,
                 normalizeResourceTypeOptions,
@@ -41,19 +46,55 @@ function loadModule3TestHooks() {
                 normalizeResourceTypeValue,
                 formatResourceType,
                 formatStatus,
+                normalizeStatusForCheck,
+                isEditableResourceStatus,
                 parseNullableLong,
+                toPublicMediaUrl,
                 renderSelectOptions,
                 renderResourceTypeSelectOptions,
                 ensureResourceTypeOption,
+                persistResourceTypeSelection,
+                renderTagChips,
+                commitTagInputValue,
+                renderResourceTable,
+                renderMyResourceEditAction,
+                renderVersionSnapshot,
+                renderVersionCompare,
+                renderHistoryInspectorEmpty,
                 updateMediaFileAccept,
+                bindCreateDraftButton,
+                bindListFilterButtons,
+                bindHistoryModal,
+                bindHeritageLanding,
+                bindModuleModalUI,
+                bindSingleFilePicker,
+                clearSelectedFile,
+                formatSelectedFileText,
+                bindMediaFileList,
                 bindMetadataForm,
                 bindFilePickerUI,
                 bindSubmitForm,
                 scheduleMetadataAutoSave,
                 saveMetadata,
                 uploadSelectedFiles,
+                loadCategoryFilterOptions,
                 loadCategorySelectOptions,
                 loadResourceTypeSelectOptions,
+                loadResourceList,
+                loadResourceDetail,
+                openHistoryModal,
+                closeHistoryModal,
+                loadHistoryModalData,
+                viewVersionSnapshot,
+                compareVersionWithCurrent,
+                rollbackToVersion,
+                createDraftForEditing,
+                updateEditorUrlWithResourceId,
+                activateHeritageModule,
+                openHeritageModuleModal,
+                closeHeritageModuleModal,
+                focusModuleField,
+                ensureContributorWorkspaceAccess,
                 populateWorkspaceSession,
                 getResourceIdFromQuery
             };
@@ -61,7 +102,7 @@ function loadModule3TestHooks() {
     `;
 
     delete window.__module3TestHooks;
-    window.eval(wrappedSource);
+    evalWithCoverage(wrappedSource, MODULE3_SCRIPT_PATH);
     return window.__module3TestHooks;
 }
 
@@ -799,6 +840,885 @@ describe("module3.js", () => {
             expect(hooks.formatStatus("PENDING_REVIEW")).toBe("Pending Review");
             expect(hooks.formatStatus("approved")).toBe("Approved");
             expect(hooks.formatStatus(null)).toBe("-");
+        });
+
+        test("normalizes media URLs and resolves public media URLs", () => {
+            const { hooks } = setupModule3("/resource-edit.html");
+
+            expect(hooks.normalizeMediaUrls(["a.jpg", "a.jpg", "", null, "b.mp4"]))
+                .toEqual(["a.jpg", "b.mp4"]);
+            expect(hooks.normalizeMediaUrls("not-array")).toEqual([]);
+            expect(hooks.getMediaFileDisplayName("folder/asset.png")).toBe("asset.png");
+            expect(hooks.getMediaFileDisplayName("")).toBe("Media file");
+            expect(hooks.toPublicMediaUrl("abc.jpg")).toBe("/uploads/abc.jpg");
+            expect(hooks.toPublicMediaUrl("/uploads/abc.jpg")).toBe("/uploads/abc.jpg");
+            expect(hooks.toPublicMediaUrl("https://cdn.example/a.jpg")).toBe("https://cdn.example/a.jpg");
+            expect(hooks.toPublicMediaUrl("   ")).toBe("");
+        });
+
+        test("normalizes status for checks and editable decision", () => {
+            const { hooks } = setupModule3("/resource-edit.html");
+
+            expect(hooks.normalizeStatusForCheck("PENDING_REVIEW")).toBe("pending review");
+            expect(hooks.normalizeStatusForCheck(" archived-status ")).toBe("archived status");
+            expect(hooks.isEditableResourceStatus("Draft")).toBe(true);
+            expect(hooks.isEditableResourceStatus("Rejected")).toBe(true);
+            expect(hooks.isEditableResourceStatus("Approved")).toBe(false);
+        });
+    });
+
+    describe("my resources list and history flows", () => {
+        test("initializes my-resources page and loads workspace session in a normal case", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <button id="createDraftBtn" type="button"></button>
+                <button id="searchBtn" type="button"></button>
+                <button id="resetBtn" type="button"></button>
+                <input id="keyword" value="">
+                <select id="statusFilter"><option value=""></option></select>
+                <select id="categoryFilter"></select>
+                <table><tbody id="resourceTableBody"></tbody></table>
+                <div id="historyModal" class="hidden"></div>
+                <div id="listMeta"></div>
+                <span id="resourceUserName"></span>
+                <span id="resourceAccessText"></span>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce([{ id: 2, name: "Oral History" }])
+                .mockResolvedValueOnce({ name: "Ava", contributor: true })
+                .mockResolvedValueOnce([]);
+
+            await hooks.initMyResourcesPage();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources/category-options",
+                { method: "GET" }
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/auth/me",
+                { method: "GET" }
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                3,
+                "/api/contributor/resources/my",
+                { method: "GET" }
+            );
+            expect(document.getElementById("resourceUserName").textContent).toBe("Ava");
+            expect(document.getElementById("resourceTableBody").textContent).toContain("No resources found.");
+        });
+
+        test("shows a network toast when my-resources access check fails", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <button id="createDraftBtn" type="button"></button>
+                <input id="keyword" value="">
+                <select id="statusFilter"><option value=""></option></select>
+                <select id="categoryFilter"></select>
+                <table><tbody id="resourceTableBody"></tbody></table>
+                <div id="historyModal" class="hidden"></div>
+                <span id="resourceUserName"></span>
+                <span id="resourceAccessText"></span>
+            `;
+            const networkError = new Error("network");
+            networkError.isNetworkError = true;
+            sharedApp.requestJson
+                .mockResolvedValueOnce([{ id: 2, name: "Oral History" }])
+                .mockRejectedValueOnce(networkError);
+
+            await hooks.initMyResourcesPage();
+
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Unable to verify contributor access right now.");
+            expect(sharedApp.requestJson).toHaveBeenCalledTimes(2);
+        });
+
+        test("loads category filter options and list data in normal case", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <select id="categoryFilter"></select>
+                <input id="keyword" value="  silk  ">
+                <select id="statusFilter"><option value="Draft" selected>Draft</option></select>
+                <table><tbody id="resourceTableBody"></tbody></table>
+                <div id="listMeta"></div>
+            `;
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce([{ id: 3, name: "Architecture" }])
+                .mockResolvedValueOnce([
+                    {
+                        id: 11,
+                        title: "Old Bridge",
+                        categoryName: "Architecture",
+                        updatedAt: "2026-05-07T00:00:00",
+                        currentVersionNo: 4,
+                        lastSubmittedAt: "2026-05-08T00:00:00",
+                        hasReviewFeedback: true,
+                        resourceType: "photo",
+                        status: "Draft"
+                    }
+                ]);
+
+            await hooks.loadCategoryFilterOptions();
+            await hooks.loadResourceList();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources/category-options",
+                { method: "GET" }
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/my?keyword=silk&status=Draft",
+                { method: "GET" }
+            );
+            expect(document.getElementById("categoryFilter").disabled).toBe(false);
+            expect(document.getElementById("resourceTableBody").innerHTML).toContain("Old Bridge");
+            expect(document.getElementById("resourceTableBody").innerHTML).toContain("Feedback available");
+            expect(document.getElementById("listMeta").textContent).toBe("1 item(s)");
+        });
+
+        test("handles list loading failure and empty resource table", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <input id="keyword" value="">
+                <select id="statusFilter"><option value=""></option></select>
+                <select id="categoryFilter"><option value=""></option></select>
+                <table><tbody id="resourceTableBody"></tbody></table>
+                <div id="listMeta"></div>
+            `;
+
+            sharedApp.requestJson.mockRejectedValue(new Error("Server offline"));
+            await hooks.loadResourceList();
+
+            expect(document.getElementById("resourceTableBody").textContent).toContain("Server offline");
+            expect(document.getElementById("listMeta").textContent).toBe("Load failed");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Server offline");
+
+            hooks.renderResourceTable([]);
+            expect(document.getElementById("resourceTableBody").textContent).toContain("No resources found.");
+        });
+
+        test("renders edit action for editable and locked statuses", () => {
+            const { hooks } = setupModule3("/my-resources.html");
+
+            expect(hooks.renderMyResourceEditAction({ id: 1, status: "Draft" }))
+                .toContain("./resource-edit.html?id=1");
+            expect(hooks.renderMyResourceEditAction({ id: 1, status: "Archived" }))
+                .toContain("Archived");
+            expect(hooks.renderMyResourceEditAction({ id: 1, status: "Pending Review" }))
+                .toContain("Locked");
+        });
+
+        test("opens history modal and renders loaded histories", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyModal" class="hidden" aria-hidden="true">
+                    <div class="heritage-history-modal-dialog"></div>
+                    <button data-close-history-modal type="button"></button>
+                    <div id="historyResourceTitle"></div>
+                    <div id="historyResourceStatus"></div>
+                    <div id="historyResourceVersion"></div>
+                    <div id="historySubmittedAt"></div>
+                    <div id="historyFeedbackText"></div>
+                    <div id="historyInspectorMeta"></div>
+                    <div id="historyInspectorBody"></div>
+                    <table><tbody id="submissionHistoryBody"></tbody></table>
+                    <table><tbody id="versionHistoryBody"></tbody></table>
+                </div>
+                <table><tbody id="resourceTableBody"></tbody></table>
+            `;
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce({
+                    title: "Ancient Bell",
+                    status: "Draft",
+                    currentVersionNo: 3,
+                    latestSubmittedAt: "2026-05-08T00:00:00",
+                    latestReviewStatus: "Rejected",
+                    latestFeedbackComment: "Need clearer license"
+                })
+                .mockResolvedValueOnce([
+                    { versionNo: 2, submittedAt: "2026-05-01T00:00:00", submissionNote: "v2", statusSnapshot: "Draft" }
+                ])
+                .mockResolvedValueOnce([
+                    { versionNo: 2, changeType: "Update", changeSummary: "Metadata updated", createdAt: "2026-05-01T00:00:00" }
+                ]);
+
+            await hooks.openHistoryModal("66");
+
+            expect(document.getElementById("historyModal").classList.contains("hidden")).toBe(false);
+            expect(document.body.classList.contains("history-modal-open")).toBe(true);
+            expect(document.getElementById("historyResourceTitle").textContent).toBe("Ancient Bell");
+            expect(document.getElementById("submissionHistoryBody").textContent).toContain("v2");
+            expect(document.getElementById("versionHistoryBody").textContent).toContain("Update");
+            expect(document.getElementById("versionHistoryBody").innerHTML).toContain("data-version-action=\"restore\"");
+        });
+
+        test("renders history load failure when detail request fails", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyModal" class="hidden" aria-hidden="true">
+                    <div id="historyResourceTitle"></div>
+                    <div id="historyResourceStatus"></div>
+                    <div id="historyResourceVersion"></div>
+                    <div id="historySubmittedAt"></div>
+                    <div id="historyFeedbackText"></div>
+                    <div id="historyInspectorMeta"></div>
+                    <div id="historyInspectorBody"></div>
+                    <table><tbody id="submissionHistoryBody"></tbody></table>
+                    <table><tbody id="versionHistoryBody"></tbody></table>
+                </div>
+            `;
+
+            sharedApp.requestJson
+                .mockRejectedValueOnce(new Error("history down"))
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+
+            await hooks.openHistoryModal("88");
+
+            expect(document.getElementById("historyResourceTitle").textContent).toBe("Load failed");
+            expect(document.getElementById("historyInspectorBody").textContent).toContain("history down");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("history down");
+        });
+
+        test("closes history modal and resets aria hidden", async () => {
+            jest.useFakeTimers();
+            const { hooks } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `<div id="historyModal" aria-hidden="false"></div>`;
+
+            hooks.closeHistoryModal();
+            jest.advanceTimersByTime(100);
+
+            expect(document.getElementById("historyModal").classList.contains("hidden")).toBe(true);
+            expect(document.getElementById("historyModal").getAttribute("aria-hidden")).toBe("true");
+            expect(document.body.classList.contains("history-modal-open")).toBe(false);
+        });
+
+        test("binds history modal actions for close and escape", async () => {
+            jest.useFakeTimers();
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyModal" aria-hidden="false">
+                    <button id="closeBtn" data-close-history-modal type="button">Close</button>
+                </div>
+                <table><tbody id="resourceTableBody"><tr><td><button id="historyBtn" data-history-id="17">History</button></td></tr></tbody></table>
+                <div id="historyResourceTitle"></div>
+                <div id="historyResourceStatus"></div>
+                <div id="historyResourceVersion"></div>
+                <div id="historySubmittedAt"></div>
+                <div id="historyFeedbackText"></div>
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+                <table><tbody id="submissionHistoryBody"></tbody></table>
+                <table><tbody id="versionHistoryBody"></tbody></table>
+            `;
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ title: "T", status: "Draft" })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+
+            hooks.bindHistoryModal();
+
+            document.getElementById("historyBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            await flushPromises();
+
+            document.getElementById("closeBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            jest.advanceTimersByTime(100);
+            expect(document.getElementById("historyModal").classList.contains("hidden")).toBe(true);
+
+            document.getElementById("historyModal").classList.remove("hidden");
+            document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+            jest.advanceTimersByTime(100);
+            expect(document.getElementById("historyModal").classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("resource edit initialization flows", () => {
+        function buildResourceEditDom() {
+            document.body.innerHTML = `
+                <form id="metadataForm">
+                    <input id="title" value="">
+                    <input id="copyright" value="">
+                    <select id="categoryId"></select>
+                    <input id="place" value="">
+                    <textarea id="description"></textarea>
+                    <select id="resourceType"></select>
+                    <select id="resourceTypeMirror"></select>
+                    <input id="tagInput">
+                    <div id="tagOptions"></div>
+                </form>
+                <form id="uploadForm"></form>
+                <form id="submitForm"><textarea id="submissionNote"></textarea></form>
+                <button id="createDraftBtn" type="button"></button>
+                <button id="metadataSaveBtn" type="button"></button>
+                <button id="submitReviewBtn" type="button"></button>
+                <div id="editorAlert" class="hidden"></div>
+                <button data-file-target="mediaFile" type="button"></button>
+                <button data-file-target="previewImage" type="button"></button>
+                <input id="mediaFile" type="file">
+                <input id="previewImage" type="file">
+                <span id="mediaFileNameText">Drag & drop file here or</span>
+                <span id="previewImageNameText">No file selected</span>
+                <span id="mediaFilePathText"></span>
+                <span id="previewImagePathText"></span>
+                <div id="mediaFileList"></div>
+                <div id="previewImageFrame"></div>
+                <span id="resourceUserName"></span>
+                <span id="resourceAccessText"></span>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+        }
+
+        test("initializes resource-edit page and loads an existing resource", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
+            buildResourceEditDom();
+            sharedApp.requestJson
+                .mockResolvedValueOnce([{ id: 5, name: "Ceremony" }])
+                .mockResolvedValueOnce([{ name: "Photo" }, { name: "Video" }])
+                .mockResolvedValueOnce({ name: "Editor", contributor: true })
+                .mockResolvedValueOnce({
+                    id: 42,
+                    title: "Temple Archive",
+                    copyright: "Museum rights",
+                    categoryId: 5,
+                    place: "Suzhou",
+                    description: "Historical description",
+                    resourceType: "photo",
+                    status: "Draft",
+                    mediaUrl: "resource-42/temple.jpg",
+                    previewImage: "resource-42/preview.jpg"
+                });
+
+            await hooks.initResourceEditPage();
+
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources/category-options",
+                { method: "GET" }
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                2,
+                "/api/contributor/resources/resource-type-options",
+                { method: "GET" }
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                3,
+                "/api/auth/me",
+                { method: "GET" }
+            );
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                4,
+                "/api/contributor/resources/42",
+                { method: "GET" }
+            );
+            expect(document.getElementById("title").value).toBe("Temple Archive");
+            expect(document.getElementById("resourceIdText").textContent).toBe("42");
+            expect(document.getElementById("mediaFileList").innerHTML).toContain("temple.jpg");
+        });
+
+        test("initializes resource-edit page without resource id and applies default meta", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html");
+            buildResourceEditDom();
+            sharedApp.requestJson
+                .mockResolvedValueOnce([{ id: 5, name: "Ceremony" }])
+                .mockResolvedValueOnce([{ name: "Photo" }])
+                .mockResolvedValueOnce({ name: "Editor", contributor: true });
+
+            await hooks.initResourceEditPage();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledTimes(3);
+            expect(document.getElementById("resourceIdText").textContent).toBe("Not saved yet");
+            expect(document.getElementById("resourceStatusText").textContent).toBe("Draft");
+        });
+    });
+
+    describe("additional branch coverage helpers", () => {
+        test("persists resource type selection across force, skip, and error branches", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=77");
+            document.body.innerHTML = `
+                <select id="resourceType"><option value="video">Video</option><option value="photo">Photo</option></select>
+                <select id="resourceTypeMirror"><option value="video" selected>Video</option><option value="photo">Photo</option></select>
+                <input id="mediaFile" type="file">
+                <div id="tagOptions"></div>
+                <div id="mediaFileList"></div>
+                <div id="previewImageFrame"></div>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+
+            sharedApp.requestJson.mockResolvedValueOnce(null);
+            const first = await hooks.persistResourceTypeSelection({ force: true });
+            expect(first).toBeNull();
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor/resources/77",
+                expect.objectContaining({ method: "PUT" })
+            );
+
+            sharedApp.requestJson.mockClear();
+            await hooks.persistResourceTypeSelection();
+            expect(sharedApp.requestJson).not.toHaveBeenCalled();
+
+            document.getElementById("resourceTypeMirror").value = "photo";
+            sharedApp.requestJson.mockRejectedValueOnce(new Error("save type failed"));
+            await expect(hooks.persistResourceTypeSelection({ force: true })).rejects.toThrow("save type failed");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("save type failed");
+        });
+
+        test("commits and removes tag chips through input and click interactions", () => {
+            const { hooks } = setupModule3("/resource-edit.html");
+            document.body.innerHTML = `
+                <input id="tagInput" value="">
+                <div id="tagOptions"></div>
+            `;
+            const input = document.getElementById("tagInput");
+
+            hooks.commitTagInputValue(null);
+            input.value = "   ";
+            hooks.commitTagInputValue(input);
+            expect(input.value).toBe("");
+
+            input.value = "Dynasty, Archive";
+            hooks.commitTagInputValue(input);
+            expect(document.getElementById("tagOptions").innerHTML).toContain("Dynasty");
+            expect(document.getElementById("tagOptions").innerHTML).toContain("Archive");
+
+            document.querySelector("[data-tag-name=\"Dynasty\"]")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(document.getElementById("tagOptions").innerHTML).not.toContain("Dynasty");
+        });
+
+        test("binds single file picker button fallback and auto upload branch", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=42");
+            document.body.innerHTML = `
+                <button data-file-target="previewImage" type="button"></button>
+                <input id="previewImage" type="file">
+                <span id="previewImageNameText">No file selected</span>
+                <button data-file-target="mediaFile" type="button"></button>
+                <input id="mediaFile" type="file">
+                <span id="mediaFileNameText">Drag & drop file here or</span>
+                <span id="mediaFilePathText"></span>
+                <span id="previewImagePathText"></span>
+                <div id="previewImageFrame"></div>
+                <div id="mediaFileList"></div>
+                <select id="resourceType"><option value="" selected></option></select>
+                <select id="resourceTypeMirror"><option value="" selected></option></select>
+                <div id="tagOptions"></div>
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+            const previewInput = document.getElementById("previewImage");
+            const clickSpy = jest.spyOn(previewInput, "click");
+            const originalCreateObjectURL = URL.createObjectURL;
+            const originalRevokeObjectURL = URL.revokeObjectURL;
+            URL.createObjectURL = jest.fn(() => "blob:preview");
+            URL.revokeObjectURL = jest.fn();
+            previewInput.showPicker = jest.fn(() => {
+                throw new Error("blocked");
+            });
+
+            hooks.bindSingleFilePicker("previewImage", "previewImageNameText", { autoUpload: true });
+            document.querySelector('[data-file-target="previewImage"]')
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(previewInput.showPicker).toHaveBeenCalled();
+            expect(clickSpy).toHaveBeenCalled();
+
+            const previewFile = new File(["img"], "preview.png", { type: "image/png" });
+            Object.defineProperty(previewInput, "files", {
+                configurable: true,
+                value: [previewFile]
+            });
+            sharedApp.requestJson.mockResolvedValueOnce({
+                id: 42,
+                status: "Draft",
+                resourceType: "photo",
+                previewImage: "resource-42/preview.png"
+            });
+
+            previewInput.dispatchEvent(new Event("change", { bubbles: true }));
+            await flushPromises();
+            await flushPromises();
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor/resources/42/files",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(document.getElementById("previewImageNameText").textContent).toContain("preview.png");
+
+            URL.createObjectURL = originalCreateObjectURL;
+            URL.revokeObjectURL = originalRevokeObjectURL;
+        });
+    });
+
+    describe("history inspector actions", () => {
+        test("loads and renders version snapshot", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+            `;
+
+            sharedApp.requestJson.mockResolvedValue({
+                versionNo: 6,
+                snapshotMap: {
+                    title: "Snapshot",
+                    resourceType: "document",
+                    tagNames: ["paper", "scan"],
+                    categoryId: 9
+                }
+            });
+
+            await hooks.viewVersionSnapshot("10", 6);
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor/resources/10/versions/6",
+                { method: "GET" }
+            );
+            expect(document.getElementById("historyInspectorMeta").textContent).toContain("V6");
+            expect(document.getElementById("historyInspectorBody").textContent).toContain("Snapshot");
+            expect(document.getElementById("historyInspectorBody").textContent).toContain("File/Document");
+        });
+
+        test("handles version snapshot failure", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+            `;
+
+            sharedApp.requestJson.mockRejectedValue(new Error("snapshot error"));
+            await hooks.viewVersionSnapshot("10", 6);
+
+            expect(document.getElementById("historyInspectorBody").textContent).toContain("snapshot error");
+            expect(sharedApp.showToast).toHaveBeenCalledWith("snapshot error");
+        });
+
+        test("compares version with current and renders diff rows", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+            `;
+
+            await hooks.loadHistoryModalData("31").catch(() => {});
+            sharedApp.requestJson.mockReset();
+            sharedApp.requestJson.mockResolvedValue({
+                leftVersionNo: 2,
+                rightVersionNo: 5,
+                diffItems: [
+                    { fieldName: "resourceType", fieldLabel: "Resource Type", leftValue: "photo", rightValue: "video", changed: true },
+                    { fieldName: "title", fieldLabel: "Title", leftValue: "A", rightValue: "A", changed: false }
+                ]
+            });
+
+            // set history state by opening modal data load once
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ title: "x", status: "Draft", currentVersionNo: 5 })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            document.body.innerHTML += `
+                <div id="historyResourceTitle"></div>
+                <div id="historyResourceStatus"></div>
+                <div id="historyResourceVersion"></div>
+                <div id="historySubmittedAt"></div>
+                <div id="historyFeedbackText"></div>
+                <table><tbody id="submissionHistoryBody"></tbody></table>
+                <table><tbody id="versionHistoryBody"></tbody></table>
+            `;
+            await hooks.loadHistoryModalData("31");
+
+            sharedApp.requestJson.mockReset();
+            sharedApp.requestJson.mockResolvedValue({
+                leftVersionNo: 2,
+                rightVersionNo: 5,
+                diffItems: [
+                    { fieldName: "resourceType", fieldLabel: "Resource Type", leftValue: "photo", rightValue: "video", changed: true }
+                ]
+            });
+
+            await hooks.compareVersionWithCurrent("31", 2);
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor/resources/31/versions/compare?v1=2&v2=5",
+                { method: "GET" }
+            );
+            expect(document.getElementById("historyInspectorBody").innerHTML).toContain("history-diff-row");
+            expect(document.getElementById("historyInspectorBody").textContent).toContain("Photo/Image");
+            expect(document.getElementById("historyInspectorBody").textContent).toContain("Video");
+        });
+
+        test("shows fallback when current version missing for compare", async () => {
+            const { hooks } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+            `;
+
+            await hooks.compareVersionWithCurrent("9", 1);
+            expect(document.getElementById("historyInspectorBody").textContent)
+                .toContain("comparison cannot be displayed");
+        });
+
+        test("rolls back a version when editable and confirmed", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            jest.spyOn(window, "confirm").mockReturnValue(true);
+            document.body.innerHTML = `
+                <input id="keyword" value="">
+                <select id="statusFilter"><option value=""></option></select>
+                <select id="categoryFilter"><option value=""></option></select>
+                <table><tbody id="resourceTableBody"></tbody></table>
+                <div id="listMeta"></div>
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+                <div id="historyResourceTitle"></div>
+                <div id="historyResourceStatus"></div>
+                <div id="historyResourceVersion"></div>
+                <div id="historySubmittedAt"></div>
+                <div id="historyFeedbackText"></div>
+                <table><tbody id="submissionHistoryBody"></tbody></table>
+                <table><tbody id="versionHistoryBody"></tbody></table>
+            `;
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ title: "R", status: "Draft", currentVersionNo: 3 })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce({ title: "R", status: "Draft", currentVersionNo: 3 })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            await hooks.loadHistoryModalData("15");
+            await hooks.rollbackToVersion("15", 2);
+
+            expect(sharedApp.requestJson).toHaveBeenCalledWith(
+                "/api/contributor/resources/15/versions/2/rollback",
+                expect.objectContaining({ method: "POST" })
+            );
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Version V2 restored successfully.");
+        });
+
+        test("blocks rollback when not editable or user cancels", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+                <div id="historyResourceTitle"></div>
+                <div id="historyResourceStatus"></div>
+                <div id="historyResourceVersion"></div>
+                <div id="historySubmittedAt"></div>
+                <div id="historyFeedbackText"></div>
+                <table><tbody id="submissionHistoryBody"></tbody></table>
+                <table><tbody id="versionHistoryBody"></tbody></table>
+            `;
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ title: "R", status: "Approved", currentVersionNo: 8 })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            await hooks.loadHistoryModalData("18");
+            await hooks.rollbackToVersion("18", 7);
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Only Draft or Rejected resources can be restored.");
+
+            sharedApp.showToast.mockClear();
+            jest.spyOn(window, "confirm").mockReturnValue(false);
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ title: "R", status: "Draft", currentVersionNo: 8 })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            await hooks.loadHistoryModalData("18");
+            await hooks.rollbackToVersion("18", 7);
+            expect(window.confirm).toHaveBeenCalled();
+            expect(sharedApp.requestJson).not.toHaveBeenCalledWith(
+                "/api/contributor/resources/18/versions/7/rollback",
+                expect.anything()
+            );
+        });
+
+        test("renders compare fallback when no diff items", () => {
+            const { hooks } = setupModule3("/my-resources.html");
+            document.body.innerHTML = `
+                <div id="historyInspectorMeta"></div>
+                <div id="historyInspectorBody"></div>
+            `;
+
+            hooks.renderVersionCompare({ leftVersionNo: 1, rightVersionNo: 2, diffItems: [] });
+            expect(document.getElementById("historyInspectorBody").textContent)
+                .toContain("No compare data is available.");
+        });
+    });
+
+    describe("heritage module modal and routing helpers", () => {
+        test("activates and closes heritage module modal", async () => {
+            jest.useFakeTimers();
+            const { hooks } = setupModule3("/resource-edit.html");
+            document.body.innerHTML = `
+                <form class="module-stack" id="formA">
+                    <section class="module-card" id="module-identity"></section>
+                </form>
+                <form class="module-stack" id="formB">
+                    <section class="module-card" id="module-tags"></section>
+                </form>
+                <a id="nodeIdentity" class="heritage-node" data-target="module-identity"></a>
+                <a id="nodeTags" class="module-pill" href="#module-tags"></a>
+                <div id="activeModuleLabel"></div>
+                <div id="activeModuleHint"></div>
+                <input id="title">
+                <input id="tagInput">
+            `;
+            document.getElementById("module-identity").scrollIntoView = jest.fn();
+            document.getElementById("title").focus = jest.fn();
+
+            hooks.activateHeritageModule("module-identity", { shouldScroll: true, shouldFocus: true });
+            jest.advanceTimersByTime(420);
+            expect(document.getElementById("module-identity").classList.contains("is-active")).toBe(true);
+            expect(document.getElementById("formA").classList.contains("active-workspace")).toBe(true);
+            expect(document.getElementById("nodeIdentity").getAttribute("aria-current")).toBe("true");
+
+            hooks.openHeritageModuleModal("module-tags", { shouldFocus: false });
+            expect(document.body.classList.contains("module-modal-open")).toBe(true);
+
+            hooks.closeHeritageModuleModal();
+            expect(document.body.classList.contains("module-modal-open")).toBe(false);
+            expect(document.getElementById("module-tags").getAttribute("aria-hidden")).toBe("true");
+            expect(document.getElementById("activeModuleLabel").textContent).toContain("Click an icon");
+        });
+
+        test("binds heritage landing and module modal shortcuts", () => {
+            jest.useFakeTimers();
+            const { hooks } = setupModule3("/resource-edit.html#module-tags");
+            document.body.innerHTML = `
+                <form class="module-stack"><section class="module-card" id="module-tags"></section></form>
+                <a id="nodeTags" class="heritage-node" data-target="module-tags"></a>
+                <button id="closeModuleBtn" data-close-module-modal type="button">x</button>
+                <div id="activeModuleLabel"></div>
+                <div id="activeModuleHint"></div>
+                <input id="tagInput">
+            `;
+            document.getElementById("tagInput").focus = jest.fn();
+
+            hooks.bindHeritageLanding();
+            hooks.bindModuleModalUI();
+            jest.advanceTimersByTime(1200);
+            expect(document.body.classList.contains("module-flow-enabled")).toBe(true);
+
+            document.getElementById("nodeTags")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            expect(document.body.classList.contains("module-modal-open")).toBe(true);
+
+            document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+            expect(document.body.classList.contains("module-modal-open")).toBe(false);
+        });
+
+        test("focus helper prefers tag input for module-tags", () => {
+            jest.useFakeTimers();
+            const { hooks } = setupModule3("/resource-edit.html");
+            document.body.innerHTML = `
+                <input id="submissionNote">
+                <input id="tagInput">
+            `;
+            document.getElementById("tagInput").focus = jest.fn();
+
+            hooks.focusModuleField("module-tags");
+            jest.advanceTimersByTime(420);
+            expect(document.getElementById("tagInput").focus).toHaveBeenCalled();
+        });
+    });
+
+    describe("access and draft helpers", () => {
+        test("ensures contributor access and redirects on errors", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html?id=7");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+
+            sharedApp.requestJson.mockResolvedValueOnce({ contributor: true, name: "A" });
+            await expect(hooks.ensureContributorWorkspaceAccess()).resolves.toEqual({ contributor: true, name: "A" });
+
+            sharedApp.requestJson.mockResolvedValueOnce({ contributor: false });
+            await expect(hooks.ensureContributorWorkspaceAccess()).rejects.toThrow("Contributor access required.");
+
+            sharedApp.requestJson.mockRejectedValueOnce({ status: 401 });
+            await expect(hooks.ensureContributorWorkspaceAccess()).rejects.toEqual({ status: 401 });
+
+            sharedApp.requestJson.mockRejectedValueOnce({ status: 403, message: "Denied" });
+            await expect(hooks.ensureContributorWorkspaceAccess()).rejects.toEqual({ status: 403, message: "Denied" });
+        });
+
+        test("creates draft and updates url, or returns null on failure", async () => {
+            const { hooks, sharedApp } = setupModule3("/resource-edit.html");
+            document.body.innerHTML = `
+                <span id="resourceIdText"></span>
+                <span id="resourceStatusText"></span>
+                <span id="updatedAtText"></span>
+                <span id="resourceStatusBadge"></span>
+            `;
+
+            sharedApp.requestJson.mockResolvedValueOnce({ id: 123, status: "Draft" });
+            const created = await hooks.createDraftForEditing();
+            expect(created.id).toBe(123);
+            expect(window.location.search).toBe("?id=123");
+
+            sharedApp.requestJson.mockRejectedValueOnce(new Error("create failed"));
+            await expect(hooks.createDraftForEditing({ throwOnError: true })).rejects.toThrow("create failed");
+
+            sharedApp.requestJson.mockRejectedValueOnce(new Error("silent fail"));
+            const fallback = await hooks.createDraftForEditing();
+            expect(fallback).toBeNull();
+            expect(sharedApp.showToast).toHaveBeenCalledWith("silent fail");
+        });
+
+        test("binds create draft button and list filter actions", async () => {
+            const { hooks, sharedApp } = setupModule3("/my-resources.html");
+            jest.spyOn(console, "error").mockImplementation(() => {});
+            document.body.innerHTML = `
+                <button id="createDraftBtn">create</button>
+                <button id="searchBtn">search</button>
+                <button id="resetBtn">reset</button>
+                <input id="keyword" value="needle">
+                <select id="statusFilter"><option value="Draft" selected>Draft</option></select>
+                <select id="categoryFilter"><option value="8" selected>8</option></select>
+                <table><tbody id="resourceTableBody"></tbody></table>
+                <div id="listMeta"></div>
+            `;
+
+            sharedApp.requestJson
+                .mockResolvedValueOnce({ id: 59 })
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            hooks.bindCreateDraftButton();
+            hooks.bindListFilterButtons();
+
+            document.getElementById("createDraftBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+            expect(sharedApp.showToast).toHaveBeenCalledWith("Draft created successfully.");
+            expect(sharedApp.requestJson).toHaveBeenNthCalledWith(
+                1,
+                "/api/contributor/resources",
+                { method: "POST" }
+            );
+
+            document.getElementById("searchBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            document.getElementById("resetBtn")
+                .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await flushPromises();
+
+            expect(document.getElementById("keyword").value).toBe("");
+            expect(document.getElementById("statusFilter").value).toBe("");
+            expect(document.getElementById("categoryFilter").value).toBe("");
         });
     });
 });
