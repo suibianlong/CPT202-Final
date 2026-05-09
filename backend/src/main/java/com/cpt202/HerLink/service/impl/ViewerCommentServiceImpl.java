@@ -17,6 +17,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// Manage viewer comments for approved resources.
 @Service
 public class ViewerCommentServiceImpl implements ViewerCommentService {
 
@@ -35,6 +36,7 @@ public class ViewerCommentServiceImpl implements ViewerCommentService {
         this.userAccessService = userAccessService;
     }
 
+    // Return comments for an approved resource.
     @Override
     public List<CommentVO> listComments(Long resourceId) {
         validateApprovedResource(resourceId);
@@ -51,6 +53,7 @@ public class ViewerCommentServiceImpl implements ViewerCommentService {
         return commentVOList;
     }
 
+    // Create a comment for an approved resource after validation and duplicate checking.
     @Override
     @Transactional
     public CommentVO createComment(Long currentUserId, Long resourceId, CommentCreateRequest request) {
@@ -84,6 +87,7 @@ public class ViewerCommentServiceImpl implements ViewerCommentService {
         return buildCommentVO(savedComment);
     }
 
+    // Delete a comment when the current user is the owner or an administrator.
     @Override
     @Transactional
     public void deleteComment(Long currentUserId, Long resourceId, Long commentId) {
@@ -113,6 +117,7 @@ public class ViewerCommentServiceImpl implements ViewerCommentService {
         commentMapper.deleteById(commentId);
     }
 
+    // Ensure the target resource exists and is approved for viewer interaction.
     private void validateApprovedResource(Long resourceId) {
         if (resourceId == null) {
             throw AppException.badRequest("Resource id is required.");
@@ -122,6 +127,7 @@ public class ViewerCommentServiceImpl implements ViewerCommentService {
         }
     }
 
+    // Normalize comment content and validates that it is not empty or too long.
     private String normalizeCommentContent(String content) {
         String normalizedContent = content == null ? null : content.trim();
         if (normalizedContent == null || normalizedContent.isEmpty()) {

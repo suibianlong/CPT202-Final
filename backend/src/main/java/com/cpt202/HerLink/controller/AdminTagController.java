@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+// Manage tags and tag usage history for administrators.
 @RestController
 @RequestMapping("/api/admin/tags")
 public class AdminTagController {

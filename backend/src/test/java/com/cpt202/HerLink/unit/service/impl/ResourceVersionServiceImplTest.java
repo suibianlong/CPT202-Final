@@ -2,14 +2,12 @@ package com.cpt202.HerLink.unit.service.impl;
 
 import com.cpt202.HerLink.service.impl.*;
 import com.cpt202.HerLink.service.impl.ResourceVersionServiceImpl;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +27,6 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.cpt202.HerLink.entity.Category;
 import com.cpt202.HerLink.entity.Resource;
 import com.cpt202.HerLink.entity.ResourceSubmission;
@@ -83,7 +80,7 @@ class ResourceVersionServiceImplTest {
     private static final Integer V1 = 1;
     private static final Integer V2 = 2;
 
-    // ==================== Utility Method ====================
+    // Utility Method
     private Resource resource() {
         Resource r = new Resource();
         r.setId(RESOURCE_ID);
@@ -142,7 +139,6 @@ class ResourceVersionServiceImplTest {
         return t;
     }
 
-    // ============================================================
     @Nested
     @DisplayName("saveVersionSnapshot Method Test")
     class SaveVersionSnapshot {
@@ -249,7 +245,7 @@ class ResourceVersionServiceImplTest {
         @Test
         @DisplayName("Boundary case: version number equals 0")
         void get_version_zero() {
-            // 关键：先mock resource，让loadOwnedResource通过
+            // mock resource first，then let loadOwnedResource pass
             when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(resource());
 
             AppException e = assertThrows(AppException.class,
@@ -260,7 +256,7 @@ class ResourceVersionServiceImplTest {
         @Test
         @DisplayName("Boundary case: version number is negative")
         void get_version_negative() {
-            // 关键：先mock resource，让loadOwnedResource通过
+            // mock resource first，then let loadOwnedResource pass
             when(resourceMapper.selectById(RESOURCE_ID)).thenReturn(resource());
 
             AppException e = assertThrows(AppException.class,
@@ -384,7 +380,7 @@ class ResourceVersionServiceImplTest {
         void rollback_tag_too_long() {
             String longTag = "a".repeat(101);
             ResourceVersion v = version(V1);
-            // 关键：快照必须包含 categoryId，否则会提前抛分类异常
+            //The snapshot must contain the categoryId; otherwise, a classification exception will be thrown in advance
             v.setSnapshot("{\"categoryId\":1, \"resourceType\":\"ARTICLE\", \"tagNames\":[\""+longTag+"\"]}");
 
             when(resourceMapper.selectByIdForUpdate(RESOURCE_ID)).thenReturn(resource());

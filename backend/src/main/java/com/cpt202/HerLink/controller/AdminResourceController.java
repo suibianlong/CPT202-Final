@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// Manage resource listing, archiving, and unarchiving for administrators.
 @RestController
 @RequestMapping("/api/admin/resources")
 public class AdminResourceController {

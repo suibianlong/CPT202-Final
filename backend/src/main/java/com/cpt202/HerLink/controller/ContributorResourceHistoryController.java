@@ -10,9 +10,9 @@ import com.cpt202.HerLink.vo.ResourceVersionCompareVO;
 import com.cpt202.HerLink.vo.ResourceVersionVO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
+// Manage contributor resource submission history, versions, comparison, and rollback.
 @RestController
 @RequestMapping("/api/contributor/resources")
 public class ContributorResourceHistoryController {

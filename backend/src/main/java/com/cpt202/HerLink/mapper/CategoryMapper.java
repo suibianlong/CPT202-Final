@@ -8,7 +8,6 @@ import org.apache.ibatis.annotations.Param;
 
 import com.cpt202.HerLink.entity.Category;
 
-// Data access of category table
 @Mapper
 public interface CategoryMapper {
 

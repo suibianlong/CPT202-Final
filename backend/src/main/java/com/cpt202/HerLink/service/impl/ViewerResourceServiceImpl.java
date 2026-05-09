@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 
+// Provide approved resource browsing, detail lookup, and filter options for viewers.
 @Service
 public class ViewerResourceServiceImpl implements ViewerResourceService {
 
@@ -44,6 +45,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         this.resourceTypeMapper = resourceTypeMapper;
     }
 
+    // Return approved resources with optional keyword, type, category, and sort filters.
     @Override
     public List<ResourceListItemVO> listApprovedResources(String keyword,
                                                           String resourceType,
@@ -86,6 +88,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         return itemVOList;
     }
 
+    // Return detailed information for an approved resource.
     @Override
     public ResourceDetailVO getApprovedResourceDetail(Long resourceId) {
         Resource resource = resourceMapper.selectApprovedById(resourceId);
@@ -96,6 +99,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         return buildResourceDetailVO(resource);
     }
 
+    // Return active category options for viewer resource filtering.
     @Override
     public List<CategoryTagOptionVO> listCategoryOptions() {
         List<Category> activeCategories = categoryMapper.selectActiveCategories();
@@ -117,6 +121,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         return optionVOList;
     }
 
+    // Return active resource type options for viewer resource filtering.
     @Override
     public List<CategoryTagOptionVO> listResourceTypeOptions() {
         List<ResourceType> resourceTypeList = resourceTypeMapper.selectActiveResourceTypes();
@@ -138,6 +143,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         return optionVOList;
     }
 
+    // Builds the approved resource detail response with tags and media files.
     private ResourceDetailVO buildResourceDetailVO(Resource resource) {
         ResourceDetailVO resourceDetailVO = new ResourceDetailVO();
         resourceDetailVO.setId(resource.getId());
@@ -162,6 +168,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         return resourceDetailVO;
     }
 
+    // Resolve all media file URLs while excluding the preview image and removing duplicates.
     private List<String> resolveMediaUrls(Resource resource) {
         if (resource == null || resource.getId() == null) {
             return Collections.emptyList();
@@ -189,6 +196,7 @@ public class ViewerResourceServiceImpl implements ViewerResourceService {
         mediaUrls.add(mediaUrl);
     }
 
+    // Resolve a resource type filter to an active database resource type id.
     private Long normalizeResourceTypeId(String resourceType) {
         if (resourceType == null || resourceType.isBlank()) {
             return null;

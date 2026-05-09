@@ -3,7 +3,6 @@ package com.cpt202.HerLink.exception;
 import java.util.Collections;
 import java.util.List;
 
-// custom application exception
 public class AppException extends RuntimeException {
 
     private final int statusCode;

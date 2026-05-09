@@ -3,7 +3,6 @@ package com.cpt202.HerLink.entity;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-// corresponding to the "resource_submission" table
 public class ResourceSubmission implements Serializable {
 
     private static final long serialVersionUID = 1L;

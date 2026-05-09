@@ -1,13 +1,10 @@
 package com.cpt202.HerLink.mapper;
 
 import java.util.List;
-
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
 import com.cpt202.HerLink.entity.ResourceSubmission;
 
-// Data access of resource submission table
 @Mapper
 public interface ResourceSubmissionMapper {
 

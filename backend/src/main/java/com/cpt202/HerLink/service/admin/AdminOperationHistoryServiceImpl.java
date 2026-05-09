@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+// Records and retrieves admin operation history.
 @Service
 public class AdminOperationHistoryServiceImpl implements AdminOperationHistoryService {
 
@@ -19,6 +20,7 @@ public class AdminOperationHistoryServiceImpl implements AdminOperationHistorySe
         this.adminOperationHistoryMapper = adminOperationHistoryMapper;
     }
 
+    // Records an admin operation and logs a warning if history recording fails.
     @Override
     public void recordOperation(String itemName, String kind, String module, String action, String administrator) {
         try {
@@ -35,6 +37,7 @@ public class AdminOperationHistoryServiceImpl implements AdminOperationHistorySe
         }
     }
 
+    // Returns all operation history or filters it by module when provided.
     @Override
     public List<AdminOperationHistoryResponse> getOperationHistory(String module) {
         if (module == null || module.isBlank()) {

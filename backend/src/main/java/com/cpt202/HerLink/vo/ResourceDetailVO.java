@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// show to users
 public class ResourceDetailVO implements Serializable {
 
     private static final long serialVersionUID = 1L;

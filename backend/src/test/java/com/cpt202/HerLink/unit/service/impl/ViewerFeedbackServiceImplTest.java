@@ -2,11 +2,9 @@ package com.cpt202.HerLink.unit.service.impl;
 
 import com.cpt202.HerLink.service.impl.*;
 import com.cpt202.HerLink.service.impl.ViewerFeedbackServiceImpl;
-
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,7 +23,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
-
 import com.cpt202.HerLink.dto.viewer.FeedbackCreateRequest;
 import com.cpt202.HerLink.entity.AttachedFile;
 import com.cpt202.HerLink.entity.Feedback;
@@ -55,13 +52,13 @@ class ViewerFeedbackServiceImplTest {
     private static final int MAX_ATTACH_COUNT = 3;
     private static final long MAX_ATTACH_SIZE = 10L * 1024 * 1024;
 
-    // 通用测试对象
+    // General test object
     private Feedback testFeedback;
     private FeedbackCreateRequest validRequest;
 
     @BeforeEach
     void setUp() {
-        // 初始化测试反馈实体
+        // Initialize the test feedback entity
         testFeedback = new Feedback();
         testFeedback.setFeedbackId(TEST_FEEDBACK_ID);
         testFeedback.setUserId(TEST_USER_ID);
@@ -70,34 +67,30 @@ class ViewerFeedbackServiceImplTest {
         testFeedback.setFileNum(0);
         testFeedback.setUploadedAt(LocalDateTime.now());
 
-        // 初始化有效请求对象
+        // Initialize the valid request object
         validRequest = new FeedbackCreateRequest();
         validRequest.setFeedbackType("Bug Report");
         validRequest.setDescription("Valid feedback content");
         validRequest.setFiles(new MultipartFile[0]);
     }
 
-    // ========================== 公开业务方法测试 ==========================
-    @Nested
+    // Public business method testing
     @DisplayName("Create Feedback - createFeedback")
     class CreateFeedbackTests {
 
         @Test
         @DisplayName("Normal scenario: Create feedback successfully without attachments")
         void createFeedback_WithoutAttachments_Success() {
-            // given
             when(feedbackMapper.insert(any(Feedback.class))).thenAnswer(invocation -> {
                 Feedback feedback = invocation.getArgument(0);
-                feedback.setFeedbackId(TEST_FEEDBACK_ID); // 手动给 Mock 的插入设置 ID
+                feedback.setFeedbackId(TEST_FEEDBACK_ID); // Manually set the ID for the insertion of the Mock
                 return 1;
             });
             when(feedbackMapper.selectById(eq(TEST_FEEDBACK_ID))).thenReturn(testFeedback);
             when(attachedFileMapper.selectByFeedbackId(eq(TEST_FEEDBACK_ID))).thenReturn(Collections.emptyList());
 
-            // when
             FeedbackVO result = viewerFeedbackService.createFeedback(TEST_USER_ID, validRequest);
 
-            // then
             assertNotNull(result);
             assertEquals(TEST_FEEDBACK_ID, result.getFeedbackId());
             assertEquals(TEST_USER_ID, result.getUserId());
@@ -110,7 +103,6 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: Create feedback successfully with maximum valid attachments (3 files)")
         void createFeedback_WithMaxValidAttachments_Success() {
-            // given
             MultipartFile file1 = mock(MultipartFile.class);
             MultipartFile file2 = mock(MultipartFile.class);
             MultipartFile file3 = mock(MultipartFile.class);
@@ -144,10 +136,8 @@ class ViewerFeedbackServiceImplTest {
             when(feedbackMapper.selectById(any())).thenReturn(testFeedback);
             when(attachedFileMapper.selectByFeedbackId(any())).thenReturn(List.of(new AttachedFile()));
 
-            // when
             FeedbackVO result = viewerFeedbackService.createFeedback(TEST_USER_ID, validRequest);
 
-            // then
             assertNotNull(result);
             assertEquals(3, result.getFileNum());
             assertFalse(result.getAttachments().isEmpty());
@@ -156,7 +146,6 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Exception scenario: Request is null, throw parameter exception")
         void createFeedback_RequestIsNull_ThrowException() {
-            // when & then
             AppException exception = assertThrows(AppException.class,
                     () -> viewerFeedbackService.createFeedback(TEST_USER_ID, null));
             assertEquals("Feedback type must be Bug Report or Suggestion.", exception.getMessage());
@@ -165,7 +154,6 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Exception scenario: Attachment count exceeds maximum limit (3 files), throw exception")
         void createFeedback_AttachmentsExceedMaxCount_ThrowException() {
-            // given
             MultipartFile[] files = new MultipartFile[4];
             for (int i = 0; i < 4; i++) {
                 MultipartFile file = mock(MultipartFile.class);
@@ -174,7 +162,6 @@ class ViewerFeedbackServiceImplTest {
             }
             validRequest.setFiles(files);
 
-            // when & then
             AppException exception = assertThrows(AppException.class,
                     () -> viewerFeedbackService.createFeedback(TEST_USER_ID, validRequest));
             assertEquals("You can upload up to 3 feedback attachments.", exception.getMessage());
@@ -183,13 +170,11 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Exception scenario: Attachment size exceeds 10MB, throw exception")
         void createFeedback_AttachmentExceedMaxSize_ThrowException() {
-            // given
             MultipartFile file = mock(MultipartFile.class);
             when(file.isEmpty()).thenReturn(false);
             when(file.getSize()).thenReturn(MAX_ATTACH_SIZE + 1);
             validRequest.setFiles(new MultipartFile[]{file});
 
-            // when & then
             AppException exception = assertThrows(AppException.class,
                     () -> viewerFeedbackService.createFeedback(TEST_USER_ID, validRequest));
             assertEquals("Each feedback attachment must be 10MB or smaller.", exception.getMessage());
@@ -197,10 +182,9 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: Attachment size is exactly 10MB, create successfully")
         void createFeedback_AttachmentSizeExactly10MB_Success() {
-            // given：精准等于 10MB
             MultipartFile file = mock(MultipartFile.class);
             when(file.isEmpty()).thenReturn(false);
-            when(file.getSize()).thenReturn(MAX_ATTACH_SIZE); // 刚好10MB
+            when(file.getSize()).thenReturn(MAX_ATTACH_SIZE);
             when(file.getOriginalFilename()).thenReturn("test.pdf");
             when(file.getContentType()).thenReturn("application/pdf");
 
@@ -219,10 +203,8 @@ class ViewerFeedbackServiceImplTest {
             when(feedbackMapper.selectById(any())).thenReturn(testFeedback);
             when(attachedFileMapper.selectByFeedbackId(any())).thenReturn(List.of(new AttachedFile()));
 
-            // when
             FeedbackVO result = viewerFeedbackService.createFeedback(TEST_USER_ID, validRequest);
 
-            // then
             assertNotNull(result);
             assertEquals(1, result.getFileNum());
             assertFalse(result.getAttachments().isEmpty());
@@ -236,14 +218,11 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Normal scenario: Multiple feedbacks exist, return corresponding VO list")
         void listMyFeedback_HasFeedbacks_ReturnList() {
-            // given
             when(feedbackMapper.selectByUserId(eq(TEST_USER_ID))).thenReturn(List.of(testFeedback));
             when(attachedFileMapper.selectByFeedbackId(eq(TEST_FEEDBACK_ID))).thenReturn(Collections.emptyList());
 
-            // when
             List<FeedbackVO> result = viewerFeedbackService.listMyFeedback(TEST_USER_ID);
 
-            // then
             assertNotNull(result);
             assertEquals(1, result.size());
             assertEquals(TEST_FEEDBACK_ID, result.get(0).getFeedbackId());
@@ -252,13 +231,10 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: No feedback data, return empty list")
         void listMyFeedback_NoFeedbacks_ReturnEmptyList() {
-            // given
             when(feedbackMapper.selectByUserId(eq(TEST_USER_ID))).thenReturn(Collections.emptyList());
 
-            // when
             List<FeedbackVO> result = viewerFeedbackService.listMyFeedback(TEST_USER_ID);
 
-            // then
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }
@@ -266,13 +242,10 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: Mapper returns null, return empty list")
         void listMyFeedback_MapperReturnNull_ReturnEmptyList() {
-            // given
             when(feedbackMapper.selectByUserId(eq(TEST_USER_ID))).thenReturn(null);
 
-            // when
             List<FeedbackVO> result = viewerFeedbackService.listMyFeedback(TEST_USER_ID);
 
-            // then
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }
@@ -285,14 +258,11 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Normal scenario: Multiple feedbacks exist, return full list")
         void listAllFeedback_HasFeedbacks_ReturnList() {
-            // given
             when(feedbackMapper.selectAll()).thenReturn(List.of(testFeedback));
             when(attachedFileMapper.selectByFeedbackId(eq(TEST_FEEDBACK_ID))).thenReturn(Collections.emptyList());
 
-            // when
             List<FeedbackVO> result = viewerFeedbackService.listAllFeedback();
 
-            // then
             assertNotNull(result);
             assertEquals(1, result.size());
             assertEquals("Bug Report", result.get(0).getFeedbackType());
@@ -301,13 +271,10 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: No feedback data, return empty list")
         void listAllFeedback_NoFeedbacks_ReturnEmptyList() {
-            // given
             when(feedbackMapper.selectAll()).thenReturn(Collections.emptyList());
 
-            // when
             List<FeedbackVO> result = viewerFeedbackService.listAllFeedback();
 
-            // then
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }
@@ -315,19 +282,16 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: Mapper returns null, return empty list")
         void listAllFeedback_MapperReturnNull_ReturnEmptyList() {
-            // given
             when(feedbackMapper.selectAll()).thenReturn(null);
 
-            // when
             List<FeedbackVO> result = viewerFeedbackService.listAllFeedback();
 
-            // then
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }
     }
 
-    // ========================== 私有工具方法（反射测试） ==========================
+    //Private tool method (Reflection testing)
     @Nested
     @DisplayName("Normalize Feedback Type - normalizeFeedbackType")
     class NormalizeFeedbackTypeTests {
@@ -335,46 +299,36 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Normal scenario: Mixed case Bug Report, normalize to standard format")
         void normalizeFeedbackType_BugReportMixedCase_Success() {
-            // given
             var method = getNormalizeMethod("normalizeFeedbackType", String.class);
 
-            // when
             String result = invokeMethod(method, "bUg rEpOrT");
 
-            // then
             assertEquals("Bug Report", result);
         }
 
         @Test
         @DisplayName("Normal scenario: Standard Suggestion format, return directly")
         void normalizeFeedbackType_ValidSuggestion_Success() {
-            // given
             var method = getNormalizeMethod("normalizeFeedbackType", String.class);
 
-            // when
             String result = invokeMethod(method, "Suggestion");
 
-            // then
             assertEquals("Suggestion", result);
         }
 
         @Test
         @DisplayName("Exception scenario: Type is null, throw exception")
         void normalizeFeedbackType_Null_ThrowException() {
-            // given
             var method = getNormalizeMethod("normalizeFeedbackType", String.class);
 
-            // when & then
             assertThrows(AppException.class, () -> invokeMethod(method, (String) null));
         }
 
         @Test
         @DisplayName("Exception scenario: Invalid feedback type, throw exception")
         void normalizeFeedbackType_InvalidType_ThrowException() {
-            // given
             var method = getNormalizeMethod("normalizeFeedbackType", String.class);
 
-            // when & then
             AppException exception = assertThrows(AppException.class,
                     () -> invokeMethod(method, "OtherType"));
             assertEquals("Feedback type must be Bug Report or Suggestion.", exception.getMessage());
@@ -388,23 +342,18 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Normal scenario: Description with whitespace, return normalized value")
         void normalizeDescription_WithWhitespace_Success() {
-            // given
             var method = getNormalizeMethod("normalizeDescription", String.class);
 
-            // when
             String result = invokeMethod(method, "  Good feedback  ");
 
-            // then
             assertEquals("Good feedback", result);
         }
 
         @Test
         @DisplayName("Exception scenario: Description is null, throw exception")
         void normalizeDescription_Null_ThrowException() {
-            // given
             var method = getNormalizeMethod("normalizeDescription", String.class);
 
-            // when & then
             AppException exception = assertThrows(AppException.class,
                     () -> invokeMethod(method, (String) null));
             assertEquals("Feedback description is required.", exception.getMessage());
@@ -413,10 +362,8 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Exception scenario: Description is empty string, throw exception")
         void normalizeDescription_Empty_ThrowException() {
-            // given
             var method = getNormalizeMethod("normalizeDescription", String.class);
 
-            // when & then
             AppException exception = assertThrows(AppException.class,
                     () -> invokeMethod(method, ""));
             assertEquals("Feedback description is required.", exception.getMessage());
@@ -430,13 +377,10 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: File array is null, return empty list")
         void normalizeAttachments_NullArray_ReturnEmpty() {
-            // given
             var method = getNormalizeMethod("normalizeAttachments", MultipartFile[].class);
 
-            // when
             List<MultipartFile> result = invokeMethod(method, (MultipartFile[]) null);
 
-            // then
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }
@@ -444,36 +388,30 @@ class ViewerFeedbackServiceImplTest {
         @Test
         @DisplayName("Boundary scenario: Empty file array, return empty list")
         void normalizeAttachments_EmptyArray_ReturnEmpty() {
-            // given
             var method = getNormalizeMethod("normalizeAttachments", MultipartFile[].class);
 
-            // when
             List<MultipartFile> result = invokeMethod(method, new MultipartFile[0]);
 
-            // then
             assertTrue(result.isEmpty());
         }
 
         @Test
         @DisplayName("Normal scenario: Filter null/empty files, keep valid files")
         void normalizeAttachments_FilterInvalidFiles_ReturnValid() {
-            // given
             var method = getNormalizeMethod("normalizeAttachments", MultipartFile[].class);
             MultipartFile validFile = mock(MultipartFile.class);
             when(validFile.isEmpty()).thenReturn(false);
             MultipartFile emptyFile = mock(MultipartFile.class);
             when(emptyFile.isEmpty()).thenReturn(true);
 
-            // when
             List<MultipartFile> result = invokeMethod(method, new MultipartFile[]{null, validFile, emptyFile});
 
-            // then
             assertEquals(1, result.size());
             assertEquals(validFile, result.get(0));
         }
     }
 
-    // ========================== 反射工具方法 ==========================
+    // Reflection tool method
     private java.lang.reflect.Method getNormalizeMethod(String name, Class<?> paramType) {
         try {
             java.lang.reflect.Method method = ViewerFeedbackServiceImpl.class.getDeclaredMethod(name, paramType);

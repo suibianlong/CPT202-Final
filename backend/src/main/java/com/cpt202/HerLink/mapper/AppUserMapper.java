@@ -2,7 +2,6 @@ package com.cpt202.HerLink.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
 import com.cpt202.HerLink.entity.AppUser;
 
 @Mapper

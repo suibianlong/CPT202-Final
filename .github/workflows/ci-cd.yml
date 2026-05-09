@@ -1,5 +1,8 @@
 name: CI/CD
 
+# Run the workflow when code is pushed to main/master,
+# when a pull request targets main, or when manually triggered.
+
 on:
   push:
     branches:

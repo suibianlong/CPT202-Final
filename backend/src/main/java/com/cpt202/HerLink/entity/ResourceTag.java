@@ -2,7 +2,6 @@ package com.cpt202.HerLink.entity;
 
 import java.io.Serializable;
 
-// corresponding to the "resource_tag" table
 public class ResourceTag implements Serializable {
 
     private static final long serialVersionUID = 1L;

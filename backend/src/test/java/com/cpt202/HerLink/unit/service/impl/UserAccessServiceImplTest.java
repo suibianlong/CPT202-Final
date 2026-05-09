@@ -2,14 +2,12 @@ package com.cpt202.HerLink.unit.service.impl;
 
 import com.cpt202.HerLink.service.impl.*;
 import com.cpt202.HerLink.service.impl.UserAccessServiceImpl;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +30,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-
 import com.cpt202.HerLink.dto.auth.AccountUpdateRequest;
 import com.cpt202.HerLink.dto.auth.ContributorRequestSubmitRequest;
 import com.cpt202.HerLink.dto.auth.ContributorReviewDecisionRequest;
@@ -97,10 +94,14 @@ class UserAccessServiceImplTest {
         javaMailSenderProvider,
         emailNotificationService,
         adminOperationHistoryService,
-        "test-host",          // mailHost（随便填，mock不会用到）
-        "test@example.com",   // verificationFromAddress
-        10,                   // registerCodeExpireMinutes
-        60                    // registerCodeResendSeconds
+        // mailHost（you can fill in）
+        "test-host",
+        // verificationFromAddress
+        "test@example.com",
+        // registerCodeExpireMinutes
+        10,
+        // registerCodeResendSeconds
+        60
         );
         testUser = new AppUser();
         testUser.setUserId(TEST_USER_ID);
@@ -177,7 +178,7 @@ class UserAccessServiceImplTest {
             RegisterVerificationCodeRequest request = new RegisterVerificationCodeRequest();
             request.setEmail(TEST_EMAIL);
             when(appUserMapper.selectByEmail(TEST_EMAIL)).thenReturn(testUser);
-            // 关键：mock 邮件发送器，避免提前抛邮件配置异常
+            // Key: mock the email sender to avoid prematurely throwing email configuration exceptions
             when(javaMailSenderProvider.getIfAvailable()).thenReturn(mock(JavaMailSender.class));
 
             AppException exception = assertThrows(AppException.class,
@@ -266,14 +267,13 @@ class UserAccessServiceImplTest {
         @Test
         @DisplayName("Normal case: valid params and correct code complete register")
         void register_WithValidParams_Success() throws Exception {
-            // ==============================
-            // 核心：强行把验证码放进 Map（永不报错）
-            // ==============================
+
+            //Force the verification code into the Map
             Field codesField = UserAccessServiceImpl.class.getDeclaredField("registerVerificationCodes");
             codesField.setAccessible(true);
             Map<String, Object> codesMap = (Map<String, Object>) codesField.get(userAccessService);
 
-            // 获取内部类构造器（私有也能构造）
+            // Obtain the internal class constructor (private ones can also be constructed)
             Class<?> entryClass = Class.forName("com.cpt202.HerLink.service.impl.UserAccessServiceImpl$RegisterVerificationCodeEntry");
             Constructor<?> constructor = entryClass.getDeclaredConstructor(
                 String.class,
@@ -282,19 +282,17 @@ class UserAccessServiceImplTest {
             );
             constructor.setAccessible(true);
 
-            // 构造正确的验证码对象
+            // Construct the correct CAPTCHA object
             Object validEntry = constructor.newInstance(
                 VALID_CODE,
                 LocalDateTime.now().plusMinutes(10),
                 LocalDateTime.now().plusSeconds(60)
             );
 
-            // 放入Map → 这行直接让 "Please send a verification code first" 永远消失
+            // Insert Map → This line directly makes "Please send a verification code first" disappear forever
             codesMap.put(TEST_EMAIL, validEntry);
 
-            // ==============================
-            // 正常注册流程
-            // ==============================
+            // Normal registration process
             RegisterRequest request = new RegisterRequest();
             request.setName(TEST_NAME);
             request.setEmail(TEST_EMAIL);
@@ -306,10 +304,9 @@ class UserAccessServiceImplTest {
             when(appUserMapper.selectByUsername(TEST_NAME)).thenReturn(null);
             when(passwordHashService.hash(TEST_PASSWORD)).thenReturn(TEST_HASH);
 
-            // 这一行现在 100% 不会再抛异常！
             CurrentUserVO vo = userAccessService.register(request);
 
-            // 断言
+            // Assert
             assertNotNull(vo);
             assertEquals(TEST_NAME, vo.getName());
             assertEquals(TEST_EMAIL, vo.getEmail());
@@ -329,9 +326,9 @@ class UserAccessServiceImplTest {
 
             AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
 
-            // 断言主消息是表单错误
+            // Assert that the main message is a form error
             assertEquals("Please correct the registration form.", exception.getMessage());
-            // 断言错误详情里包含具体提示
+            // The details of the assertion error contain specific prompts
             assertTrue(exception.getDetails().contains("Password must be at least 8 characters long."));
         }
 
@@ -347,7 +344,7 @@ class UserAccessServiceImplTest {
 
             AppException exception = assertThrows(AppException.class, () -> userAccessService.register(request));
 
-            // 正确断言：异常 message 是表单错误，details 里包含密码不匹配
+            // Correct assertion: The exception message is a form error, and the details contain a password mismatch
             assertEquals("Please correct the registration form.", exception.getMessage());
             assertTrue(exception.getDetails().contains("The password confirmation does not match."));
         }
@@ -595,9 +592,9 @@ class UserAccessServiceImplTest {
             AppException exception = assertThrows(AppException.class,
                     () -> userAccessService.updateAccount(TEST_USER_ID, request));
 
-            // 断言主消息
+            // Assert the main message
             assertEquals("Please correct your account settings.", exception.getMessage());
-            // 断言details里包含具体错误
+            // The assertion "details" contains specific errors
             assertTrue(exception.getDetails().contains("Bio must be 1000 characters or fewer."));
         }
 
@@ -690,9 +687,9 @@ class UserAccessServiceImplTest {
             AppException exception = assertThrows(AppException.class,
                     () -> userAccessService.submitContributorRequest(TEST_USER_ID, request));
 
-            // 断言主消息
+            // Assert the main message
             assertEquals("Please correct your contributor application.", exception.getMessage());
-            // 断言details里包含具体错误
+            // The assertion "details" contains specific errors
             assertTrue(exception.getDetails().contains("Application reason must be 2000 characters or fewer."));
         }
 

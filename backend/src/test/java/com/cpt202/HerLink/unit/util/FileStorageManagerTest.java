@@ -2,9 +2,7 @@ package com.cpt202.HerLink.unit.util;
 
 import com.cpt202.HerLink.util.*;
 import com.cpt202.HerLink.util.FileStorageManager;
-
 import java.io.IOException;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,7 +21,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
-
 import com.cpt202.HerLink.exception.AppException;
 
 @ExtendWith(MockitoExtension.class)
@@ -157,7 +154,7 @@ class FileStorageManagerTest {
             when(mockMultipartFile.isEmpty()).thenReturn(false);
             when(mockMultipartFile.getOriginalFilename()).thenReturn("a.jpg");
 
-            // 同时stub两个transferTo重载方法，覆盖所有情况
+            // At the same time, stub the two overloaded transferTo methods and override all cases
             doThrow(new IOException("Mock IO error"))
                     .when(mockMultipartFile)
                     .transferTo(any(java.io.File.class));

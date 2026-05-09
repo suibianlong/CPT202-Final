@@ -2,13 +2,10 @@ package com.cpt202.HerLink.mapper;
 
 import java.util.List;
 import java.time.LocalDateTime;
-
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
 import com.cpt202.HerLink.entity.Tag;
 
-// Data access of tag table
 @Mapper
 public interface TagMapper {
 

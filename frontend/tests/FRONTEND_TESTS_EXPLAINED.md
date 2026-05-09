@@ -1,18 +1,18 @@
 # Frontend Tests Explained
 
-## 1. 这套前端测试在做什么
+## 1. What This Frontend Test Suite Does
 
-本项目前端测试使用 `Jest + jsdom`，目标是验证：
+The frontend tests in this project use `Jest + jsdom`, with the goal of verifying:
 
-- 页面脚本在正常流程下是否按预期工作。
-- 边界输入（空值、缺字段、缺 DOM、取消操作）是否处理正确。
-- 异常流程（接口失败、权限失败）是否有正确提示或重定向。
-- 输出内容是否安全（如 `escapeHtml` 防注入）。
-- 管理端和用户端关键业务流程是否可回归验证。
+* Whether page scripts work as expected under normal flows.
+* Whether boundary inputs (empty values, missing fields, missing DOM, cancelled operations) are handled correctly.
+* Whether exceptional flows (API failure, permission failure) provide correct prompts or redirects.
+* Whether output content is safe (such as `escapeHtml` preventing injection).
+* Whether key business flows on the admin side and user side can be regression-tested.
 
 ---
 
-## 2. 当前测试文件结构
+## 2. Current Test File Structure
 
 ```text
 frontend/tests/
@@ -32,124 +32,125 @@ frontend/tests/
 
 ---
 
-## 3. 各测试文件具体验证内容
+## 3. Specific Verification Content of Each Test File
 
 ### `tests/shared/shared.test.js`
 
-- 查询参数读取：`getQueryMessage`
-- 网络请求包装：`requestJson`（成功、非 JSON、网络异常、业务异常）
-- 统一提示：`showToast` / `showMessageFromQuery`
-- 退出登录事件绑定：`bindLogoutButtons`
-- 公共工具函数：`escapeHtml`、`formatDateTime`、`setText`、`setValue`
+* Query parameter reading: `getQueryMessage`
+* Network request wrapper: `requestJson` (success, non-JSON, network exception, business exception)
+* Unified prompts: `showToast` / `showMessageFromQuery`
+* Logout event binding: `bindLogoutButtons`
+* Common utility functions: `escapeHtml`, `formatDateTime`, `setText`, `setValue`
 
-### `tests/module1/module1.test.js`（登录/注册/账户）
+### `tests/module1/module1.test.js` (Login / Registration / Account)
 
-- 登录后跳转路径净化与白名单校验
-- 枚举状态文案与账户状态文案生成
-- 注册验证码冷却倒计时
-- 管理员待审核列表加载与渲染
-- 首页登录状态卡片渲染
-- 账户页贡献者状态区域渲染
-- 注册页和登录页关键初始化流程（含校验与异常提示）
+* Post-login redirect path sanitisation and whitelist validation
+* Enum status text and account status text generation
+* Registration verification code cooldown countdown
+* Admin pending review list loading and rendering
+* Home page login status card rendering
+* Account page contributor status area rendering
+* Key initialisation flows for the registration page and login page (including validation and exception prompts)
 
-### `tests/module2/admin-approval.test.js`（管理员贡献者审批）
+### `tests/module2/admin-approval.test.js` (Admin Contributor Approval)
 
-- 审批页 Tab 切换与事件绑定
-- 待审批列表与已批准列表加载
-- 详情区域渲染
-- 审批通过/拒绝提交流程
-- 撤销贡献者资格流程
-- 常见异常分支（取消、接口失败、空数据）
+* Approval page tab switching and event binding
+* Pending approval list and approved list loading
+* Detail area rendering
+* Approval/rejection submission flow
+* Contributor role revocation flow
+* Common exceptional branches (cancellation, API failure, empty data)
 
-### `tests/module3/module3.test.js`（资源编辑工作台）
+### `tests/module3/module3.test.js` (Resource Editing Workspace)
 
-- 标签、分类、资源类型的标准化与去重
-- 下拉选项渲染与兜底逻辑
-- 分类/资源类型加载流程
-- 元数据保存、自动保存、提交审核流程
-- 文件上传触发链路
-- 页面会话信息与查询参数解析
+* Tag, category, and resource type normalisation and deduplication
+* Dropdown option rendering and fallback logic
+* Category/resource type loading flow
+* Metadata saving, auto-saving, and review submission flow
+* File upload trigger chain
+* Page session information and query parameter parsing
 
-### `tests/module5/review-approval.test.js`（资源审核）
+### `tests/module5/review-approval.test.js` (Resource Review)
 
-- 待审核资源列表加载与卡片渲染
-- 资源详情、媒体区、审核历史渲染
-- 审核通过/拒绝提交
-- 正常与异常分支（空列表、接口失败、取消）
+* Pending resource list loading and card rendering
+* Resource detail, media area, and review history rendering
+* Approval/rejection submission
+* Normal and exceptional branches (empty list, API failure, cancellation)
 
-### `tests/module6/module6.test.js`（游客浏览与反馈）
+### `tests/module6/module6.test.js` (Viewer Browsing and Feedback)
 
-- 游客端筛选项加载与筛选重置
-- 已审核资源列表与详情渲染
-- 评论提交、评论删除、评论错误展示
-- 反馈历史加载与渲染
-- 资源标签/媒体预览渲染
-- 鉴权与统一错误处理分支
+* Viewer-side filter option loading and filter reset
+* Approved resource list and detail rendering
+* Comment submission, comment deletion, and comment error display
+* Feedback history loading and rendering
+* Resource tag/media preview rendering
+* Authentication and unified error handling branches
 
-### `tests/module7/module7.test.js`（管理端公共层）
+### `tests/module7/module7.test.js` (Admin Common Layer)
 
-- `bindAdminBasics` 退出登录绑定配置
-- `requireAdmin` 鉴权逻辑
-- 401 场景跳转登录并携带 `next`
-- 非管理员/异常场景的访问提示渲染
-- 状态标签、空行模板、错误消息工具函数
-- `jsonRequest` 请求头拼装逻辑
+* `bindAdminBasics` logout binding configuration
+* `requireAdmin` authentication logic
+* 401 scenario redirecting to login with `next`
+* Access prompt rendering for non-admin/exception scenarios
+* Status labels, empty-row templates, and error message utility functions
+* `jsonRequest` request header assembly logic
 
 ### `tests/module7/admin-dashboard.test.js`
 
-- `DOMContentLoaded` 初始化流程
-- 管理员欢迎文案渲染
-- 无用户时提前返回
-- 缺少目标 DOM 节点时不抛错
+* `DOMContentLoaded` initialisation flow
+* Admin welcome text rendering
+* Early return when there is no user
+* No error thrown when target DOM nodes are missing
 
 ### `tests/module7/admin-resources.test.js`
 
-- 资源状态标准化与过滤
-- 资源列表加载/渲染/空态/错态
-- 归档/取消归档动作
-- 取消确认、接口失败等异常分支
+* Resource status normalisation and filtering
+* Resource list loading/rendering/empty state/error state
+* Archive/unarchive actions
+* Exceptional branches such as cancelled confirmation and API failure
 
 ### `tests/module7/classification-management.test.js`
 
-- 资源类型与分类数据加载
-- 概览、使用历史、操作历史渲染
-- 新增、编辑、启用/禁用流程
-- 空态、取消、失败分支处理
+* Resource type and category data loading
+* Overview, usage history, and operation history rendering
+* Add, edit, enable/disable flows
+* Empty state, cancellation, and failure branch handling
 
 ### `tests/module7/tag-management.test.js`
 
-- 标签数据与历史数据加载
-- 列表/概览/历史渲染
-- 新增、编辑、启用/禁用流程
-- 空态与异常分支处理
+* Tag data and history data loading
+* List/overview/history rendering
+* Add, edit, enable/disable flows
+* Empty state and exceptional branch handling
 
 ---
 
-## 4. `test-utils/eval-with-coverage.js` 的作用
+## 4. Role of `test-utils/eval-with-coverage.js`
 
-很多页面脚本不是模块化导出，而是直接在浏览器环境运行。  
-该工具会在 `window.eval` 前做覆盖率插桩，让这些脚本执行路径能被 Jest 覆盖率正确统计。
-
----
-
-## 5. CI 里如何跑前端测试
-
-在 `.github/workflows/ci-cd.yml` 的 `frontend-check` job 中，前端流程包括：
-
-- `npm ci`
-- `npm run lint`
-- `npm run format:check`
-- `npm run test:coverage -- --runInBand --json --outputFile=jest-results.json`
-- 汇总并输出：
-  - 指令覆盖率（Statements）
-  - 分支覆盖率（Branches）
-  - 平均每条用例执行时间
-  - 测试通过率
-- 上传覆盖率报告与测试日志 artifact
+Many page scripts are not modularly exported, but run directly in the browser environment.
+This utility performs coverage instrumentation before `window.eval`, so that the execution paths of these scripts can be correctly counted by Jest coverage.
 
 ---
 
-## 6. 如何本地运行
+## 5. How Frontend Tests Run in CI
+
+In the `frontend-check` job of `.github/workflows/ci-cd.yml`, the frontend process includes:
+
+* `npm ci`
+* `npm run lint`
+* `npm run format:check`
+* `npm run test:coverage -- --runInBand --json --outputFile=jest-results.json`
+* Summarising and outputting:
+
+  * Statement coverage (Statements)
+  * Branch coverage (Branches)
+  * Average execution time per test case
+  * Test pass rate
+* Uploading the coverage report and test log artifact
+
+---
+
+## 6. How to Run Locally
 
 ```bash
 cd frontend
@@ -162,12 +163,12 @@ npm run test:coverage -- --runInBand
 
 ---
 
-## 7. 如果要继续补测，优先顺序建议
+## 7. Suggested Priority If Continuing to Add Tests
 
-- 优先补 `module3.js` 的低覆盖分支（长流程、分支多）
-- 再补 `module6.js` 的异常路径和权限分支
-- 每次新增功能同时补充：
-  - 1 条正常路径
-  - 1 条边界路径
-  - 1 条异常路径
+* First add tests for low-coverage branches in `module3.js` (long flows, many branches)
+* Then add tests for exceptional paths and permission branches in `module6.js`
+* For each new feature, add at the same time:
 
+  * 1 normal path
+  * 1 boundary path
+  * 1 exceptional path

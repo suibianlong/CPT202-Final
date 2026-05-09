@@ -3,7 +3,6 @@ package com.cpt202.HerLink.entity;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-// corresponding to the "tag" table
 public class Tag implements Serializable {
 
     private static final long serialVersionUID = 1L;

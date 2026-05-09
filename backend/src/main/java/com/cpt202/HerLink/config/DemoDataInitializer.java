@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+// Initializes demo data on application startup when enabled and the database is empty.
 @Configuration
 public class DemoDataInitializer {
 

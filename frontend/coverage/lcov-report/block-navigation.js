@@ -14,7 +14,8 @@ var jumpToCode = (function init() {
         fileListingElements.join(', ') +
         ', ' +
         notSelector +
-        missingCoverageClasses.join(', ' + notSelector); // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
+        // becomes `:not(a):not(b) > a, :not(a):not(b) > b`
+        missingCoverageClasses.join(', ' + notSelector); 
 
     // The NodeList of matching elements
     var missingCoverageElements = document.querySelectorAll(selector);

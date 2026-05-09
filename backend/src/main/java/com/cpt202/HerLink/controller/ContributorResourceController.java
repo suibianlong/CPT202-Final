@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
+// Manages contributor resource drafts, files, submissions, and metadata options.
 @RestController
 @RequestMapping("/api/contributor/resources")
 public class ContributorResourceController {
@@ -26,14 +27,12 @@ public class ContributorResourceController {
         this.resourcePermissionChecker = resourcePermissionChecker;
     }
 
-    // create draft
     @PostMapping
     public ResourceDetailVO createDraft(HttpServletRequest request) {
         Long currentUserId = getCurrentUserId(request);
         return contributorResourceService.createDraft(currentUserId);
     }
 
-    // update resource
     @PutMapping("/{resourceId}")
     public ResourceDetailVO updateResource(@PathVariable Long resourceId,
                                            @RequestBody ResourceUpdateRequest request,
@@ -42,7 +41,6 @@ public class ContributorResourceController {
         return contributorResourceService.updateResource(currentUserId, resourceId, request);
     }
 
-    // upload files
     @PostMapping("/{resourceId}/files")
     public ResourceDetailVO uploadFiles(@PathVariable Long resourceId,
                                         @RequestPart(value = "previewImage", required = false) MultipartFile previewImage,
@@ -52,7 +50,6 @@ public class ContributorResourceController {
         return contributorResourceService.uploadFiles(currentUserId, resourceId, previewImage, mediaFiles);
     }
 
-    // delete media file
     @DeleteMapping("/{resourceId}/files")
     public ResourceDetailVO deleteMediaFile(@PathVariable Long resourceId,
                                             @RequestParam String filePath,
@@ -61,21 +58,18 @@ public class ContributorResourceController {
         return contributorResourceService.deleteMediaFile(currentUserId, resourceId, filePath);
     }
 
-    // get my resource list
     @GetMapping("/my")
     public List<ResourceListItemVO> listMyResources(ResourceQueryRequest request, HttpServletRequest httpServletRequest) {
         Long currentUserId = getCurrentUserId(httpServletRequest);
         return contributorResourceService.listMyResources(currentUserId, request);
     }
 
-    // get my specific resource detail
     @GetMapping("/{resourceId}")
     public ResourceDetailVO getMyResourceDetail(@PathVariable Long resourceId, HttpServletRequest request) {
         Long currentUserId = getCurrentUserId(request);
         return contributorResourceService.getMyResourceDetail(currentUserId, resourceId);
     }
 
-    // submit resource for review
     @PostMapping("/{resourceId}/submit")
     public void submitResource(@PathVariable Long resourceId,
                                @RequestBody(required = false) ResourceSubmitRequest request,
@@ -84,19 +78,16 @@ public class ContributorResourceController {
         contributorResourceService.submitResource(currentUserId, resourceId, request);
     }
 
-    // get category options
     @GetMapping("/category-options")
     public List<CategoryTagOptionVO> listCategoryOptions() {
         return contributorResourceService.listCategoryOptions();
     }
 
-    // get resource type options
     @GetMapping("/resource-type-options")
     public List<CategoryTagOptionVO> listResourceTypeOptions() {
         return contributorResourceService.listResourceTypeOptions();
     }
 
-    // get tag options
     @GetMapping("/tag-options")
     public List<CategoryTagOptionVO> listTagOptions() {
         return contributorResourceService.listTagOptions();

@@ -29,7 +29,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+// Manage resource version snapshots, history, comparison, and rollback.
 @Service
 public class ResourceVersionServiceImpl implements ResourceVersionService {
 
@@ -76,6 +76,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         this.objectMapper = new ObjectMapper();
     }
 
+    // Save a version snapshot for the current resource state.
     @Override
     public void saveVersionSnapshot(Long resourceId, Long userId, String changeType, String changeSummary) {
         if (resourceId == null) {
@@ -104,6 +105,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         resourceVersionMapper.insert(resourceVersion);
     }
 
+    // Return version history for a resource owned by the current contributor.
     @Override
     public List<ResourceVersionVO> listVersions(Long currentUserId, Long resourceId) {
         loadOwnedResource(currentUserId, resourceId);
@@ -121,6 +123,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return versionVOList;
     }
 
+    // Return a specific resource version with its snapshot data.
     @Override
     public ResourceVersionVO getVersion(Long currentUserId, Long resourceId, Integer versionNo) {
         loadOwnedResource(currentUserId, resourceId);
@@ -128,6 +131,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return buildVersionVO(resourceVersion, true);
     }
 
+    // Compare two resource versions and returns field-level differences.
     @Override
     public ResourceVersionCompareVO compareVersions(Long currentUserId, Long resourceId, Integer leftVersionNo, Integer rightVersionNo) {
         loadOwnedResource(currentUserId, resourceId);
@@ -160,6 +164,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return compareVO;
     }
 
+    // Restore an editable resource to a selected historical version.
     @Override
     @Transactional
     public ResourceDetailVO rollbackToVersion(Long currentUserId, Long resourceId, Integer versionNo) {
@@ -203,6 +208,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return loadOwnedResource(currentUserId, resourceId, false);
     }
 
+    // Loads a resource and ensures it belongs to the current contributor.
     private Resource loadOwnedResource(Long currentUserId, Long resourceId, boolean forUpdate) {
         Resource resource = forUpdate
                 ? resourceMapper.selectByIdForUpdate(resourceId)
@@ -236,6 +242,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return maxVersionNo == null ? 1 : maxVersionNo + 1;
     }
 
+    // Build a snapshot object from the current resource metadata and tags.
     private ResourceSnapshot buildSnapshot(Resource resource) {
         ResourceSnapshot snapshot = new ResourceSnapshot();
         snapshot.setTitle(resource.getTitle());
@@ -251,6 +258,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return snapshot;
     }
 
+    // Serializes a resource snapshot into JSON for version storage.
     private String serializeSnapshot(ResourceSnapshot snapshot) {
         try {
             return objectMapper.writeValueAsString(snapshot);
@@ -263,6 +271,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         }
     }
 
+    // Deserializes stored snapshot JSON back into a resource snapshot object.
     private ResourceSnapshot deserializeSnapshot(String snapshotText) {
         try {
             return objectMapper.readValue(snapshotText, ResourceSnapshot.class);
@@ -353,6 +362,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
                 : normalizeCategoryName(category.getCategoryTopic());
     }
 
+    // Ensure the current resource status allows rollback.
     private void validateRollbackStatus(Resource resource) {
         String status = resource.getStatus();
         if (!ResourceStatusEnum.DRAFT.getValue().equals(status)
@@ -361,6 +371,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         }
     }
 
+    // Validate that the stored rollback category still exists and is active.
     private Category validateRollbackCategory(Long categoryId) {
         if (categoryId == null) {
             throw AppException.conflict("Stored category is missing and cannot be restored.");
@@ -377,6 +388,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return category;
     }
 
+    // Validate that the stored rollback resource type is still available.
     private ResourceType validateRollbackResourceType(String resourceType) {
         if (resourceType == null || resourceType.isBlank()) {
             throw AppException.conflict("Stored resource type is missing and cannot be restored.");
@@ -402,6 +414,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         throw AppException.conflict("Stored resource type is unavailable and cannot be restored.");
     }
 
+    // Restore snapshot tag names by resolving existing tags or creating new active tags.
     private void replaceResourceTagsByName(Long resourceId, List<String> tagNames) {
         List<Long> resolvedTagIds = new ArrayList<>();
 
@@ -547,6 +560,7 @@ public class ResourceVersionServiceImpl implements ResourceVersionService {
         return value == null ? "" : value;
     }
 
+    // Builds the restored resource detail response with tags, version, submission, and review data.
     private ResourceDetailVO buildResourceDetailVO(Resource resource) {
         ResourceDetailVO resourceDetailVO = new ResourceDetailVO();
 
