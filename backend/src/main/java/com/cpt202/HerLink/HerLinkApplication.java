@@ -3,7 +3,7 @@ package com.cpt202.HerLink;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-// start
+// Start ！！！
 @SpringBootApplication
 public class HerLinkApplication {
 

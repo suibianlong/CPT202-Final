@@ -2,10 +2,8 @@ package com.cpt202.HerLink.unit.service.impl;
 
 import com.cpt202.HerLink.service.impl.*;
 import com.cpt202.HerLink.service.impl.CategoryServiceImpl;
-
 import java.util.Collections;
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,7 +14,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.cpt202.HerLink.entity.Category;
 import com.cpt202.HerLink.mapper.CategoryMapper;
 import com.cpt202.HerLink.vo.CategoryTagOptionVO;

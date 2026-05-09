@@ -3,7 +3,6 @@ package com.cpt202.HerLink.entity;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-// // corresponding to the "review_record" table
 public class ReviewRecord implements Serializable {
 
     private static final long serialVersionUID = 1L;

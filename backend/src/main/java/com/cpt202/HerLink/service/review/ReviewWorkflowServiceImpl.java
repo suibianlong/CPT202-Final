@@ -38,6 +38,7 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// Manage administrator workflows for pending submissions, review details, history, and decisions.
 @Service
 public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
 
@@ -65,6 +66,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         this.emailNotificationService = emailNotificationService;
     }
 
+    // Return paginated pending submissions for reviewer approval.
     @Override
     public PageResponse<ReviewListItemResponse> getPendingReviews(int page, int pageSize) {
         validatePagination(page, pageSize);
@@ -101,6 +103,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Return full review details for a specific submission.
     @Override
     public ReviewDetailResponse getReviewDetail(Long submissionId) {
         ReviewSubmissionRow submission = loadSubmission(submissionId);
@@ -140,6 +143,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Return grouped review history for a specific submission.
     @Override
     public ReviewHistoryResponse getReviewHistory(Long submissionId) {
         ReviewSubmissionRow submission = loadSubmission(submissionId);
@@ -180,6 +184,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Approve a pending submission through the review workflow.
     @Override
     @Transactional
     public ReviewDecisionResponse approveSubmission(Long submissionId, Long reviewerId, ReviewActionRequest request) {
@@ -196,6 +201,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Reject the pending submission through the review workflow.
     @Override
     @Transactional
     public ReviewDecisionResponse rejectSubmission(Long submissionId, Long reviewerId, ReviewActionRequest request) {
@@ -212,6 +218,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Submit a validated review decision for a pending submission.
     @Override
     @Transactional
     public ReviewDecisionResponse submitDecision(Long submissionId, Long reviewerId, ReviewDecisionRequest request) {
@@ -230,6 +237,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Apply the review decision, updates resource status, records review history, and sends notifications.
     private ReviewDecisionResponse submitReviewDecision(Long submissionId,
                                                         Long reviewerId,
                                                         ReviewAction action,
@@ -284,6 +292,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         );
     }
 
+    // Send approval or rejection email notifications to the contributor.
     private void notifyResourceDecision(ReviewSubmissionRow submission,
                                         ResourceReviewStatus nextStatus,
                                         String feedbackComment) {
@@ -309,6 +318,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         }
     }
 
+    // Load a submission detail row and fails if the submission does not exist.
     private ReviewSubmissionRow loadSubmission(Long submissionId) {
         if (submissionId == null) {
             throw AppException.badRequest("Submission id is required.");
@@ -355,6 +365,7 @@ public class ReviewWorkflowServiceImpl implements ReviewWorkflowService {
         }
     }
 
+    // Validate that the decision matches the selected latest pending submission.
     private void validateDecisionRequest(ReviewSubmissionRow submission,
                                          ReviewAction action,
                                          Long requestedResourceId,

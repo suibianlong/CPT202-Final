@@ -2,7 +2,6 @@ package com.cpt202.HerLink.vo;
 
 import java.io.Serializable;
 
-// display selectable category, tag option
 public class CategoryTagOptionVO implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -4,10 +4,8 @@ import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-
 import com.cpt202.HerLink.entity.Resource;
 
-// Data access of resource table
 @Mapper
 public interface ResourceMapper {
 

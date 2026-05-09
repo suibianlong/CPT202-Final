@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Component;
 
+// Check session-based user authentication and role permissions.
 @Component
 public class ResourcePermissionChecker {
 
@@ -17,6 +18,7 @@ public class ResourcePermissionChecker {
         this.userAccessService = userAccessService;
     }
 
+    // Return the current logged-in user from the session or reject invalid sessions.
     public CurrentUserVO requireCurrentUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null) {
@@ -40,10 +42,12 @@ public class ResourcePermissionChecker {
         }
     }
 
+    // Require a logged-in user and returns the current user id.
     public Long requireAuthenticatedUserId(HttpServletRequest request) {
         return requireCurrentUser(request).getUserId();
     }
 
+    // Require a current user to be an approved contributor.
     public Long requireContributorUserId(HttpServletRequest request) {
         CurrentUserVO currentUser = requireCurrentUser(request);
         if (!currentUser.isContributor()) {
@@ -56,6 +60,7 @@ public class ResourcePermissionChecker {
         return requireAdminUser(request).getUserId();
     }
 
+    // Require the current user to be an administrator.
     public CurrentUserVO requireAdminUser(HttpServletRequest request) {
         CurrentUserVO currentUser = requireCurrentUser(request);
         if (!UserRoleEnum.ADMINISTRATOR.matches(currentUser.getRole())) {
@@ -64,6 +69,7 @@ public class ResourcePermissionChecker {
         return currentUser;
     }
 
+    // Store the authenticated user id in the HTTP session.
     public void storeLoginSession(HttpServletRequest request, Long userId) {
         HttpSession session = request.getSession(true);
         session.setAttribute(SessionKeys.USER_ID, userId);

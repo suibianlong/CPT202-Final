@@ -6,6 +6,7 @@ import com.cpt202.HerLink.mapper.AdminUsageHistoryMapper;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
+// Provide admin usage history data for classifications and tags.
 @Service
 public class AdminUsageHistoryServiceImpl implements AdminUsageHistoryService {
 
@@ -15,11 +16,13 @@ public class AdminUsageHistoryServiceImpl implements AdminUsageHistoryService {
         this.adminUsageHistoryMapper = adminUsageHistoryMapper;
     }
 
+    // Return usage history for categories and resource types.
     @Override
     public List<ClassificationUsageHistoryResponse> getClassificationUsageHistory() {
         return adminUsageHistoryMapper.selectClassificationUsageHistory();
     }
 
+    // Return usage history for tags.
     @Override
     public List<TagUsageHistoryResponse> getTagUsageHistory() {
         return adminUsageHistoryMapper.selectTagUsageHistory();

@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.UUID;
 
-// file store
+// Store, delete, and describe uploaded files within the configured upload directory.
 @Component
 public class FileStorageManager {
 
@@ -26,6 +26,7 @@ public class FileStorageManager {
         return storedFile == null ? null : storedFile.getFilePath();
     }
 
+    // Store an uploaded file safely and returns its storage metadata.
     public StoredFile storeFile(MultipartFile multipartFile, String folderName) {
         if (multipartFile == null || multipartFile.isEmpty()) {
             return null;
@@ -84,6 +85,7 @@ public class FileStorageManager {
         }
     }
 
+    // Delete a stored file and fail if the path is invalid or deletion fails.
     public void delete(String relativePath) {
         if (relativePath == null || relativePath.isBlank()) {
             return;
@@ -106,6 +108,7 @@ public class FileStorageManager {
         }
     }
 
+    // Silently delete a stored file during cleanup without interrupting the main workflow.
     public void deleteQuietly(String relativePath) {
         if (relativePath == null || relativePath.isBlank()) {
             return;
@@ -128,6 +131,7 @@ public class FileStorageManager {
         return extension == null ? "" : extension.toLowerCase(Locale.ROOT);
     }
 
+    // Represent metadata for a stored uploaded file.
     public static class StoredFile {
 
         private String originalFilename;

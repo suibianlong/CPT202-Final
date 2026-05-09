@@ -12,6 +12,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// Manage admin resource lifecycle operations, including listing, archiving, and unarchiving resources.
 @Service
 public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycleService {
 
@@ -30,6 +31,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         this.operationHistoryService = operationHistoryService;
     }
 
+    // Return resource lifecycle rows, optionally filtered by a valid resource status.
     @Override
     public List<ResourceLifecycleRow> listResources(String status) {
         String normalizedStatus = null;
@@ -44,6 +46,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         return resources == null ? Collections.emptyList() : resources;
     }
 
+    // Archive an approved resource and records the admin lifecycle operation.
     @Override
     @Transactional
     public AdminResourceLifecycleResponse archiveResource(Long resourceId, String administrator) {
@@ -88,6 +91,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         );
     }
 
+    // Restore an archived resource to approved status and records the admin lifecycle operation.
     @Override
     @Transactional
     public AdminResourceLifecycleResponse unarchiveResource(Long resourceId, String administrator) {
@@ -132,6 +136,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         );
     }
 
+    // Loads a resource lifecycle row and validates that the resource id is present and valid.
     private ResourceLifecycleRow loadResource(Long resourceId) {
         if (resourceId == null) {
             throw AppException.badRequest("Resource id is required.");
@@ -146,6 +151,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         return resource;
     }
 
+    // Builds a no-change response for resources that are already archived.
     private AdminResourceLifecycleResponse archivedResponse(ResourceLifecycleRow resource) {
         return new AdminResourceLifecycleResponse(
                 resource.getResourceId(),
@@ -159,6 +165,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         );
     }
 
+    // Builds a no-change response for resources that are already approved.
     private AdminResourceLifecycleResponse approvedResponse(ResourceLifecycleRow resource) {
         return new AdminResourceLifecycleResponse(
                 resource.getResourceId(),
@@ -180,6 +187,7 @@ public class AdminResourceLifecycleServiceImpl implements AdminResourceLifecycle
         recordLifecycleOperation(resource, administrator, UNARCHIVE_ACTION);
     }
 
+    // Record a resource lifecycle operation with a safe item name and administrator name.
     private void recordLifecycleOperation(ResourceLifecycleRow resource, String administrator, String action) {
         String title = resource.getTitle() == null || resource.getTitle().isBlank()
                 ? "Resource"

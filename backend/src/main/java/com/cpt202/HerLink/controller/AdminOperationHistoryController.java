@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// Return admin operation history, optionally filtered by module.
 @RestController
 @RequestMapping("/api/admin/operation-history")
 public class AdminOperationHistoryController {

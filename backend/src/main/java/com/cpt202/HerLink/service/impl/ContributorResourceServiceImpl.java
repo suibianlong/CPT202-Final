@@ -52,6 +52,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+// Manage contributor resources, including drafts, updates, files, submissions, and metadata options.
 @Service
 public class ContributorResourceServiceImpl implements ContributorResourceService {
 
@@ -100,6 +101,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         this.emailNotificationService = emailNotificationService;
     }
 
+    // Create a new draft resource with default category, resource type, and initial version snapshot.
     @Override
     @Transactional
     public ResourceDetailVO createDraft(Long currentUserId) {
@@ -133,6 +135,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return buildResourceDetailVO(latestResource);
     }
 
+    // Update editable resource metadata and tags, then saves a version snapshot.
     @Override
     @Transactional
     public ResourceDetailVO updateResource(Long currentUserId, Long resourceId, ResourceUpdateRequest request) {
@@ -198,6 +201,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return buildResourceDetailVO(latestResource);
     }
 
+    // Upload preview and media files for an editable resource and saves a version snapshot.
     @Override
     @Transactional
     public ResourceDetailVO uploadFiles(Long currentUserId, Long resourceId, MultipartFile previewImage, MultipartFile[] mediaFiles) {
@@ -277,6 +281,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return buildResourceDetailVO(latestResource);
     }
 
+    // Delete a media file from an editable resource and updates the current media URL.
     @Override
     @Transactional
     public ResourceDetailVO deleteMediaFile(Long currentUserId, Long resourceId, String filePath) {
@@ -322,6 +327,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return buildResourceDetailVO(latestResource);
     }
 
+    // Return the current contributor's resources with optional filters and review summary data.
     @Override
     public List<ResourceListItemVO> listMyResources(Long currentUserId, ResourceQueryRequest request) {
         String keyword = null;
@@ -371,6 +377,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return resourceListItemVOList;
     }
 
+    // Return submission history for a resource owned by the current contributor.
     @Override
     public List<ResourceSubmissionVO> listSubmissionHistory(Long currentUserId, Long resourceId) {
         loadOwnedResource(currentUserId, resourceId);
@@ -397,12 +404,14 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return submissionVOList;
     }
 
+    // Return detailed information for a resource owned by the current contributor.
     @Override
     public ResourceDetailVO getMyResourceDetail(Long currentUserId, Long resourceId) {
         Resource resource = loadOwnedResource(currentUserId, resourceId);
         return buildResourceDetailVO(resource);
     }
 
+    // Submit a valid contributor resource for review and notifies reviewers.
     @Override
     @Transactional
     public void submitResource(Long currentUserId, Long resourceId, ResourceSubmitRequest request) {
@@ -436,11 +445,13 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         notifyResourcePendingReview(currentUserId, resource);
     }
 
+    // Return active category options for contributor resource forms.
     @Override
     public List<CategoryTagOptionVO> listCategoryOptions() {
         return mapCategoryOptions(loadActiveCategories());
     }
 
+    // Return active resource type options for contributor resource forms.
     @Override
     public List<CategoryTagOptionVO> listResourceTypeOptions() {
         List<ResourceType> resourceTypeList = resourceTypeMapper.selectActiveResourceTypes();
@@ -462,6 +473,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return optionVOList;
     }
 
+    // Returns active tag options for contributor resource forms.
     @Override
     public List<CategoryTagOptionVO> listTagOptions() {
         List<Tag> tagList = tagMapper.selectActiveTags();
@@ -484,6 +496,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return loadOwnedResource(currentUserId, resourceId, false);
     }
 
+    // Loads a resource and ensures it belongs to the current contributor.
     private Resource loadOwnedResource(Long currentUserId, Long resourceId, boolean forUpdate) {
         Resource resource = forUpdate
                 ? resourceMapper.selectByIdForUpdate(resourceId)
@@ -562,6 +575,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         throw AppException.conflict("Cannot create draft because no active resource type is available.");
     }
 
+    // Resolves a submitted resource type name to an active database resource type.
     private ResourceType resolveActiveResourceType(String resourceType) {
         if (resourceType == null || resourceType.isBlank()) {
             throw AppException.badRequest("Resource type is required.");
@@ -585,6 +599,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         throw AppException.conflict("Selected resource type is unavailable.");
     }
 
+    // Removes an old replaced file when it is no longer used by the latest resource state.
     private void cleanupReplacedFile(Long resourceId, String filePath, Resource latestResource) {
         if (filePath == null || filePath.isBlank() || isCurrentResourceFile(filePath, latestResource)) {
             return;
@@ -628,6 +643,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         ResourceStatusValidator.assertEditable(resource);
     }
 
+    // Validates that a resource has all required fields and files before submission.
     private void validateSubmittableResource(Resource resource) {
         ResourceStatusValidator.assertSubmittable(resource);
 
@@ -664,6 +680,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         }
     }
 
+    // Validates that an uploaded media file matches the selected resource type.
     private void validateMediaFile(Resource resource, MultipartFile mediaFile) {
         if (mediaFile == null || mediaFile.isEmpty()) {
             return;
@@ -771,6 +788,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         refreshTagUsageCounts(oldTagIds, distinctTagIds);
     }
 
+    // Resolve tag names into active tags, creates missing tags, and replaces resource tags.
     private void replaceResourceTagsByName(Long resourceId, List<String> tagNames) {
         List<Long> resolvedTagIds = new ArrayList<>();
 
@@ -847,6 +865,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         return distinctTagIds;
     }
 
+    // Normalize tag names by splitting commas, trimming spaces, removing duplicates, and checking length.
     private List<String> normalizeTagNames(List<String> tagNames) {
         if (tagNames == null || tagNames.isEmpty()) {
             return Collections.emptyList();
@@ -924,6 +943,7 @@ public class ContributorResourceServiceImpl implements ContributorResourceServic
         }
     }
 
+    // Builds the contributor resource detail response with tags, files, version, submission, and review data.
     private ResourceDetailVO buildResourceDetailVO(Resource resource) {
         ResourceDetailVO resourceDetailVO = new ResourceDetailVO();
 

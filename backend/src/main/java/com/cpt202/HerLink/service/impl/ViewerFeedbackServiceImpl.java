@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+// Manage administrator feedback submission, attachment uploads, and feedback lookup.
 @Service
 public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
 
@@ -38,6 +39,7 @@ public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
         this.fileStorageManager = fileStorageManager;
     }
 
+    // Create feedback with validated type, description, and optional attachments.
     @Override
     @Transactional
     public FeedbackVO createFeedback(Long currentUserId, FeedbackCreateRequest request) {
@@ -92,6 +94,7 @@ public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
         return buildFeedbackVO(savedFeedback);
     }
 
+    // Return feedback submitted by the current user.
     @Override
     public List<FeedbackVO> listMyFeedback(Long currentUserId) {
         List<Feedback> feedbackList = feedbackMapper.selectByUserId(currentUserId);
@@ -106,6 +109,7 @@ public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
         return feedbackVOList;
     }
 
+    // Returns all feedback records for admin review.
     @Override
     public List<FeedbackVO> listAllFeedback() {
         List<Feedback> feedbackList = feedbackMapper.selectAll();
@@ -120,6 +124,7 @@ public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
         return feedbackVOList;
     }
 
+    // Validate and normalizes the feedback type to supported values.
     private String normalizeFeedbackType(String feedbackType) {
         String normalizedType = feedbackType == null ? null : feedbackType.trim();
         if ("Bug Report".equalsIgnoreCase(normalizedType)) {
@@ -154,6 +159,7 @@ public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
         return attachments;
     }
 
+    // Validate feedback attachments by count, size, and supported file type.
     private void validateAttachments(List<MultipartFile> attachments) {
         if (attachments.size() > MAX_ATTACHMENT_COUNT) {
             throw AppException.badRequest("You can upload up to 3 feedback attachments.");
@@ -174,6 +180,7 @@ public class ViewerFeedbackServiceImpl implements ViewerFeedbackService {
         }
     }
 
+    // Build the feedback response with its uploaded attachment information.
     private FeedbackVO buildFeedbackVO(Feedback feedback) {
         FeedbackVO feedbackVO = new FeedbackVO();
         feedbackVO.setFeedbackId(feedback.getFeedbackId());

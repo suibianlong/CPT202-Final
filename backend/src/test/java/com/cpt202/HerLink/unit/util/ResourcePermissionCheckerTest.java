@@ -3,7 +3,6 @@ package com.cpt202.HerLink.unit.util;
 import com.cpt202.HerLink.util.*;
 import com.cpt202.HerLink.util.ResourcePermissionChecker;
 import com.cpt202.HerLink.util.SessionKeys;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -18,12 +17,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.cpt202.HerLink.enums.UserRoleEnum;
 import com.cpt202.HerLink.exception.AppException;
 import com.cpt202.HerLink.service.UserAccessService;
 import com.cpt202.HerLink.vo.CurrentUserVO;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 

@@ -2,7 +2,6 @@ package com.cpt202.HerLink.dto.resource;
 
 import java.io.Serializable;
 
-// rollback confirmation request
 public class ResourceVersionRollbackRequest implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -3,12 +3,11 @@ package com.cpt202.HerLink.util;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.HexFormat;
-
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-
 import org.springframework.stereotype.Component;
 
+// Provides PBKDF2 password hashing and verification.
 @Component
 public class PasswordHashService {
 
@@ -18,6 +17,7 @@ public class PasswordHashService {
     private static final int SALT_LENGTH = 16;
     private final SecureRandom secureRandom = new SecureRandom();
 
+    // Hash a raw password with a random salt using PBKDF2.
     public String hash(String rawPassword) {
         byte[] salt = new byte[SALT_LENGTH];
         secureRandom.nextBytes(salt);
@@ -25,6 +25,7 @@ public class PasswordHashService {
         return ITERATIONS + ":" + HexFormat.of().formatHex(salt) + ":" + HexFormat.of().formatHex(digest);
     }
 
+    // Verifie the raw password against a stored PBKDF2 hash.
     public boolean matches(String rawPassword, String storedHash) {
         if (storedHash == null || storedHash.isBlank()) {
             return false;
@@ -58,6 +59,7 @@ public class PasswordHashService {
         return diff == 0;
     }
 
+    // Generates a PBKDF2 password digest using the given salt and parameters.
     private byte[] pbkdf2(String rawPassword, byte[] salt, int iterations, int keyLength) {
         try {
             PBEKeySpec keySpec = new PBEKeySpec(rawPassword.toCharArray(), salt, iterations, keyLength);

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+// Provides active category options for frontend selection.
 @Service
 public class CategoryServiceImpl implements CategoryService {
 
@@ -18,6 +19,7 @@ public class CategoryServiceImpl implements CategoryService {
         this.categoryMapper = categoryMapper;
     }
 
+    // Returns active categories as selectable option objects.
     @Override
     public List<CategoryTagOptionVO> listCategoryOptions() {
         List<Category> categoryList = categoryMapper.selectActiveCategories();

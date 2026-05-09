@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+// Provide active tag options for frontend selection.
 @Service
 public class TagServiceImpl implements TagService {
 
@@ -18,6 +19,7 @@ public class TagServiceImpl implements TagService {
         this.tagMapper = tagMapper;
     }
 
+    // Return active tags as selectable option objects.
     @Override
     public List<CategoryTagOptionVO> listTagOptions() {
         List<Tag> tagList = tagMapper.selectActiveTags();

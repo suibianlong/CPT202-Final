@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// Provide approved resource browsing and filter options for authenticated viewers.
 @RestController
 @RequestMapping("/api/viewer/resources")
 public class ViewerResourceController {

@@ -2,43 +2,35 @@ package com.cpt202.HerLink.unit.util;
 
 import com.cpt202.HerLink.util.*;
 import com.cpt202.HerLink.util.ResourceStatusValidator;
-
 import com.cpt202.HerLink.entity.Resource;
 import com.cpt202.HerLink.enums.ResourceStatusEnum;
 import com.cpt202.HerLink.exception.AppException;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class ResourceStatusValidatorTest {
 
     @Test
     void assertEditable_shouldPassForDraft() {
-        // setup
         Resource resource = new Resource();
         resource.setStatus(ResourceStatusEnum.DRAFT.getValue());
 
-        // call & assertion
         assertDoesNotThrow(() -> ResourceStatusValidator.assertEditable(resource));
     }
 
     @Test
     void assertEditable_shouldPassForRejected() {
-        // setup
         Resource resource = new Resource();
         resource.setStatus(ResourceStatusEnum.REJECTED.getValue());
 
-        // call & assertion
         assertDoesNotThrow(() -> ResourceStatusValidator.assertEditable(resource));
     }
 
     @Test
     void assertEditable_shouldThrowForApproved() {
-        // setup
         Resource resource = new Resource();
         resource.setStatus(ResourceStatusEnum.APPROVED.getValue());
 
-        // call
         AppException exception = assertThrows(
                 AppException.class,
                 () -> ResourceStatusValidator.assertEditable(resource)
@@ -64,7 +56,6 @@ class ResourceStatusValidatorTest {
 
     @Test
     void assertSubmittable_shouldPassForDraft() {
-        // setup
         Resource resource = new Resource();
         resource.setStatus(ResourceStatusEnum.DRAFT.getValue());
 
@@ -74,7 +65,6 @@ class ResourceStatusValidatorTest {
 
     @Test
     void assertSubmittable_shouldPassForRejected() {
-        // setup
         Resource resource = new Resource();
         resource.setStatus(ResourceStatusEnum.REJECTED.getValue());
 
@@ -84,11 +74,9 @@ class ResourceStatusValidatorTest {
 
     @Test
     void assertSubmittable_shouldThrowForPendingReview() {
-        // setup
         Resource resource = new Resource();
         resource.setStatus(ResourceStatusEnum.PENDING_REVIEW.getValue());
 
-        // call
         AppException exception = assertThrows(
                 AppException.class,
                 () -> ResourceStatusValidator.assertSubmittable(resource)

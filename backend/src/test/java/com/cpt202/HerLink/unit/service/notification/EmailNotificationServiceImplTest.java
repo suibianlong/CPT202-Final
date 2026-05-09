@@ -2,9 +2,7 @@ package com.cpt202.HerLink.unit.service.notification;
 
 import com.cpt202.HerLink.service.notification.*;
 import com.cpt202.HerLink.service.notification.EmailNotificationServiceImpl;
-
 import java.util.List;
-
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -27,10 +25,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-
 import com.cpt202.HerLink.entity.AppUser;
 import com.cpt202.HerLink.entity.Resource;
-
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -199,10 +195,10 @@ class EmailNotificationServiceImplTest {
         @Test
         @DisplayName("Should log failure when sending fails")
         void mailException_LogFailure() {
-            // 创建 MailException 的匿名子类实例
+            // Create an anonymous subclass instance of MailException
             MailException mailException = new MailException("Test send failed") {};
 
-            // 强制指定 SimpleMailMessage 类型，消除方法歧义
+            // Force the specification of the SimpleMailMessage type to eliminate method ambiguity
             doThrow(mailException)
                 .when(javaMailSender)
                 .send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));

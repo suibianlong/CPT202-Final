@@ -3,7 +3,6 @@ package com.cpt202.HerLink.vo;
 import java.io.Serializable;
 import java.util.List;
 
-// display compare result between two versions
 public class ResourceVersionCompareVO implements Serializable {
 
     private static final long serialVersionUID = 1L;

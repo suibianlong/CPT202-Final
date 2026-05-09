@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +18,6 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.cpt202.HerLink.dto.auth.AccountUpdateRequest;
 import com.cpt202.HerLink.dto.auth.ContributorRequestSubmitRequest;
 import com.cpt202.HerLink.dto.auth.ContributorReviewDecisionRequest;
@@ -40,6 +38,7 @@ import com.cpt202.HerLink.util.PasswordHashService;
 import com.cpt202.HerLink.vo.ContributorRequestVO;
 import com.cpt202.HerLink.vo.CurrentUserVO;
 
+// Manage user authentication, account updates, and contributor access workflows.
 @Service
 public class UserAccessServiceImpl implements UserAccessService {
 
@@ -108,6 +107,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         );
     }
 
+    // Send a registration verification code to a valid and unused email address.
     @Override
     public void sendRegisterVerificationCode(RegisterVerificationCodeRequest request) {
         String email = normalizeEmail(request == null ? null : request.getEmail());
@@ -144,6 +144,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         }
     }
 
+    // Register a new user after validating account data and consuming the verification code.
     @Override
     @Transactional
     public CurrentUserVO register(RegisterRequest request) {
@@ -183,6 +184,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildCurrentUserVO(user, null);
     }
 
+    // Authenticate a user by email and password, then returns current user information.
     @Override
     public CurrentUserVO login(LoginRequest request) {
         String email = normalizeEmail(request == null ? null : request.getEmail());
@@ -198,6 +200,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildCurrentUserVO(user, latestRequest);
     }
 
+    // Return current user information by user id.
     @Override
     public CurrentUserVO getCurrentUserById(Long userId) {
         AppUser user = loadUser(userId);
@@ -205,6 +208,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildCurrentUserVO(user, latestRequest);
     }
 
+    // Update the current user's basic account information after validation.
     @Override
     @Transactional
     public CurrentUserVO updateAccount(Long userId, AccountUpdateRequest request) {
@@ -237,6 +241,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildCurrentUserVO(existingUser, latestRequest);
     }
 
+    // Submit a contributor application for a registered viewer.
     @Override
     @Transactional
     public ContributorRequestVO submitContributorRequest(Long userId, ContributorRequestSubmitRequest request) {
@@ -272,6 +277,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildContributorRequestVO(contributorRequest, user);
     }
 
+    // Return the current user's latest contributor application.
     @Override
     public ContributorRequestVO getMyLatestContributorRequest(Long userId) {
         AppUser user = loadUser(userId);
@@ -282,11 +288,13 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildContributorRequestVO(latestRequest, user);
     }
 
+    // Return all pending contributor applications for admin review.
     @Override
     public List<ContributorRequestVO> listPendingContributorRequests() {
         return contributorRequestMapper.selectPendingRequestViews();
     }
 
+    // Return the detail of a specific contributor application.
     @Override
     public ContributorRequestVO getContributorRequestDetail(Long requestId) {
         if (requestId == null) {
@@ -299,11 +307,13 @@ public class UserAccessServiceImpl implements UserAccessService {
         return requestView;
     }
 
+    // Return all approved contributors.
     @Override
     public List<ContributorRequestVO> listApprovedContributors() {
         return contributorRequestMapper.selectApprovedContributorViews();
     }
 
+    // Review a pending contributor application and updates the contributor flag.
     @Override
     @Transactional
     public ContributorRequestVO reviewContributorRequest(Long adminUserId,
@@ -351,6 +361,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return buildContributorRequestVO(contributorRequest, applicant);
     }
 
+    // Revokes an approved contributor role and records the admin operation.
     @Override
     @Transactional
     public ContributorRequestVO revokeContributor(Long adminUserId, Long contributorUserId, String administrator) {
@@ -397,6 +408,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return requestView == null ? buildContributorRequestVO(latestRequest, user) : requestView;
     }
 
+    // Load a user by id and throws an application exception if the user is missing.
     private AppUser loadUser(Long userId) {
         if (userId == null) {
             throw AppException.unauthorized("Please log in first.");
@@ -423,6 +435,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         }
     }
 
+    // Record an admin operation when a contributor role is revoked.
     private void recordContributorRevokeOperation(AppUser user, String administrator) {
         if (adminOperationHistoryService == null || user == null) {
             return;
@@ -442,6 +455,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         );
     }
 
+    // Validates registration fields, including email, password, confirmation, and verification code.
     private void validateRegistrationInput(String name,
                                            String email,
                                            String password,
@@ -572,6 +586,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         javaMailSender.send(message);
     }
 
+    // Consume a valid registration verification code and removes it after successful use.
     private void consumeRegisterVerificationCode(String email, String verificationCode) {
         purgeExpiredRegisterVerificationCodes();
 
@@ -626,6 +641,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    // Converts database uniqueness errors into user-facing account conflict exceptions.
     private AppException translateUserConflictException(RuntimeException exception) {
         String message = exception.getMessage();
         if (message != null) {
@@ -644,6 +660,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         throw exception;
     }
 
+    // Builds the current user response with role and contributor application status.
     private CurrentUserVO buildCurrentUserVO(AppUser user, ContributorRequest latestRequest) {
         CurrentUserVO currentUserVO = new CurrentUserVO();
         currentUserVO.setUserId(user.getUserId());
@@ -668,6 +685,7 @@ public class UserAccessServiceImpl implements UserAccessService {
         return currentUserVO;
     }
 
+    // Build the contributor request response with applicant and review information.
     private ContributorRequestVO buildContributorRequestVO(ContributorRequest contributorRequest, AppUser user) {
         ContributorRequestVO contributorRequestVO = new ContributorRequestVO();
         contributorRequestVO.setRequestId(contributorRequest.getRequestId());

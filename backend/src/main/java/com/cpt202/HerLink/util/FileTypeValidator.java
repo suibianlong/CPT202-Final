@@ -2,9 +2,9 @@ package com.cpt202.HerLink.util;
 
 import java.util.Locale;
 import java.util.Set;
-
 import com.cpt202.HerLink.enums.ResourceTypeEnum;
 
+// Validate supported file types for resources, previews, media uploads, and feedback attachments.
 public final class FileTypeValidator {
 
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif");
@@ -24,6 +24,7 @@ public final class FileTypeValidator {
     private FileTypeValidator() {
     }
 
+    // Checks whether a filename has a globally supported upload extension.
     public static boolean isSupported(String filename) {
         String extension = getNormalizedExtension(filename);
         return extension != null && ALLOWED_EXTENSIONS.contains(extension);
@@ -38,6 +39,7 @@ public final class FileTypeValidator {
         return "JPG, JPEG, PNG, GIF, MP4, MP3, WAV, PDF, DOC, DOCX, or TXT";
     }
 
+    // Extract and normalize the file extension from a filename.
     public static String getNormalizedExtension(String filename) {
         if (filename == null || filename.isBlank()) {
             return null;
@@ -51,6 +53,7 @@ public final class FileTypeValidator {
         return filename.substring(lastDotIndex + 1).trim().toLowerCase(Locale.ROOT);
     }
 
+    // Validate that a preview image has both an image extension and image MIME type.
     public static boolean isPreviewImageSupported(String filename, String contentType) {
         String extension = getNormalizedExtension(filename);
         return extension != null
@@ -58,6 +61,7 @@ public final class FileTypeValidator {
                 && hasContentTypePrefix(contentType, "image/");
     }
 
+    // Validate that a media file matches the selected resource type and MIME type.
     public static boolean isMediaFileSupported(String filename, String contentType, String resourceType) {
         String extension = getNormalizedExtension(filename);
         if (extension == null) {
@@ -121,6 +125,7 @@ public final class FileTypeValidator {
         }
     }
 
+    // Validate the feedback attachment type by extension and MIME type.
     public static boolean isFeedbackAttachmentSupported(String filename, String contentType) {
         String extension = getNormalizedExtension(filename);
         if (extension == null || !FEEDBACK_EXTENSIONS.contains(extension)) {

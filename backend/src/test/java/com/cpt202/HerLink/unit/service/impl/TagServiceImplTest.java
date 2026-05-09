@@ -2,9 +2,7 @@ package com.cpt202.HerLink.unit.service.impl;
 
 import com.cpt202.HerLink.service.impl.*;
 import com.cpt202.HerLink.service.impl.TagServiceImpl;
-
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +13,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.cpt202.HerLink.entity.Tag;
 import com.cpt202.HerLink.mapper.TagMapper;
 import com.cpt202.HerLink.vo.CategoryTagOptionVO;
@@ -35,13 +32,13 @@ class TagServiceImplTest {
     @InjectMocks
     private TagServiceImpl tagService;
 
-    // ========================= Test Constants =========================
+    //Test Constants
     private static final Long TEST_TAG_ID = 1L;
     private static final String TEST_TAG_NAME = "Test Tag";
     private static final Long SECOND_TAG_ID = 2L;
     private static final String SECOND_TAG_NAME = "Tech Tag";
 
-    // ========================= Normal Scenarios =========================
+    //Normal Scenarios
     @Test
     @DisplayName("Normal case: Query single active tag, return corresponding option list")
     void listTagOptions_WithSingleTag_ReturnSingleOption() {
@@ -95,7 +92,7 @@ class TagServiceImplTest {
         assertEquals(SECOND_TAG_NAME, result.get(1).getName());
     }
 
-    // ========================= Boundary Scenarios =========================
+    //Boundary Scenarios
     @Test
     @DisplayName("Boundary case: No active tags exist, return empty list (not null)")
     void listTagOptions_WithEmptyList_ReturnEmptyList() {
@@ -111,7 +108,7 @@ class TagServiceImplTest {
         assertEquals(0, result.size());
     }
 
-    // ========================= Exception / Null Scenarios =========================
+    //Exception / Null Scenarios
     @Test
     @DisplayName("Null case: Mapper returns null, handle safely and return empty list")
     void listTagOptions_WhenMapperReturnNull_ReturnEmptyList() {

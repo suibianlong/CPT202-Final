@@ -1,7 +1,6 @@
 package com.cpt202.HerLink.unit.dto.review;
 
 import com.cpt202.HerLink.dto.review.ResourceReviewStatus;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -10,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
 import com.cpt202.HerLink.enums.ResourceStatusEnum;
 
 @DisplayName("ResourceReviewStatus Enum Unit Test")

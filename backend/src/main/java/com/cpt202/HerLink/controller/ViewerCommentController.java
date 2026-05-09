@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+// Manage users comments for approved resources.
 @RestController
 @RequestMapping("/api/viewer/resources/{resourceId}/comments")
 public class ViewerCommentController {

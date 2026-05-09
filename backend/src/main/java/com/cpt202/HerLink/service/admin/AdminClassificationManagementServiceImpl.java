@@ -21,6 +21,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// Manage admin classification data, including categories, tags, resource types, validation, and operation history.
 @Service
 public class AdminClassificationManagementServiceImpl implements AdminClassificationManagementService {
 
@@ -45,16 +46,19 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         this.operationHistoryService = operationHistoryService;
     }
 
+    // Return all category records for admin management.
     @Override
     public List<AdminCategoryResponse> getAllCategories() {
         return mapCategories(categoryMapper.selectAllCategories());
     }
 
+    // Return only active category records.
     @Override
     public List<AdminCategoryResponse> getActiveCategories() {
         return mapCategories(categoryMapper.selectByStatus(ClassificationStatus.ACTIVE.name()));
     }
 
+    // Create a new category after validation and records the admin operation.
     @Override
     @Transactional
     public AdminCategoryResponse createCategory(AdminCategoryRequest request, String administrator) {
@@ -76,6 +80,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return created;
     }
 
+    // Update an existing category after validation and records the admin operation.
     @Override
     @Transactional
     public AdminCategoryResponse updateCategory(Long categoryId, AdminCategoryRequest request, String administrator) {
@@ -97,28 +102,33 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return updated;
     }
 
+    // Deactivate a category and records the admin operation.
     @Override
     @Transactional
     public AdminCategoryResponse deactivateCategory(Long categoryId, String administrator) {
         return updateCategoryStatus(categoryId, ClassificationStatus.INACTIVE, "Deactivated", administrator);
     }
 
+    // Activate a category and records the admin operation.
     @Override
     @Transactional
     public AdminCategoryResponse activateCategory(Long categoryId, String administrator) {
         return updateCategoryStatus(categoryId, ClassificationStatus.ACTIVE, "Activated", administrator);
     }
 
+    // Return all tag records for admin management.
     @Override
     public List<AdminTagResponse> getAllTags() {
         return mapTags(tagMapper.selectAllTags());
     }
 
+    // Return only active tag records.
     @Override
     public List<AdminTagResponse> getActiveTags() {
         return mapTags(tagMapper.selectByStatus(ClassificationStatus.ACTIVE.name()));
     }
 
+    // Create a new tag after validation and records the admin operation.
     @Override
     @Transactional
     public AdminTagResponse createTag(AdminTagRequest request, String administrator) {
@@ -140,6 +150,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return created;
     }
 
+    // Update an existing tag after validation and records the admin operation.
     @Override
     @Transactional
     public AdminTagResponse updateTag(Long tagId, AdminTagRequest request, String administrator) {
@@ -161,28 +172,33 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return updated;
     }
 
+    // Deactivate a tag and records the admin operation.
     @Override
     @Transactional
     public AdminTagResponse deactivateTag(Long tagId, String administrator) {
         return updateTagStatus(tagId, ClassificationStatus.INACTIVE, "Deactivated", administrator);
     }
 
+    // Activate a tag and records the admin operation.
     @Override
     @Transactional
     public AdminTagResponse activateTag(Long tagId, String administrator) {
         return updateTagStatus(tagId, ClassificationStatus.ACTIVE, "Activated", administrator);
     }
 
+    // Return all resource type records for admin management.
     @Override
     public List<AdminResourceTypeResponse> getAllResourceTypes() {
         return mapResourceTypes(resourceTypeMapper.selectAllResourceTypes());
     }
 
+    // Return only active resource type records.
     @Override
     public List<AdminResourceTypeResponse> getActiveResourceTypes() {
         return mapResourceTypes(resourceTypeMapper.selectByStatus(ClassificationStatus.ACTIVE.name()));
     }
 
+    // Create a new resource type after validation and records the admin operation.
     @Override
     @Transactional
     public AdminResourceTypeResponse createResourceType(AdminResourceTypeRequest request, String administrator) {
@@ -204,6 +220,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return created;
     }
 
+    // Update an existing resource type after validation and records the admin operation.
     @Override
     @Transactional
     public AdminResourceTypeResponse updateResourceType(Long resourceTypeId,
@@ -228,18 +245,21 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return updated;
     }
 
+    // Deactivate a resource type and records the admin operation.
     @Override
     @Transactional
     public AdminResourceTypeResponse deactivateResourceType(Long resourceTypeId, String administrator) {
         return updateResourceTypeStatus(resourceTypeId, ClassificationStatus.INACTIVE, "Deactivated", administrator);
     }
 
+    // Activate a resource type and records the admin operation.
     @Override
     @Transactional
     public AdminResourceTypeResponse activateResourceType(Long resourceTypeId, String administrator) {
         return updateResourceTypeStatus(resourceTypeId, ClassificationStatus.ACTIVE, "Activated", administrator);
     }
 
+    // Update a category status and records the admin operation when the status changes.
     private AdminCategoryResponse updateCategoryStatus(Long categoryId,
                                                        ClassificationStatus status,
                                                        String action,
@@ -259,6 +279,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return updated;
     }
 
+    // Update a tag status and records the admin operation when the status changes.
     private AdminTagResponse updateTagStatus(Long tagId,
                                              ClassificationStatus status,
                                              String action,
@@ -278,6 +299,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return updated;
     }
 
+    // Update a resource type status and records the admin operation when the status changes.
     private AdminResourceTypeResponse updateResourceTypeStatus(Long resourceTypeId,
                                                                ClassificationStatus status,
                                                                String action,
@@ -297,6 +319,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return updated;
     }
 
+    // Load a category by id and throws an application exception if it is missing.
     private Category loadCategory(Long categoryId) {
         if (categoryId == null) {
             throw AppException.badRequest("Category id is required.");
@@ -308,6 +331,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return category;
     }
 
+    // Load a tag by id and throws an application exception if it is missing.
     private Tag loadTag(Long tagId) {
         if (tagId == null) {
             throw AppException.badRequest("Tag id is required.");
@@ -319,6 +343,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return tag;
     }
 
+    // Load a resource type by id and throws an application exception if it is missing.
     private ResourceType loadResourceType(Long resourceTypeId) {
         if (resourceTypeId == null) {
             throw AppException.badRequest("Resource type id is required.");
@@ -330,6 +355,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         return resourceType;
     }
 
+    // Ensure the category topic is unique and does not conflict with resource type names.
     private void validateUniqueCategoryTopic(String categoryTopic, Long excludedCategoryId) {
         if (count(categoryMapper.countByTopicIgnoreCase(categoryTopic, excludedCategoryId)) > 0) {
             throw AppException.conflict("categoryTopic already exists.");
@@ -339,12 +365,14 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         }
     }
 
+    // Ensure the tag name is unique.
     private void validateUniqueTagName(String tagName, Long excludedTagId) {
         if (count(tagMapper.countByNameIgnoreCase(tagName, excludedTagId)) > 0) {
             throw AppException.conflict("tagName already exists.");
         }
     }
 
+    // Ensure the resource type name is unique and does not conflict with category topics.
     private void validateUniqueResourceType(String typeName, Long excludedResourceTypeId) {
         if (count(resourceTypeMapper.countByTypeNameIgnoreCase(typeName, excludedResourceTypeId)) > 0) {
             throw AppException.conflict("typeName already exists.");
@@ -354,6 +382,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         }
     }
 
+    // Prevent used resource types from being renamed to values unsupported by the current metadata flow.
     private void validateResourceTypeCompatibility(ResourceType existing, String newTypeName) {
         Integer usageCount = existing.getUsageCount();
         if (usageCount == null || usageCount == 0) {
@@ -369,6 +398,7 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         }
     }
 
+    // Normalize and validates a name field by trimming spaces, collapsing whitespace, and checking length.
     private String normalizeName(String value, String fieldName, int maxLength) {
         List<String> details = new ArrayList<>();
         if (value == null || value.isBlank()) {
@@ -456,10 +486,12 @@ public class AdminClassificationManagementServiceImpl implements AdminClassifica
         );
     }
 
+    // Records an admin operation for category or resource type changes.
     private void recordClassification(String itemName, String kind, String action, String administrator) {
         operationHistoryService.recordOperation(itemName, kind, CLASSIFICATION_MODULE, action, administrator);
     }
 
+    // Records an admin operation for tag changes.
     private void recordTag(String itemName, String action, String administrator) {
         operationHistoryService.recordOperation(itemName, "Tag", TAG_MODULE, action, administrator);
     }

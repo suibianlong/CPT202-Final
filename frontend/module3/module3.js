@@ -153,7 +153,6 @@ function bindSingleFilePicker(inputId, textId, options = {}) {
                     input.showPicker();
                     return;
                 } catch (error) {
-                    // Fallback when showPicker exists but is rejected in this context.
                 }
             }
 

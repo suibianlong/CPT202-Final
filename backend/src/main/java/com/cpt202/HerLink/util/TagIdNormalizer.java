@@ -5,7 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-// normalize tags‘ ID
+// Normalize tag id lists by removing null values and duplicates.
 public final class TagIdNormalizer {
 
     private TagIdNormalizer() {

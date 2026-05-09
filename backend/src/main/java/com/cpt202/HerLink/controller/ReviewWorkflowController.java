@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+// Handles administrators resource review workflow, including pending lists, details, history, and decisions.
 @RestController
 @RequestMapping("/api/reviewer/reviews")
 public class ReviewWorkflowController {

@@ -3,7 +3,6 @@ package com.cpt202.HerLink.vo;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-// display brief information
 public class ResourceListItemVO implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -1,7 +1,6 @@
 package com.cpt202.HerLink.controller;
 
 import java.time.LocalDateTime;
-
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -27,7 +26,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
 import com.cpt202.HerLink.entity.AppUser;
 import com.cpt202.HerLink.entity.ContributorRequest;
 import com.cpt202.HerLink.enums.UserRoleEnum;
@@ -35,6 +33,13 @@ import com.cpt202.HerLink.mapper.AppUserMapper;
 import com.cpt202.HerLink.mapper.ContributorRequestMapper;
 import com.cpt202.HerLink.util.PasswordHashService;
 
+/**
+ * Integration tests for {@link AdminContributorRequestController}.
+ * These tests verify admin-only contributor request workflows using MockMvc,
+ * session-based authentication, and a Testcontainers MySQL database.
+ * Covered scenarios include pending request lookup, request detail lookup,
+ * approved contributor listing, contributor request review, and contributor revocation.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Testcontainers

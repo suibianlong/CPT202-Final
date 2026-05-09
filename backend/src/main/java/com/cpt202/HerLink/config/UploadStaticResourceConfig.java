@@ -8,6 +8,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+// Configure the static access for uploaded files and front-end resources.
 @Configuration
 public class UploadStaticResourceConfig implements WebMvcConfigurer {
 

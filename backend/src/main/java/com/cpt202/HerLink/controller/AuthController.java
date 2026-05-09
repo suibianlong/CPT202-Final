@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+// Handle user authentication, sessions, and account updates.
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

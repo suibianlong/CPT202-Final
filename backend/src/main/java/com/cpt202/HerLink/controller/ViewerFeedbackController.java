@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+// Handle users‘ feedbacks submission and feedback lookup.
 @RestController
 @RequestMapping("/api/viewer/feedback")
 public class ViewerFeedbackController {

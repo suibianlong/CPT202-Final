@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+// Manage contributor requests and contributor permissions for administrators.
 @RestController
 @RequestMapping("/api/admin/contributor-requests")
 public class AdminContributorRequestController {

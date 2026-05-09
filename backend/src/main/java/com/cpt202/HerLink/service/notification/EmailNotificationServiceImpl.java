@@ -11,6 +11,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+// Send email notifications for contributor and resource status changes.
 @Service
 public class EmailNotificationServiceImpl implements EmailNotificationService {
 
@@ -29,6 +30,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
         this.fromAddress = fromAddress == null ? "" : fromAddress.trim();
     }
 
+    // Notifies a user that their contributor application has been approved.
     @Override
     public void notifyContributorApplicationApproved(AppUser user) {
         String userLabel = buildUserLabel(user);
@@ -42,6 +44,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
         );
     }
 
+    // Notifies a user that their contributor role has been revoked.
     @Override
     public void notifyContributorRoleRevoked(AppUser user) {
         String userLabel = buildUserLabel(user);
@@ -55,6 +58,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
         );
     }
 
+    // Notifies a contributor that their resource is pending review.
     @Override
     public void notifyResourcePendingReview(AppUser contributor, Resource resource) {
         sendNotification(
@@ -67,6 +71,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
         );
     }
 
+    // Notifies a contributor that their resource has been approved.
     @Override
     public void notifyResourceApproved(AppUser contributor, String resourceTitle, Long resourceId) {
         sendNotification(
@@ -79,6 +84,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
         );
     }
 
+    // Notifies a contributor that their resource has been rejected with feedback.
     @Override
     public void notifyResourceRejected(AppUser contributor, String resourceTitle, Long resourceId, String feedbackComment) {
         String feedback = feedbackComment == null || feedbackComment.isBlank()
@@ -96,6 +102,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
         );
     }
 
+    // Sends an email notification when mail configuration and recipient data are valid.
     private void sendNotification(AppUser user, String subject, String text) {
         if (user == null) {
             LOGGER.warn("Email notification skipped because the user record is missing. Subject: {}", subject);

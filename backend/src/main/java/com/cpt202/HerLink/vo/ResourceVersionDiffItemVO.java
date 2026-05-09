@@ -2,7 +2,6 @@ package com.cpt202.HerLink.vo;
 
 import java.io.Serializable;
 
-// display one compare row between two resource versions
 public class ResourceVersionDiffItemVO implements Serializable {
 
     private static final long serialVersionUID = 1L;
