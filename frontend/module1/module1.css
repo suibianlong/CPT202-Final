@@ -834,7 +834,7 @@ body[data-page="home"]::before {
     display: flex;
     align-items: stretch;
     justify-content: center;
-    transform: translateX(clamp(24px, 6.8vw, 136px));
+    transform: none;
 }
 
 .home-art-image {
