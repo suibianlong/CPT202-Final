@@ -1,6 +1,4 @@
-# Smoke Test Record Template
-
-Use this template after each deployment. Fill all fields and keep one copy per release.
+# Smoke Test Record
 
 ## 1. Test Metadata
 
