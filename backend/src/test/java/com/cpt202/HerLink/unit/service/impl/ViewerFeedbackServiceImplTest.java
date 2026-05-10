@@ -75,6 +75,7 @@ class ViewerFeedbackServiceImplTest {
     }
 
     // Public business method testing
+    @Nested
     @DisplayName("Create Feedback - createFeedback")
     class CreateFeedbackTests {
 
